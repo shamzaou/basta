@@ -1,0 +1,8 @@
+=== to force logged in status:
+run in the browser:
+document.body.classList.add('is-logged-in');
+document.body.classList.remove('is-logged-out');
+localStorage.setItem('isLoggedIn', 'true');
+
+
+=== 

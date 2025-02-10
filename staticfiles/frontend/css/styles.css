@@ -1,0 +1,885 @@
+/* Root Variables */
+:root {
+    --primary-color: #00ff00;
+    --secondary-color: #ff00ff;
+    --background-color: #000000;
+    --text-color: #ffffff;
+    --danger-color: #ff4444;
+    --border-radius: 8px;
+    --transition-speed: 0.3s;
+}
+
+/* Base Styles */
+body, html {
+    margin: 0;
+    padding: 0;
+    font-family: 'Roboto', sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+    overflow-x: hidden;
+    font-size: 16px;
+}
+
+.container {
+    width: 90%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1.25em;
+    position: relative;
+}
+
+/* Typography */
+h1, h2, h3 {
+    font-family: 'Press Start 2P', cursive;
+    color: var(--primary-color);
+    margin-bottom: 0.8em;
+}
+
+h1 {
+    font-size: 2.5em;
+    text-align: center;
+    text-shadow: 0.08em 0.08em var(--secondary-color);
+}
+
+h2 {
+    font-size: 1.5em;
+}
+
+h3 {
+    font-size: 1em;
+}
+
+p {
+    margin-bottom: 1.25em;
+    max-width: 37.5em;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+}
+
+/* Header and Navigation */
+header {
+    padding: 1.25em 0;
+    border-bottom: 0.125em solid var(--primary-color);
+}
+
+nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.logo {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 1.5em;
+    text-decoration: none;
+    color: var(--primary-color);
+    text-shadow: 0.125em 0.125em var(--secondary-color);
+}
+
+.nav-links {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    padding: 0;
+    align-items: center;
+    margin: 0;
+}
+
+.nav-links li {
+    margin-left: 1.25em;
+}
+
+.nav-links a {
+    font-family: 'Press Start 2P', cursive;
+    text-decoration: none;
+    color: var(--text-color);
+    transition: color var(--transition-speed) ease;
+    font-size: 0.75em;
+    cursor: pointer;
+}
+
+.nav-links a:hover, .nav-links a.active {
+    color: var(--primary-color);
+}
+
+/* Avatar Dropdown Fixes */
+.nav-avatar {
+    width: 32px;  /* Fixed width */
+    height: 32px; /* Fixed height */
+    border-radius: 50%;
+    border: 2px solid var(--primary-color);
+    transition: border-color var(--transition-speed) ease;
+    object-fit: cover; /* This ensures the image covers the area properly */
+    display: block;
+}
+
+.avatar-container {
+    width: 32px;  /* Container matches avatar size */
+    height: 32px;
+    position: relative;
+    cursor: pointer;
+}
+
+/* Keep the rest of your dropdown styling */
+.avatar-dropdown {
+    position: relative;
+    padding-bottom: 15px;
+}
+
+.dropdown-content {
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    right: 0;
+    top: calc(100% - 15px);
+    background-color: var(--background-color);
+    border: 2px solid var(--primary-color);
+    border-radius: var(--border-radius);
+    min-width: 150px;
+    z-index: 1000;
+    transition: opacity var(--transition-speed) ease, visibility var(--transition-speed) ease;
+}
+
+.avatar-dropdown:hover .dropdown-content {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Optional: Add a subtle animation */
+.dropdown-content {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--transition-speed) ease;
+}
+
+.avatar-dropdown:hover .dropdown-content {
+    opacity: 1;
+    visibility: visible;
+    display: block;
+}
+
+.dropdown-item {
+    display: block;
+    padding: 0.75em 1em;
+    color: var(--text-color);
+    text-decoration: none;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.75em;
+    transition: background-color var(--transition-speed) ease;
+}
+
+.dropdown-item:hover {
+    background-color: rgba(0, 255, 0, 0.1);
+}
+
+.dropdown-item.logout {
+    color: var(--danger-color);
+}
+
+.dropdown-item.logout:hover {
+    background-color: rgba(255, 0, 0, 0.1);
+}
+
+/* Mobile Menu */
+.hamburger {
+    display: none;
+    flex-direction: column;
+    cursor: pointer;
+}
+
+.hamburger span {
+    width: 25px;
+    height: 3px;
+    background-color: var(--primary-color);
+    margin: 2px 0;
+    transition: var(--transition-speed);
+}
+
+/* Page Container */
+.page {
+    display: none;
+    padding: 2em 0;
+}
+
+.page.active {
+    display: block;
+}
+
+/* Home Page */
+.cta-container {
+    text-align: center;
+    margin: 2em 0;
+}
+
+.cta-button {
+    display: inline-block;
+    background-color: var(--primary-color);
+    color: var(--background-color);
+    padding: 0.75em 1.5em;
+    text-decoration: none;
+    border-radius: var(--border-radius);
+    transition: all var(--transition-speed) ease;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.875em;
+}
+
+.cta-button:hover {
+    background-color: var(--secondary-color);
+    transform: scale(1.05);
+}
+
+/* Pong Animation */
+.pong-animation {
+    width: 100%;
+    height: 12.5em;
+    position: relative;
+    margin-top: 2.5em;
+    overflow: hidden;
+}
+
+.paddle {
+    width: 0.625em;
+    height: 3.75em;
+    background-color: var(--text-color);
+    position: absolute;
+    top: 4.375em;
+}
+
+.paddle-left {
+    left: 0.625em;
+}
+
+.paddle-right {
+    right: 0.625em;
+}
+
+.ball {
+    width: 0.625em;
+    height: 0.625em;
+    background-color: var(--primary-color);
+    border-radius: 50%;
+    position: absolute;
+    top: 5.9375em;
+    left: 50%;
+    animation: moveBall 4s linear infinite;
+}
+
+.divider {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 0.125em;
+    background-color: var(--text-color);
+    transform: translateX(-50%);
+}
+
+@keyframes moveBall {
+    0%, 100% { left: 1.25em; }
+    50% { left: calc(100% - 1.875em); }
+}
+
+/* Profile Page */
+.profile-container {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: var(--border-radius);
+    padding: 2em;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    gap: 2em;
+    margin-bottom: 2em;
+}
+
+.profile-avatar {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    border: 3px solid var(--primary-color);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5em;
+    margin-top: 2em;
+}
+
+.stat-card {
+    background-color: rgba(0, 255, 0, 0.1);
+    border: 2px solid var(--primary-color);
+    border-radius: var(--border-radius);
+    padding: 1em;
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 1.5em;
+    font-weight: bold;
+}
+
+/* Match History */
+.match-history {
+    margin-top: 2em;
+}
+
+.match-card {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: var(--border-radius);
+    padding: 1em;
+    margin-bottom: 1em;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.match-result {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.8em;
+}
+
+.match-result.win {
+    color: var(--primary-color);
+}
+
+.match-result.loss {
+    color: var(--danger-color);
+}
+
+/* Settings Page Specific Styles */
+.settings-container {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 2em;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.settings-section {
+    margin-bottom: 2em;
+    padding-bottom: 2em;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.settings-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.settings-section h2 {
+    font-family: 'Press Start 2P', cursive;
+    color: var(--primary-color);
+    font-size: 1.2em;
+    margin-bottom: 1em;
+}
+
+.form-group {
+    margin-bottom: 1.5em;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5em;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.8em;
+    color: var(--text-color);
+}
+
+.field-container {
+    display: flex;
+    align-items: center;
+    gap: 1em;
+}
+
+.field-display {
+    flex-grow: 1;
+    padding: 0.8em;
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 2px solid transparent;
+    border-radius: 4px;
+    color: var(--text-color);
+    font-family: 'Roboto', sans-serif;
+}
+
+.field-input {
+    flex-grow: 1;
+    padding: 0.8em;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 2px solid var(--primary-color);
+    border-radius: 4px;
+    color: var(--text-color);
+    font-family: 'Roboto', sans-serif;
+    display: none;
+}
+
+.edit-btn {
+    padding: 0.5em 1em;
+    background-color: transparent;
+    border: 2px solid var(--primary-color);
+    color: var(--primary-color);
+    border-radius: 4px;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.7em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.edit-btn:hover {
+    background-color: var(--primary-color);
+    color: var(--background-color);
+}
+
+.edit-btn.save {
+    background-color: var(--primary-color);
+    color: var(--background-color);
+}
+
+.editing .field-display {
+    display: none;
+}
+
+.editing .field-input {
+    display: block;
+}
+
+.avatar-upload {
+    display: flex;
+    align-items: center;
+    gap: 2em;
+    margin-bottom: 1em;
+}
+
+.current-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: 3px solid var(--primary-color);
+}
+
+.upload-btn {
+    background-color: rgba(0, 255, 0, 0.1);
+    border: 2px solid var(--primary-color);
+    color: var(--text-color);
+    padding: 0.8em 1.5em;
+    cursor: pointer;
+    border-radius: 4px;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.8em;
+    transition: all 0.3s ease;
+}
+
+.upload-btn:hover {
+    background-color: rgba(0, 255, 0, 0.2);
+}
+
+.btn {
+    padding: 0.8em 1.5em;
+    border: none;
+    border-radius: 4px;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.8em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: var(--background-color);
+}
+
+.btn-primary:hover {
+    background-color: #00cc00;
+}
+
+.btn-danger {
+    background-color: var(--danger-color);
+    color: var(--text-color);
+}
+
+.btn-danger:hover {
+    background-color: #ff2222;
+}
+
+.btn-secondary {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-color);
+    border: 2px solid var(--text-color);
+}
+
+.btn-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.gdpr-notice {
+    background-color: rgba(255, 255, 255, 0.05);
+    padding: 1em;
+    border-radius: 4px;
+    margin-top: 1em;
+    font-size: 0.9em;
+}
+
+.danger-zone {
+    background-color: rgba(255, 68, 68, 0.1);
+    border: 2px solid var(--danger-color);
+    border-radius: 8px;
+    padding: 1.5em;
+}
+
+.danger-zone p {
+    margin: 0 0 1em 0;  /* Reset margin, just keep bottom margin for spacing */
+    text-align: left;   /* Ensure left alignment */
+}
+
+@media (max-width: 768px) {
+    .avatar-upload {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .settings-container {
+        padding: 1em;
+    }
+}
+
+/* Game Canvas */
+.game-container {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    aspect-ratio: 16/9;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: var(--border-radius);
+}
+
+#pongCanvas {
+    width: 100%;
+    height: 100%;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    body {
+        font-size: 14px;
+    }
+
+    .hamburger {
+        display: flex;
+    }
+
+    .nav-links {
+        display: none;
+        width: 100%;
+        text-align: center;
+        padding-top: 1em;
+    }
+
+    .nav-links.active {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .nav-links li {
+        margin: 0.5em 0;
+    }
+
+    .profile-header {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .profile-avatar {
+        width: 120px;
+        height: 120px;
+    }
+
+    .field-container {
+        flex-direction: column;
+    }
+
+    .edit-btn {
+        width: 100%;
+        margin-top: 0.5em;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        font-size: 12px;
+    }
+
+    .logo {
+        font-size: 1.25em;
+    }
+
+    h1 {
+        font-size: 1.8em;
+    }
+
+    .pong-animation {
+        height: 10em;
+    }
+
+    .paddle {
+        height: 3em;
+    }
+
+    .container {
+        width: 95%;
+        padding: 0.8em;
+    }
+
+    .profile-container,
+    .settings-container {
+        padding: 1em;
+    }
+}
+
+/* Navigation login state styles */
+.logged-in, .logged-out {
+    display: none;
+}
+
+body.is-logged-in .logged-in {
+    display: flex;
+}
+
+body.is-logged-out .logged-out {
+    display: flex;
+}
+
+/* Navigation buttons (Login/Register) */
+.btn-nav {
+    background-color: var(--primary-color);
+    color: var(--background-color) !important;
+    padding: 0.5em 1.5em;
+    border-radius: 4px;
+    transition: all var(--transition-speed) ease;
+    margin-left: 0.5em;
+}
+
+.btn-nav:hover {
+    background-color: var(--secondary-color);
+    transform: scale(1.05);
+}
+
+/* Mobile menu adjustments */
+@media (max-width: 768px) {
+    body.is-logged-in .logged-in,
+    body.is-logged-out .logged-out {
+        display: none;
+    }
+
+    body.is-logged-in .logged-in.active,
+    body.is-logged-out .logged-out.active {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        align-items: center;
+    }
+
+    .nav-links li {
+        margin: 0.5em 0;
+    }
+
+    .btn-nav {
+        margin: 0.5em 0;
+    }
+}
+
+/* Login Page Styles */
+.auth-container {
+    width: 100%;
+    max-width: 600px;
+    padding: 2em;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 2px solid var(--primary-color);
+    border-radius: var(--border-radius);
+    margin: 2em auto;
+}
+
+.form-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5em;
+    align-items: center;
+    justify-content: center;
+}
+
+.input-container {
+    display: flex;
+    align-items: center;
+    gap: 1em;
+    width: 100%;
+    max-width: 400px;
+}
+
+.input-container span {
+    min-width: 100px;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.8em;
+}
+
+.input-field {
+    flex: 1;
+    border: none;
+    border-bottom: 2px solid var(--text-color);
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-color);
+    padding: 0.8em;
+    transition: all var(--transition-speed) ease;
+}
+
+.input-field:hover, .input-field:focus {
+    border-bottom-color: var(--primary-color);
+    outline: none;
+}
+
+.more {
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.forgot-password {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.7em;
+    transition: color var(--transition-speed) ease;
+}
+
+.forgot-password:hover {
+    color: var(--secondary-color);
+}
+
+.auth-button {
+    width: 100%;
+    max-width: 400px;
+    padding: 1em;
+    background-color: var(--primary-color);
+    border: none;
+    border-radius: var(--border-radius);
+    color: var(--background-color);
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.8em;
+    cursor: pointer;
+    transition: all var(--transition-speed) ease;
+    margin: 0.5em 0;
+}
+
+.auth-button:hover {
+    background-color: var(--secondary-color);
+    transform: scale(1.02);
+}
+
+#otp-step {
+    width: 100%;
+    max-width: 400px;
+    margin: 1.5em auto;
+}
+
+/* Mobile Responsiveness for Login */
+@media (max-width: 768px) {
+    .auth-container {
+        padding: 1.5em;
+        margin: 1em auto;
+    }
+
+    .input-container {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .input-container span {
+        margin-bottom: 0.5em;
+    }
+
+    .input-field {
+        width: 100%;
+    }
+}
+
+
+/* Register Page Styles */
+.registration-form {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.form-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5em;
+    margin-bottom: 2em;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8em;
+}
+
+.form-group label {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.8em;
+    color: var(--text-color);
+}
+
+.file-input {
+    border: 2px dashed var(--text-color);
+    padding: 0.8em;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all var(--transition-speed) ease;
+}
+
+.file-input:hover {
+    border-color: var(--primary-color);
+    background-color: rgba(0, 255, 0, 0.1);
+}
+
+/* Style the file input button */
+.file-input::-webkit-file-upload-button {
+    background-color: var(--primary-color);
+    color: var(--background-color);
+    border: none;
+    padding: 0.5em 1em;
+    margin-right: 1em;
+    border-radius: 4px;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.8em;
+    cursor: pointer;
+    transition: all var(--transition-speed) ease;
+}
+
+.file-input::-webkit-file-upload-button:hover {
+    background-color: var(--secondary-color);
+}
+
+/* Mobile Responsiveness for Register Page */
+@media (max-width: 768px) {
+    .registration-form {
+        padding: 1em;
+    }
+    
+    .form-group label {
+        font-size: 0.7em;
+    }
+    
+    .file-input::-webkit-file-upload-button {
+        padding: 0.4em 0.8em;
+        font-size: 0.7em;
+    }
+}

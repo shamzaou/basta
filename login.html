@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PaddleBattle Authentication</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" 
+          rel="stylesheet" 
+          integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" 
+          crossorigin="anonymous">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@300;400;700&display=swap');
+        :root {
+            --primary-color: #00ff00;
+            --secondary-color: #ff00ff;
+            --background-color: #000000;
+            --text-color: #ffffff;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: black; 
+            color: white;
+            font-family: 'Press Start 2P', cursive;
+        }
+        .auth-container {
+            width: 600px;
+            padding: 20px;
+            background-color: black;
+            border: 2px solid white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        form.form-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            align-items: center;
+            justify-content: center;
+        }
+        .form-header {
+            text-align: center;
+        }
+        .more {
+            display: flex;
+            justify-content: space-between;
+        }
+        .input-container {
+            display: flex;
+            align-items: center;
+        }
+        .input-field {
+            border: none;
+            border-bottom: 2px solid white;
+            height: 30px;
+            background-color: rgb(20, 20, 20);
+            color: white;
+            transition-duration: 0.3s;
+        }
+        .input-field:hover {
+            border-bottom: 2px solid var(--primary-color);
+        }
+        .forgot-password {
+            color: #00ff00;
+            text-decoration: none;
+            transition-duration: 0.3s;
+        }
+        .forgot-password:hover {
+            color: #ff00ff;
+        }
+        .auth-button {
+            background-color: #00ff00;
+            border: none;
+            box-shadow: 0 3px white;
+            color: black;
+            transition-duration: 0.3s;
+        }
+        .auth-button > a {
+            color: black;
+            text-decoration: none;
+        }
+        .auth-button:hover {
+            background-color: #ff00ff;
+        }
+        .auth-button:active {
+            box-shadow: none;
+            transform: translateY(3px);
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container container">
+        <div class="form-header">
+            <h1>Welcome to FAST_PONG</h1>
+        </div>
+        
+        <!-- Traditional Login Form -->
+        <form class="form-container" id="loginForm">
+            <div class="input-container">
+                <span id="basic-addon1">Username:</span>
+                <input type="text" class="input-field" id="username" aria-label="Username" required>
+            </div>
+            <div class="input-container">
+                <span id="basic-addon1">Password:</span>
+                <input type="password" class="input-field" id="password" aria-label="Password" required>
+            </div>
+            <div class="more">
+                <div><a class="forgot-password" href="#">Forgot password...</a></div>
+            </div>
+            <button type="button" class="auth-button" id="sign-in">Sign in</button>
+            <button type="button" class="auth-button" id="register">Have no account</button>
+        </form>
+
+        <!-- OTP Verification Step -->
+        <div id="otp-step" style="display:none; margin-top: 20px;">
+            <div class="input-container">
+                <span id="basic-addon1">OTP:</span>
+                <input type="text" class="input-field" id="otp" aria-label="OTP">
+            </div>
+            <button type="button" class="auth-button" id="verify-otp">Verify OTP</button>
+        </div>
+
+        <!-- OR divider -->
+        <hr style="width:100%; border:1px solid white; margin: 20px 0;">
+        <p>OR</p>
+
+        <!-- 42 API OAuth Login Button -->
+        <button id="login-42" class="auth-button">Login with 42</button>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+    // Traditional Login
+    document.getElementById('sign-in').addEventListener('click', async () => {
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+
+    try {
+        // Send login request to the correct API endpoint
+        const response = await fetch('/api/login/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // Show OTP step if login is successful
+            alert('Login successful. Please verify OTP.');
+            document.getElementById('otp-step').style.display = 'block';
+            localStorage.setItem('username', username);
+        } else {
+            // Display error from the backend
+            console.error('Login failed:', data);
+            alert('Login failed: ' + (data.error || 'Unexpected error.'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred during login. Please try again.');
+    }
+});
+
+    // Verify OTP
+    document.getElementById('verify-otp').addEventListener('click', async () => {
+    const otp = document.getElementById('otp').value;
+    const username = localStorage.getItem('username');
+
+    try {
+        // Send OTP verification request to the correct API endpoint
+        const response = await fetch('/api/verify-otp/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, otp })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            alert('OTP verified successfully!');
+            localStorage.setItem('access_token', data.token);
+            window.location.href = data.redirect_url || 'http://localhost:8000/profile/';
+        } else {
+            console.error('OTP verification failed:', data);
+            alert('OTP verification failed: ' + (data.error || 'Unexpected error.'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred during OTP verification. Please try again.');
+    }
+});
+
+        // OAuth Login with 42 API
+        document.getElementById('login-42').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/redirect_uri/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    window.location.href = data.oauth_link;
+                } else {
+                    console.error('Error:', data);
+                    alert('Failed to initiate OAuth');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to initiate OAuth');
+            }
+        });
+
+        // Redirect to register page
+        document.getElementById('register').addEventListener('click', () => {
+            window.location.href = "{% url 'register' %}";
+        });
+    </script>
+</body>
+</html>
+
