@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'frontend/css/styles.css' %}">
 </head>
-<body>
+<body class="is-logged-out">
     <header>
         <div class="container">
             <nav>
@@ -233,7 +233,7 @@
                     <form class="form-container" id="loginForm">
                         <div class="input-container">
                             <span id="basic-addon1">Username:</span>
-                            <input type="text" class="input-field" id="username" aria-label="Username" required>
+                            <input type="text" class="input-field" id="login-username" aria-label="Username" required>
                         </div>
                         <div class="input-container">
                             <span id="basic-addon1">Password:</span>

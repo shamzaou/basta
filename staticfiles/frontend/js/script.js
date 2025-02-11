@@ -67,11 +67,65 @@ function getCookie(name) {
 }
 
 // Handle login
-function handleLogin(event) {
-    if (event) event.preventDefault();
-    localStorage.setItem('isLoggedIn', 'true');
-    checkLoginState();
-    showPage('home');
+async function handleLogin(event) {
+    event.preventDefault();
+    
+    const email = document.getElementById('login-username').value;
+    const password = document.getElementById('password').value;
+
+    try {
+        const response = await fetch('/api/login/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ email, password })
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+            localStorage.setItem('isLoggedIn', 'true');
+            localStorage.setItem('userData', JSON.stringify(data.user));
+            checkLoginState();
+            showPage('home');
+        } else {
+            alert(data.error);
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        alert('Login failed. Please try again.');
+    }
+}
+
+// Registration handler
+async function handleRegister(event) {
+    event.preventDefault();
+    
+    const formData = new FormData(document.getElementById('registerForm'));
+    
+    try {
+        const response = await fetch('/api/register/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: formData
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+            alert('Registration successful! Please log in.');
+            showPage('login');
+        } else {
+            alert(data.error);
+        }
+    } catch (error) {
+        console.error('Registration error:', error);
+        alert('Registration failed. Please try again.');
+    }
 }
 
 // Single DOMContentLoaded event listener

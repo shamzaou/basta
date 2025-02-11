@@ -1,3 +1,15 @@
+// Immediately clear any stored login state
+localStorage.removeItem('isLoggedIn');
+localStorage.removeItem('userData');
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Force logged-out state initially
+    document.body.classList.remove('is-logged-in');
+    document.body.classList.add('is-logged-out');
+    
+    checkLoginState();
+});
+
 // Page navigation
 function showPage(pageId) {
     // Update URL without page reload
@@ -32,21 +44,50 @@ window.addEventListener('popstate', () => {
 
 // Function to check login state
 function checkLoginState() {
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    document.body.classList.toggle('is-logged-in', isLoggedIn);
-    document.body.classList.toggle('is-logged-out', !isLoggedIn);
+    fetch('/api/auth/check-auth/')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Auth check response:', data);  // Debug log
+            
+            // Always remove both classes first
+            document.body.classList.remove('is-logged-in');
+            document.body.classList.remove('is-logged-out');
+            
+            // Then add the appropriate one
+            if (data.isAuthenticated) {
+                document.body.classList.add('is-logged-in');
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('userData', JSON.stringify(data.user));
+            } else {
+                document.body.classList.add('is-logged-out');
+                localStorage.removeItem('isLoggedIn');
+                localStorage.removeItem('userData');
+            }
+        })
+        .catch(error => {
+            console.error('Auth check error:', error);
+            // On error, ensure logged-out state
+            document.body.classList.remove('is-logged-in');
+            document.body.classList.add('is-logged-out');
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('userData');
+        });
 }
 
 // Handle logout
 function handleLogout() {
-    // Send request to Django logout URL
-    fetch('/logout/', {
+    fetch('/api/auth/logout/', {
         method: 'POST',
         headers: {
             'X-CSRFToken': getCookie('csrftoken')
         }
     }).then(() => {
-        window.location.href = '/';  // Redirect to home page
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('userData');
+        checkLoginState();  // This will update the UI
+        showPage('home');
+    }).catch(error => {
+        console.error('Logout error:', error);
     });
 }
 
@@ -67,11 +108,38 @@ function getCookie(name) {
 }
 
 // Handle login
-function handleLogin(event) {
-    if (event) event.preventDefault();
-    localStorage.setItem('isLoggedIn', 'true');
-    checkLoginState();
-    showPage('home');
+async function handleLogin(event) {
+    event.preventDefault();
+    
+    const email = document.getElementById('login-username').value;
+    const password = document.getElementById('password').value;
+
+    try {
+        const response = await fetch('/api/auth/login/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ email, password })
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+            // Login successful
+            localStorage.setItem('isLoggedIn', 'true');
+            localStorage.setItem('userData', JSON.stringify(data.user));
+            checkLoginState();
+            showPage('home');
+        } else {
+            // Login failed
+            alert(data.message || 'Login failed. Please try again.');
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        alert('Login failed. Please check your connection and try again.');
+    }
 }
 
 // Single DOMContentLoaded event listener
@@ -81,10 +149,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const pageId = path.substring(1) || 'home';  // Remove leading slash
     showPage(pageId);
  
-    // Set initial login state based on Django's authentication
-    const isAuthenticated = document.body.dataset.authenticated === 'true';
-    document.body.classList.toggle('is-logged-in', isAuthenticated);
-    document.body.classList.toggle('is-logged-out', !isAuthenticated);
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('userData');
  
     // Initial login state check
     checkLoginState();
@@ -165,3 +231,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const pageId = path.substring(1) || 'home';  // Remove leading slash
     showPage(pageId);
  });
+
+ // Add the event listener to the login form
+document.addEventListener('DOMContentLoaded', function() {
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleLogin);
+    }
+    
+    // Add event listener for the login button specifically
+    const signInButton = document.getElementById('sign-in');
+    if (signInButton) {
+        signInButton.addEventListener('click', handleLogin);
+    }
+});
