@@ -1,3 +1,19 @@
+/* Add this at the top of your CSS file */
+.page {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Reset any potential conflicting styles */
+.page.active {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    position: relative !important;
+    transform: none !important;
+}
+
 /* Root Variables */
 :root {
     --primary-color: #00ff00;
@@ -883,3 +899,64 @@ body.is-logged-out .logged-out {
         font-size: 0.7em;
     }
 }
+
+/* Add this to your CSS file */
+.page {
+    display: none;
+    width: 100%;
+    min-height: 100vh;
+}
+
+.page.active {
+    display: block !important;
+}
+
+/* Specific styles for register page */
+#register.page {
+    background-color: var(--bg-color, #f5f5f5);
+    padding: 2rem 0;
+}
+
+#register .auth-container {
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 2rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#register .form-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+#register .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+#register .input-field {
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+#register .auth-button {
+    width: 100%;
+    padding: 1rem;
+    margin-top: 1rem;
+    background-color: var(--primary-color, #007bff);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+#register .auth-button:hover {
+    background-color: var(--primary-color-dark, #0056b3);
+}
+

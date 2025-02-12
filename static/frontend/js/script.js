@@ -1,38 +1,61 @@
-// Immediately clear any stored login state
-localStorage.removeItem('isLoggedIn');
-localStorage.removeItem('userData');
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Force logged-out state initially
-    document.body.classList.remove('is-logged-in');
-    document.body.classList.add('is-logged-out');
-    
-    checkLoginState();
-});
-
 // Page navigation
-function showPage(pageId) {
+function showPage(pageId) {    
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    
+    // List of pages that should only be visible when logged in
+    const loggedInOnlyPages = ['profile', 'settings'];
+    // List of pages that should only be visible when logged out
+    const loggedOutOnlyPages = ['login', 'register'];
+    
+    if (isLoggedIn && loggedOutOnlyPages.includes(pageId)) {
+        console.log('Attempting to access auth page while logged in, redirecting to home');
+        pageId = 'home';
+    } else if (!isLoggedIn && loggedInOnlyPages.includes(pageId)) {
+        console.log('Attempting to access protected page while logged out, redirecting to login');
+        pageId = 'login';
+    }
+
     // Update URL without page reload
     history.pushState({}, '', '/' + pageId);
     
-    // Hide all pages
+    // Remove any stray classes or styles
     document.querySelectorAll('.page').forEach(page => {
         page.classList.remove('active');
+        page.style.removeProperty('display');
+        console.log(`Deactivating page: ${page.id}`);
     });
     
-    // Show selected page
+    // Add these debug lines before activating the page
     const targetPage = document.getElementById(pageId);
-    if (targetPage) {
-        targetPage.classList.add('active');
-    }
-    
-    // Update active nav link
-    document.querySelectorAll('.nav-links a').forEach(link => {
-        link.classList.remove('active');
-        if (link.getAttribute('onclick')?.includes(pageId)) {
-            link.classList.add('active');
-        }
+    console.log('Debug - Target Page:', {
+        id: pageId,
+        element: targetPage,
+        classList: targetPage?.classList.toString(),
+        display: targetPage?.style.display,
+        computedStyle: targetPage ? window.getComputedStyle(targetPage).display : 'none'
     });
+
+    if (targetPage) {
+        console.log(`Activating page: ${pageId}`);
+        targetPage.classList.add('active');
+        targetPage.style.display = 'block';
+        
+        // Also log the computed style to verify visibility
+        const computedStyle = window.getComputedStyle(targetPage);
+        console.log(`Page ${pageId} computed display after activation:`, computedStyle.display);
+    }
+
+    // Show selected page
+    // const targetPage = document.getElementById(pageId);
+    if (targetPage) {
+        console.log(`Activating page: ${pageId}`);
+        targetPage.classList.add('active');
+        targetPage.style.display = 'block';
+        
+        // Also log the computed style to verify visibility
+        const computedStyle = window.getComputedStyle(targetPage);
+        console.log(`Page ${pageId} computed display:`, computedStyle.display);
+    }
 }
 
 // Handle browser back/forward buttons
@@ -42,53 +65,24 @@ window.addEventListener('popstate', () => {
     showPage(pageId);
 });
 
-// Function to check login state
+// Check login state and update UI accordingly
 function checkLoginState() {
-    fetch('/api/auth/check-auth/')
-        .then(response => response.json())
-        .then(data => {
-            console.log('Auth check response:', data);  // Debug log
-            
-            // Always remove both classes first
-            document.body.classList.remove('is-logged-in');
-            document.body.classList.remove('is-logged-out');
-            
-            // Then add the appropriate one
-            if (data.isAuthenticated) {
-                document.body.classList.add('is-logged-in');
-                localStorage.setItem('isLoggedIn', 'true');
-                localStorage.setItem('userData', JSON.stringify(data.user));
-            } else {
-                document.body.classList.add('is-logged-out');
-                localStorage.removeItem('isLoggedIn');
-                localStorage.removeItem('userData');
-            }
-        })
-        .catch(error => {
-            console.error('Auth check error:', error);
-            // On error, ensure logged-out state
-            document.body.classList.remove('is-logged-in');
-            document.body.classList.add('is-logged-out');
-            localStorage.removeItem('isLoggedIn');
-            localStorage.removeItem('userData');
-        });
-}
-
-// Handle logout
-function handleLogout() {
-    fetch('/api/auth/logout/', {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': getCookie('csrftoken')
-        }
-    }).then(() => {
-        localStorage.removeItem('isLoggedIn');
-        localStorage.removeItem('userData');
-        checkLoginState();  // This will update the UI
-        showPage('home');
-    }).catch(error => {
-        console.error('Logout error:', error);
-    });
+    console.log('Checking login state...');
+    
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    console.log('isLoggedIn:', isLoggedIn);
+    
+    document.body.classList.remove('is-logged-in', 'is-logged-out');
+    document.body.classList.add(isLoggedIn ? 'is-logged-in' : 'is-logged-out');
+    
+    console.log('Body classes after update:', document.body.classList.toString());
+    
+    // Get all nav links
+    const loggedInNav = document.querySelector('.nav-links.logged-in');
+    const loggedOutNav = document.querySelector('.nav-links.logged-out');
+    
+    if (loggedInNav) loggedInNav.style.display = isLoggedIn ? 'flex' : 'none';
+    if (loggedOutNav) loggedOutNav.style.display = isLoggedIn ? 'none' : 'flex';
 }
 
 // Helper function to get CSRF token
@@ -127,47 +121,136 @@ async function handleLogin(event) {
         const data = await response.json();
         
         if (response.ok) {
-            // Login successful
             localStorage.setItem('isLoggedIn', 'true');
             localStorage.setItem('userData', JSON.stringify(data.user));
             checkLoginState();
             showPage('home');
         } else {
-            // Login failed
-            alert(data.message || 'Login failed. Please try again.');
+            alert(data.message || 'Login failed');
         }
     } catch (error) {
         console.error('Login error:', error);
-        alert('Login failed. Please check your connection and try again.');
+        alert('Login failed. Please try again.');
     }
 }
 
-// Single DOMContentLoaded event listener
+// Handle logout
+async function handleLogout() {
+    try {
+        const response = await fetch('/api/auth/logout/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+
+        if (response.ok) {
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('userData');
+            checkLoginState();
+            showPage('home');
+        }
+    } catch (error) {
+        console.error('Logout error:', error);
+        alert('Logout failed. Please try again.');
+    }
+}
+
+// Handle registration
+async function handleRegister(event) {
+    event.preventDefault();
+    
+    const formData = new FormData(document.getElementById('registerForm'));
+    const data = Object.fromEntries(formData.entries());
+
+    try {
+        const response = await fetch('/api/auth/register/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(data)
+        });
+
+        const responseData = await response.json();
+        
+        if (response.ok) {
+            alert('Registration successful! Please log in.');
+            showPage('login');
+        } else {
+            alert(responseData.message || 'Registration failed');
+        }
+    } catch (error) {
+        console.error('Registration error:', error);
+        alert('Registration failed. Please try again.');
+    }
+}
+
+// Main initialization
 document.addEventListener('DOMContentLoaded', () => {
-    // Initial page load
-    const path = window.location.pathname;
-    const pageId = path.substring(1) || 'home';  // Remove leading slash
-    showPage(pageId);
- 
+    // Force initial logout state
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('userData');
- 
-    // Initial login state check
+    
+    // Check login state
     checkLoginState();
+    
+    // Initial page load
+    const path = window.location.pathname;
+    const pageId = path.substring(1) || 'home';
+    showPage(pageId);
+    
+    // Login form handler
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleLogin);
+    }
+
+    // Sign in button handler
+    const signInButton = document.getElementById('sign-in');
+    if (signInButton) {
+        signInButton.addEventListener('click', handleLogin);
+    }
+    
+    // Register button in navbar
+    const registerNavLink = document.querySelector('a[href="/register"]');
+    if (registerNavLink) {
+        registerNavLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            showPage('register');
+        });
+    }
+    
+    // "Have no account" button in login form
+    const registerButton = document.getElementById('register-btn');
+    if (registerButton) {
+        registerButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            showPage('register');
+        });
+    }
+    
+    // Register form handler
+    const registerForm = document.getElementById('registerForm');
+    if (registerForm) {
+        registerForm.addEventListener('submit', handleRegister);
+    }
     
     // Mobile menu handling
     const hamburger = document.getElementById('hamburger-menu');
-    const navLinksLoggedIn = document.querySelector('.logged-in');
-    const navLinksLoggedOut = document.querySelector('.logged-out');
- 
-    hamburger.addEventListener('click', () => {
-        if (document.body.classList.contains('is-logged-in')) {
-            navLinksLoggedIn.classList.toggle('active');
-        } else {
-            navLinksLoggedOut.classList.toggle('active');
-        }
-    });
- 
+    const navLinksLoggedIn = document.querySelector('.nav-links.logged-in');
+    const navLinksLoggedOut = document.querySelector('.nav-links.logged-out');
+    
+    if (hamburger) {
+        hamburger.addEventListener('click', () => {
+            const navLinks = document.body.classList.contains('is-logged-in') 
+                ? navLinksLoggedIn 
+                : navLinksLoggedOut;
+            navLinks?.classList.toggle('active');
+        });
+    }
+    
     // Settings form handling
     const settingsForm = document.getElementById('settings-form');
     if (settingsForm) {
@@ -176,7 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Settings saved successfully!');
         });
     }
- 
+    
     // Edit buttons in settings
     document.querySelectorAll('.edit-btn').forEach(button => {
         button.addEventListener('click', () => {
@@ -198,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
- 
+    
     // Avatar upload handling
     const avatarUpload = document.getElementById('avatar-upload');
     if (avatarUpload) {
@@ -213,7 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
- 
+    
     // Delete account confirmation
     const deleteAccountBtn = document.getElementById('delete-account');
     if (deleteAccountBtn) {
@@ -222,26 +305,5 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('Account deletion initiated...');
             }
         });
-    }
- });
- 
- // Handle browser back/forward buttons
- window.addEventListener('popstate', () => {
-    const path = window.location.pathname;
-    const pageId = path.substring(1) || 'home';  // Remove leading slash
-    showPage(pageId);
- });
-
- // Add the event listener to the login form
-document.addEventListener('DOMContentLoaded', function() {
-    const loginForm = document.getElementById('loginForm');
-    if (loginForm) {
-        loginForm.addEventListener('submit', handleLogin);
-    }
-    
-    // Add event listener for the login button specifically
-    const signInButton = document.getElementById('sign-in');
-    if (signInButton) {
-        signInButton.addEventListener('click', handleLogin);
     }
 });

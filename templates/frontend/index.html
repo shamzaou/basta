@@ -217,6 +217,7 @@
                 <h1>TicTacToe</h1>
                 <div class="tictactoe-container">
                     <!-- TicTacToe game will be inserted here -->
+                    <canvas id="tictactoeCanvas"></canvas>
                 </div>
             </div>
         </div>
@@ -230,20 +231,33 @@
                     </div>
                     
                     <!-- Traditional Login Form -->
-                    <form class="form-container" id="loginForm">
+                    <form class="form-container" id="loginForm" novalidate>
                         <div class="input-container">
-                            <span id="basic-addon1">Username:</span>
-                            <input type="text" class="input-field" id="login-username" aria-label="Username" required>
+                            <span id="basic-addon1">Email:</span>
+                            <input 
+                                type="email" 
+                                class="input-field" 
+                                id="login-username" 
+                                aria-label="Email"
+                                required
+                                pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
+                            >
+                            <div class="error-message" id="email-error"></div>
                         </div>
                         <div class="input-container">
                             <span id="basic-addon1">Password:</span>
-                            <input type="password" class="input-field" id="password" aria-label="Password" required>
-                        </div>
-                        <div class="more">
-                            <div><a class="forgot-password" href="#">Forgot password...</a></div>
+                            <input 
+                                type="password" 
+                                class="input-field" 
+                                id="password" 
+                                aria-label="Password"
+                                required
+                                minlength="8"
+                            >
+                            <div class="error-message" id="password-error"></div>
                         </div>
                         <button type="button" class="auth-button" id="sign-in">Sign in</button>
-                        <button type="button" class="auth-button" id="register">Have no account</button>
+                        <button type="button" class="auth-button" id="register-btn">Have no account</button>
                     </form>
 
                     <!-- OTP Verification Step -->
@@ -270,7 +284,7 @@
             <div class="container">
                 <div class="auth-container">
                     <h2>Register</h2>
-                    <form id="registerForm" class="registration-form" enctype="multipart/form-data">
+                    <form id="registerForm" class="registration-form">
                         <div class="form-grid">
                             <div class="form-group">
                                 <label for="id_username">Nickname:</label>
@@ -291,14 +305,9 @@
                                 <label for="id_password2">Confirm Password:</label>
                                 <input type="password" name="password2" class="input-field" id="id_password2" required>
                             </div>
-                            
-                            <div class="form-group">
-                                <label for="id_profile_picture">Profile Picture (Optional):</label>
-                                <input type="file" name="profile_picture" class="file-input" id="id_profile_picture" accept="image/*">
-                            </div>
                         </div>
                         
-                        <button type="button" id="register-button" class="auth-button">Submit</button>
+                        <button type="submit" id="register-button" class="auth-button">Register</button>
                     </form>
                 </div>
             </div>
