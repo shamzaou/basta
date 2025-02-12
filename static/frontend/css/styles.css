@@ -827,18 +827,6 @@ body.is-logged-out .logged-out {
 
 
 /* Register Page Styles */
-.registration-form {
-    width: 100%;
-    max-width: 600px;
-    margin: 0 auto;
-}
-
-.form-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5em;
-    margin-bottom: 2em;
-}
 
 .form-group {
     display: flex;
@@ -884,22 +872,6 @@ body.is-logged-out .logged-out {
     background-color: var(--secondary-color);
 }
 
-/* Mobile Responsiveness for Register Page */
-@media (max-width: 768px) {
-    .registration-form {
-        padding: 1em;
-    }
-    
-    .form-group label {
-        font-size: 0.7em;
-    }
-    
-    .file-input::-webkit-file-upload-button {
-        padding: 0.4em 0.8em;
-        font-size: 0.7em;
-    }
-}
-
 /* Add this to your CSS file */
 .page {
     display: none;
@@ -911,51 +883,113 @@ body.is-logged-out .logged-out {
     display: block !important;
 }
 
-/* Specific styles for register page */
-#register.page {
-    background-color: var(--background-color);
-    padding: 2rem 0;
+/* REFACTORED STYLES for login and register */
+.auth-container {
+    width: 100%;
+    max-width: 600px;
+    padding: 2em;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 2px solid var(--primary-color);
+    border-radius: var(--border-radius);
+    margin: 2em auto;
 }
 
-#register .auth-container {
-    max-width: 500px;
-    margin: 0 auto;
-    padding: 2rem;
-    background: black;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-#register .form-grid {
-    display: grid;
-    gap: 1rem;
-}
-
-#register .form-group {
+.form-container {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 1.5em;
+    align-items: center;
+    justify-content: center;
 }
 
-#register .input-field {
-    padding: 0.75rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 1rem;
-}
-
-#register .auth-button {
+.input-container {
+    display: flex;
+    align-items: center;
+    gap: 1em;
     width: 100%;
-    padding: 1rem;
-    margin-top: 1rem;
-    background-color: var(--primary-color, #007bff);
-    color: black;
-    border: none;
-    border-radius: 4px;
-    font-size: 1rem;
-    cursor: pointer;
+    max-width: 400px;
 }
 
-#register .auth-button:hover {
-    background-color: var(--primary-color-dark, #0056b3);
+.input-container span {
+    min-width: 100px;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.8em;
+}
+
+.input-field {
+    flex: 1;
+    border: none;
+    border-bottom: 2px solid var(--text-color);
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-color);
+    padding: 0.8em;
+    transition: all var(--transition-speed) ease;
+}
+
+.input-field:hover, .input-field:focus {
+    border-bottom-color: var(--primary-color);
+    outline: none;
+}
+
+.auth-button {
+    width: 100%;
+    max-width: 400px;
+    padding: 1em;
+    background-color: var(--primary-color);
+    border: none;
+    border-radius: var(--border-radius);
+    color: var(--background-color);
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.8em;
+    cursor: pointer;
+    transition: all var(--transition-speed) ease;
+    margin: 0.5em 0;
+}
+
+.auth-button:hover {
+    background-color: var(--secondary-color);
+    transform: scale(1.02);
+}
+
+/* Keep the basic page display rules */
+.page {
+    display: none;
+    width: 100%;
+    min-height: 100vh;
+}
+
+.page.active {
+    display: block !important;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .auth-container {
+        padding: 1.5em;
+        margin: 1em auto;
+    }
+
+    .input-container {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .input-container span {
+        margin-bottom: 0.5em;
+    }
+
+    .input-field {
+        width: 100%;
+    }
+}
+/* Center the OR divider and 42 login button */
+.auth-container p {  /* This targets the "OR" text */
+    text-align: center;
+    margin: 20px 0;
+}
+
+#login-42 {
+    display: block;  /* Make button a block element */
+    margin: 0 auto;  /* Center the button */
+    max-width: 400px;  /* Match other buttons width */
 }
