@@ -80,10 +80,10 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'fastpong_db',
-        'USER': 'postgres',  # This is usually the default unless you changed it
-        'PASSWORD': 'Madmin',  # The password you set during PostgreSQL installation
-        'HOST': 'localhost',
+        'NAME': 'basta_db',                  # Match docker-compose.yml
+        'USER': 'postgres',                  # Match docker-compose.yml
+        'PASSWORD': 'postgres',              # Match docker-compose.yml
+        'HOST': 'db',                       # Use the service name from docker-compose.yml
         'PORT': '5432',
     }
 }
