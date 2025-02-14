@@ -103,21 +103,21 @@
 <body>
     <div class="container">
         <h2>Register</h2>
-        <form method="POST" id="registerForm" class="auth-container" enctype="multipart/form-data">
+        <form id="registerForm" class="auth-container">
+            <!-- Remove method="POST" and enctype="multipart/form-data" -->
             <div class="left-side">
                 <label for="id_username">Nickname:</label>
                 <label for="id_email">Email:</label>
                 <label for="id_password1">Password:</label>
                 <label for="id_password2">Confirm Password:</label>
-                <label for="id_profile_picture">Profile Picture (Optional):</label>
             </div>
             <div class="right-side">
                 <input type="text" name="username" class="input-field" id="id_username" required>
                 <input type="email" name="email" class="input-field" id="id_email" required>
                 <input type="password" name="password1" class="input-field" id="id_password1" required>
                 <input type="password" name="password2" class="input-field" id="id_password2" required>
-                <input type="file" name="profile_picture" class="input-field" id="id_profile_picture" accept="image/*">
             </div>
+            <button type="submit" class="auth-button">Register</button>
         </form>
         <button type="button" id="register-button" class="auth-button">Submit</button>
     </div>

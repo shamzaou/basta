@@ -154,3 +154,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_COOKIE_AGE = 86400  # 24 hours in seconds
 SESSION_COOKIE_NAME = 'sessionid'
+
+CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_HTTPONLY = False  # False to allow JavaScript access
+CSRF_USE_SESSIONS = False
+CSRF_COOKIE_NAME = 'csrftoken'

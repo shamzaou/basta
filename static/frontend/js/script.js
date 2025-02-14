@@ -160,35 +160,71 @@ async function handleLogout() {
 async function handleRegister(event) {
     event.preventDefault();
     
-    const formData = new FormData(document.getElementById('registerForm'));
-    const data = Object.fromEntries(formData.entries());
-
+    // First ensure we have a CSRF token
     try {
+        // Get fresh CSRF token
+        await fetch('/api/auth/check-auth/', {
+            method: 'GET',
+            credentials: 'include'
+        });
+
+        const username = document.getElementById('id_username').value;
+        const email = document.getElementById('id_email').value;
+        const password1 = document.getElementById('id_password1').value;
+        const password2 = document.getElementById('id_password2').value;
+
+        if (password1 !== password2) {
+            alert('Passwords do not match');
+            return;
+        }
+
+        const formData = {
+            username,
+            email,
+            password1,
+            password2
+        };
+
+        console.log('Sending registration data:', formData); // Debug log
+
         const response = await fetch('/api/auth/register/', {
             method: 'POST',
+            credentials: 'include',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCookie('csrftoken')
             },
-            body: JSON.stringify(data)
+            body: JSON.stringify(formData)
         });
 
-        const responseData = await response.json();
-        
+        const data = await response.json();
+        console.log('Server response:', data); // Debug log
+
         if (response.ok) {
-            alert('Registration successful! Please log in.');
-            showPage('login');
+            alert('Registration successful!');
+            window.location.href = '/login/';
         } else {
-            alert(responseData.message || 'Registration failed');
+            alert(data.message || data.error || 'Registration failed');
         }
     } catch (error) {
         console.error('Registration error:', error);
-        alert('Registration failed. Please try again.');
+        alert('Registration failed. Please check the console for details.');
     }
 }
 
 // Main initialization
 document.addEventListener('DOMContentLoaded', () => {
+
+    console.log('DOM loaded, setting up event listeners');
+    
+    const registerForm = document.getElementById('registerForm');
+    if (registerForm) {
+        console.log('Register form found, adding submit handler');
+        registerForm.addEventListener('submit', handleRegister);
+    } else {
+        console.log('Register form not found');
+    }
+
     // Force initial logout state
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('userData');
@@ -232,7 +268,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Register form handler
-    const registerForm = document.getElementById('registerForm');
     if (registerForm) {
         registerForm.addEventListener('submit', handleRegister);
     }
