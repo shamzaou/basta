@@ -76,5 +76,9 @@ format:
 	docker-compose exec web black .
 	docker-compose exec web isort .
 
+db:
+	@echo "$(GREEN)Connecting to PostgreSQL database...$(RESET)"
+	docker-compose exec db psql -U postgres -d basta_db
+
 # Default target
 .DEFAULT_GOAL := help
