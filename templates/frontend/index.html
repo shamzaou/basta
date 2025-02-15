@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ft_transcendence</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'frontend/css/styles.css' %}">
 </head>
 <body class="is-logged-out">
@@ -200,13 +201,21 @@
             </div>
         </div>
 
-        <!-- Game Page Placeholder -->
+        <!-- Game Page -->
         <div id="game" class="page">
             <div class="container">
                 <h1>Pong Game</h1>
                 <div class="game-container">
-                    <!-- Game canvas will be inserted here -->
-                    <canvas id="pongCanvas"></canvas>
+                    <!-- Score and UI elements -->
+                    <div id="score" class="ui-element">00 - 00</div>
+                    <div id="instructions" class="ui-element">P1: W/S | P2: ↑/↓ | SPACE: Pause</div>
+                    <div id="pauseText" class="ui-element">PAUSED</div>
+                    
+                    <!-- Mode selection buttons -->
+                    <div id="modeSelection">
+                        <button id="pvpButton" class="mode-button">Player vs Player</button>
+                        <button id="aiButton" class="mode-button">Player vs AI</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -315,5 +324,12 @@
     </main>
 
     <script src="{% static 'frontend/js/script.js' %}"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script type="module">
+        import PongGame from '{% static "frontend/js/pong.js" %}';
+        import TicTacToeGame from '{% static "frontend/js/tictactoe.js" %}';
+        window.PongGame = PongGame; // Make them available globally
+        window.TicTacToeGame = TicTacToeGame;
+    </script>
 </body>
 </html>

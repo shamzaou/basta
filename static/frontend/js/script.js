@@ -2,59 +2,53 @@
 function showPage(pageId) {    
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     
-    // List of pages that should only be visible when logged in
-    const loggedInOnlyPages = ['profile', 'settings'];
-    // List of pages that should only be visible when logged out
-    const loggedOutOnlyPages = ['login', 'register'];
-    
-    if (isLoggedIn && loggedOutOnlyPages.includes(pageId)) {
-        console.log('Attempting to access auth page while logged in, redirecting to home');
+    // Handle page access permissions
+    if (isLoggedIn && ['login', 'register'].includes(pageId)) {
         pageId = 'home';
-    } else if (!isLoggedIn && loggedInOnlyPages.includes(pageId)) {
-        console.log('Attempting to access protected page while logged out, redirecting to login');
+    } else if (!isLoggedIn && ['profile', 'settings'].includes(pageId)) {
         pageId = 'login';
     }
 
-    // Update URL without page reload
+    // Update URL and page visibility
     history.pushState({}, '', '/' + pageId);
-    
-    // Remove any stray classes or styles
     document.querySelectorAll('.page').forEach(page => {
         page.classList.remove('active');
-        page.style.removeProperty('display');
-        console.log(`Deactivating page: ${page.id}`);
-    });
-    
-    // Add these debug lines before activating the page
-    const targetPage = document.getElementById(pageId);
-    console.log('Debug - Target Page:', {
-        id: pageId,
-        element: targetPage,
-        classList: targetPage?.classList.toString(),
-        display: targetPage?.style.display,
-        computedStyle: targetPage ? window.getComputedStyle(targetPage).display : 'none'
+        page.style.display = 'none';
     });
 
-    if (targetPage) {
-        console.log(`Activating page: ${pageId}`);
-        targetPage.classList.add('active');
-        targetPage.style.display = 'block';
-        
-        // Also log the computed style to verify visibility
-        const computedStyle = window.getComputedStyle(targetPage);
-        console.log(`Page ${pageId} computed display after activation:`, computedStyle.display);
+    const targetPage = document.getElementById(pageId);
+    if (!targetPage) return;
+
+    targetPage.classList.add('active');
+    targetPage.style.display = 'block';
+
+    // Clean up any existing game
+    if (window.currentGame) {
+        window.currentGame.cleanup();
+        window.currentGame = null;
     }
 
-    // Show selected page
-    // const targetPage = document.getElementById(pageId);
-    if (targetPage) {
-        console.log(`Activating page: ${pageId}`);
-        targetPage.classList.add('active');
-        targetPage.style.display = 'block';
-        
-        // Also log the computed style to verify visibility
-        const computedStyle = window.getComputedStyle(targetPage);
-        console.log(`Page ${pageId} computed display:`, computedStyle.display);
+    // Handle game initializations
+    if (pageId === 'game') {
+        const modeSelection = document.getElementById('modeSelection');
+        modeSelection.style.display = 'flex';
+
+        document.getElementById('pvpButton').onclick = () => {
+            modeSelection.style.display = 'none';
+            const gameContainer = document.querySelector('.game-container');
+            window.currentGame = new window.PongGame(gameContainer, 'pvp');
+            window.currentGame.physics.resetBall();
+        };
+
+        document.getElementById('aiButton').onclick = () => {
+            modeSelection.style.display = 'none';
+            const gameContainer = document.querySelector('.game-container');
+            window.currentGame = new window.PongGame(gameContainer, 'ai');
+            window.currentGame.physics.resetBall();
+        };
+    } else if (pageId === 'tictactoe') {
+        const gameContainer = document.querySelector('.tictactoe-container');
+        window.currentGame = new window.TicTacToeGame(gameContainer);
     }
 }
 
