@@ -342,3 +342,30 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+async function initiate42OAuth() {
+    try {
+        const response = await fetch('/api/auth/redirect_uri/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = await response.json();
+        console.log("OAuth API Response:", data); // Debugging log
+
+        if (response.ok && data.oauth_link) {
+            checkLoginState();
+            console.log("Redirecting to:", data.oauth_link); // Debugging log
+            window.location.href = data.oauth_link;
+        } else {
+            console.error('Error:', data);
+            alert('Failed to initiate OAuth');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to initiate OAuth');
+    }
+}
+
+// Event listener for OAuth button in login page
+document.getElementById('login-42').addEventListener('click', initiate42OAuth);

@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+from decouple import config
 from pathlib import Path
 AUTH_USER_MODEL = 'userapp.User'
 
@@ -40,6 +41,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'gameapp',
     'userapp',
+    'django_otp',
+    'django_otp.plugins.otp_totp',
 ]
 
 
@@ -72,7 +75,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'backend.wsgi.application'
-
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
@@ -159,3 +161,23 @@ CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_HTTPONLY = False  # False to allow JavaScript access
 CSRF_USE_SESSIONS = False
 CSRF_COOKIE_NAME = 'csrftoken'
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "transcendance.2fa@gmail.com"
+EMAIL_HOST_PASSWORD = "poba ejtv oemo afsj"
+DEFAULT_FROM_EMAIL = "2FA <transcendance.2fa@gmail.com>"
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
+
+JWT_SETTINGS = {
+    'JWT_SECRET_KEY': config('JWT_SECRET_KEY'),
+    'JWT_EXP_DELTA_SECONDS': 4200,
+    'JWT_ALGORITHM': 'HS256'
+}
