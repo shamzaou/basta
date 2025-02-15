@@ -1,24 +1,51 @@
 // Page navigation
-function showPage(pageId) {    
+// Track current page for navigation
+let currentPage = 'home';
+
+function showPage(pageId, pushState = true) {
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     
     // Handle page access permissions
     if (isLoggedIn && ['login', 'register'].includes(pageId)) {
+        console.log('Redirecting to home: logged-in user attempting to access auth page');
         pageId = 'home';
     } else if (!isLoggedIn && ['profile', 'settings'].includes(pageId)) {
+        console.log('Redirecting to login: non-logged-in user attempting to access protected page');
         pageId = 'login';
     }
 
-    // Update URL and page visibility
-    history.pushState({}, '', '/' + pageId);
+    // Validate page exists
+    const targetPage = document.getElementById(pageId);
+    if (!targetPage) {
+        console.error(`Page ${pageId} not found`);
+        pageId = 'home'; // Fallback to home page if target doesn't exist
+        targetPage = document.getElementById(pageId);
+    }
+
+    // Only push state if we're actually changing pages and pushState is true
+    if (pushState && pageId !== currentPage) {
+        const newUrl = pageId === 'home' ? '/' : `/${pageId}`;
+        history.pushState({ pageId }, '', newUrl);
+    }
+
+    // Store current page
+    currentPage = pageId;
+
+    // Update active page in navigation
+    document.querySelectorAll('.nav-links a').forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === `/${pageId}` || (pageId === 'home' && link.getAttribute('href') === '/')) {
+            link.classList.add('active');
+        }
+    });
+
+    // Hide all pages
     document.querySelectorAll('.page').forEach(page => {
         page.classList.remove('active');
         page.style.display = 'none';
     });
 
-    const targetPage = document.getElementById(pageId);
-    if (!targetPage) return;
-
+    // Show target page
     targetPage.classList.add('active');
     targetPage.style.display = 'block';
 
@@ -29,34 +56,81 @@ function showPage(pageId) {
     }
 
     // Handle game initializations
+    initializeGameIfNeeded(pageId);
+}
+
+// Separate function for game initialization
+function initializeGameIfNeeded(pageId) {
     if (pageId === 'game') {
         const modeSelection = document.getElementById('modeSelection');
-        modeSelection.style.display = 'flex';
-
-        document.getElementById('pvpButton').onclick = () => {
-            modeSelection.style.display = 'none';
-            const gameContainer = document.querySelector('.game-container');
-            window.currentGame = new window.PongGame(gameContainer, 'pvp');
-            window.currentGame.physics.resetBall();
-        };
-
-        document.getElementById('aiButton').onclick = () => {
-            modeSelection.style.display = 'none';
-            const gameContainer = document.querySelector('.game-container');
-            window.currentGame = new window.PongGame(gameContainer, 'ai');
-            window.currentGame.physics.resetBall();
-        };
+        if (modeSelection) {
+            modeSelection.style.display = 'flex';
+            
+            const pvpButton = document.getElementById('pvpButton');
+            const aiButton = document.getElementById('aiButton');
+            
+            if (pvpButton) {
+                pvpButton.onclick = () => {
+                    modeSelection.style.display = 'none';
+                    const gameContainer = document.querySelector('.game-container');
+                    window.currentGame = new window.PongGame(gameContainer, 'pvp');
+                    window.currentGame.physics.resetBall();
+                };
+            }
+            
+            if (aiButton) {
+                aiButton.onclick = () => {
+                    modeSelection.style.display = 'none';
+                    const gameContainer = document.querySelector('.game-container');
+                    window.currentGame = new window.PongGame(gameContainer, 'ai');
+                    window.currentGame.physics.resetBall();
+                };
+            }
+        }
     } else if (pageId === 'tictactoe') {
         const gameContainer = document.querySelector('.tictactoe-container');
-        window.currentGame = new window.TicTacToeGame(gameContainer);
+        if (gameContainer) {
+            window.currentGame = new window.TicTacToeGame(gameContainer);
+        }
     }
 }
 
-// Handle browser back/forward buttons
-window.addEventListener('popstate', () => {
+// Handle browser back/forward navigation
+window.addEventListener('popstate', (event) => {
+    if (!event.state) {
+        // If no state exists, create one based on current URL
+        const path = window.location.pathname;
+        const pageId = path.substring(1) || 'home';
+        history.replaceState({ pageId }, '', path);
+        showPage(pageId, false);
+        return;
+    }
+
+    showPage(event.state.pageId, false);
+});
+
+// Initialize history state on page load
+window.addEventListener('load', () => {
     const path = window.location.pathname;
-    const pageId = path.substring(1) || 'home';  // Remove leading slash
-    showPage(pageId);
+    const initialPage = path.substring(1) || 'home';
+    
+    // Set initial history state if it doesn't exist
+    if (!history.state) {
+        history.replaceState({ pageId: initialPage }, '', path);
+    }
+    
+    showPage(initialPage, false);
+    checkLoginState(); // Ensure login state is checked after page is shown
+});
+
+// Add click handler for navigation links to prevent default behavior
+document.addEventListener('click', (event) => {
+    const link = event.target.closest('a');
+    if (link && link.getAttribute('href')?.startsWith('/')) {
+        event.preventDefault();
+        const pageId = link.getAttribute('href').substring(1) || 'home';
+        showPage(pageId, true);
+    }
 });
 
 // Check login state and update UI accordingly
