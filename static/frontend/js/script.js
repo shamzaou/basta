@@ -18,7 +18,8 @@ function showPage(pageId, pushState = true) {
     const targetPage = document.getElementById(pageId);
     if (!targetPage) {
         console.error(`Page ${pageId} not found`);
-        return;
+        pageId = 'home'; // Fallback to home page if target doesn't exist
+        targetPage = document.getElementById(pageId);
     }
 
     // Update URL if needed
@@ -33,8 +34,7 @@ function showPage(pageId, pushState = true) {
     // Update active page in navigation
     document.querySelectorAll('.nav-links a').forEach(link => {
         link.classList.remove('active');
-        const href = link.getAttribute('href');
-        if (href === `/${pageId}` || (pageId === 'home' && href === '/')) {
+        if (link.getAttribute('href') === `/${pageId}` || (pageId === 'home' && link.getAttribute('href') === '/')) {
             link.classList.add('active');
         }
     });
@@ -56,6 +56,11 @@ function showPage(pageId, pushState = true) {
     }
 
     // Handle game initializations
+    initializeGameIfNeeded(pageId);
+}
+
+// Separate function for game initialization
+function initializeGameIfNeeded(pageId) {
     if (pageId === 'game') {
         const modeSelection = document.getElementById('modeSelection');
         if (modeSelection) {
@@ -92,30 +97,30 @@ function showPage(pageId, pushState = true) {
 
 // Handle browser back/forward navigation
 window.addEventListener('popstate', (event) => {
-    const state = event.state;
-    let pageId;
-    
-    if (state && state.pageId) {
-        // Use the page ID from state if available
-        pageId = state.pageId;
-    } else {
-        // Fall back to parsing from URL
+    if (!event.state) {
+        // If no state exists, create one based on current URL
         const path = window.location.pathname;
-        pageId = path.substring(1) || 'home';
+        const pageId = path.substring(1) || 'home';
+        history.replaceState({ pageId }, '', path);
+        showPage(pageId, false);
+        return;
     }
-    
-    // Show page without pushing new state
-    showPage(pageId, false);
+
+    showPage(event.state.pageId, false);
 });
 
 // Initialize history state on page load
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('load', () => {
     const path = window.location.pathname;
     const initialPage = path.substring(1) || 'home';
     
-    // Set initial history state
-    history.replaceState({ pageId: initialPage }, '', path);
+    // Set initial history state if it doesn't exist
+    if (!history.state) {
+        history.replaceState({ pageId: initialPage }, '', path);
+    }
+    
     showPage(initialPage, false);
+    checkLoginState(); // Ensure login state is checked after page is shown
 });
 
 // Check login state and update UI accordingly
