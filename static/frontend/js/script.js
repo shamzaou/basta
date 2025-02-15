@@ -22,8 +22,8 @@ function showPage(pageId, pushState = true) {
         targetPage = document.getElementById(pageId);
     }
 
-    // Update URL if needed
-    if (pushState) {
+    // Only push state if we're actually changing pages and pushState is true
+    if (pushState && pageId !== currentPage) {
         const newUrl = pageId === 'home' ? '/' : `/${pageId}`;
         history.pushState({ pageId }, '', newUrl);
     }
@@ -121,6 +121,16 @@ window.addEventListener('load', () => {
     
     showPage(initialPage, false);
     checkLoginState(); // Ensure login state is checked after page is shown
+});
+
+// Add click handler for navigation links to prevent default behavior
+document.addEventListener('click', (event) => {
+    const link = event.target.closest('a');
+    if (link && link.getAttribute('href')?.startsWith('/')) {
+        event.preventDefault();
+        const pageId = link.getAttribute('href').substring(1) || 'home';
+        showPage(pageId, true);
+    }
 });
 
 // Check login state and update UI accordingly
