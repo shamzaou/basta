@@ -231,50 +231,20 @@
                     </div>
                     
                     <!-- Traditional Login Form -->
-                    <form class="form-container" id="loginForm" novalidate>
+                    <form id="loginForm" class="form-container">
                         <div class="input-container">
-                            <span id="basic-addon1">Email:</span>
-                            <input 
-                                type="email" 
-                                class="input-field" 
-                                id="login-username" 
-                                aria-label="Email"
-                                required
-                                pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
-                            >
-                            <div class="error-message" id="email-error"></div>
+                            <span>Email:</span>
+                            <input type="email" name="email" class="input-field" id="login-username" required>
                         </div>
+                        
                         <div class="input-container">
-                            <span id="basic-addon1">Password:</span>
-                            <input 
-                                type="password" 
-                                class="input-field" 
-                                id="password" 
-                                aria-label="Password"
-                                required
-                                minlength="8"
-                            >
-                            <div class="error-message" id="password-error"></div>
+                            <span>Password:</span>
+                            <input type="password" name="password" class="input-field" id="password" required>
                         </div>
-                        <button type="button" class="auth-button" id="sign-in">Sign in</button>
-                        <button type="button" class="auth-button" id="register-btn">Have no account</button>
+                        
+                        <button type="submit" id="login-button" class="auth-button">Sign In</button>
+                        <button type="button" id="login-42" class="auth-button">Sign in with 42</button>
                     </form>
-
-                    <!-- OTP Verification Step -->
-                    <div id="otp-step" style="display:none; margin-top: 20px;">
-                        <div class="input-container">
-                            <span id="basic-addon1">OTP:</span>
-                            <input type="text" class="input-field" id="otp" aria-label="OTP">
-                        </div>
-                        <button type="button" class="auth-button" id="verify-otp">Verify OTP</button>
-                    </div>
-
-                    <!-- OR divider -->
-                    <hr style="width:100%; border:1px solid white; margin: 20px 0;">
-                    <p>OR</p>
-
-                    <!-- 42 API OAuth Login Button -->
-                    <button id="login-42" class="auth-button">Login with 42</button>
                 </div>
             </div>
         </div>
@@ -307,12 +277,34 @@
                             <input type="password" name="password2" class="input-field" id="id_password2" required>
                         </div>
                         
+                        <div class="input-container">
+                            <label for="enable_2fa">
+                                <input type="checkbox" id="enable_2fa" name="enable_2fa">
+                                Enable Two-Factor Authentication
+                            </label>
+                            <div class="help-text">
+                                If enabled, you'll need to enter a code sent to your email when logging in
+                            </div>
+                        </div>
+                        
                         <button type="submit" id="register-button" class="auth-button">Register</button>
                     </form>
                 </div>
             </div>
         </div>
     </main>
+
+    <!-- Move OTP Modal outside of any page, directly under main -->
+    <div id="otp-modal" class="modal">
+        <div class="modal-content">
+            <h2>Two-Factor Authentication Required</h2>
+            <p>A verification code has been sent to your email.</p>
+            <div class="input-container">
+                <input type="text" id="otp-input" pattern="[0-9]{6}" maxlength="6" placeholder="Enter 6-digit code">
+            </div>
+            <button id="verify-otp" class="auth-button">Verify Code</button>
+        </div>
+    </div>
 
     <script src="{% static 'frontend/js/script.js' %}"></script>
 </body>

@@ -15,6 +15,11 @@ function showPage(pageId) {
         pageId = 'login';
     }
 
+    // Check if this is an OAuth redirect
+    if (pageId === 'home' && window.location.pathname === '/home') {
+        checkOAuthLogin(); // This will handle setting the login state
+    }
+
     // Update URL without page reload
     history.pushState({}, '', '/' + pageId);
     
@@ -119,14 +124,32 @@ async function handleLogin(event) {
         });
 
         const data = await response.json();
+        console.log('Login response:', data);
         
         if (response.ok) {
-            localStorage.setItem('isLoggedIn', 'true');
-            localStorage.setItem('userData', JSON.stringify(data.user));
-            checkLoginState();
-            showPage('home');
+            if (data.requires_2fa) {
+                // Password is correct, but 2FA is required
+                localStorage.setItem('temp_email', email);
+                alert(data.message); // "Please check your email for OTP"
+                
+                // Show OTP modal
+                const modal = document.getElementById('otp-modal');
+                modal.style.display = 'block';
+                document.getElementById('otp-input').focus();
+                
+                // Clear password field for security
+                document.getElementById('password').value = '';
+            } else {
+                // Normal login flow (no 2FA)
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('userData', JSON.stringify(data.user));
+                localStorage.setItem('token', data.token);
+                checkLoginState();
+                showPage('home');
+            }
         } else {
-            alert(data.message || 'Login failed');
+            // Login failed
+            alert(data.message || 'Invalid email or password');
         }
     } catch (error) {
         console.error('Login error:', error);
@@ -134,25 +157,65 @@ async function handleLogin(event) {
     }
 }
 
-// Handle logout
-async function handleLogout() {
+// Handle OTP verification
+async function handleOTPVerification(event) {
+    event.preventDefault();
+    
+    const otp = document.getElementById('otp-input').value;
+    const email = localStorage.getItem('temp_email');
+
+    if (!otp || !email) {
+        alert('Please enter the OTP code');
+        return;
+    }
+
     try {
-        const response = await fetch('/api/auth/logout/', {
+        const response = await fetch('/api/auth/verify-otp/', {
             method: 'POST',
             headers: {
+                'Content-Type': 'application/json',
                 'X-CSRFToken': getCookie('csrftoken')
-            }
+            },
+            body: JSON.stringify({ email, otp })
         });
 
+        const data = await response.json();
+        console.log('OTP verification response:', data);  // Debug log
+
         if (response.ok) {
-            localStorage.removeItem('isLoggedIn');
-            localStorage.removeItem('userData');
+            // Clear temporary storage
+            localStorage.removeItem('temp_email');
+            // Hide OTP modal
+            document.getElementById('otp-modal').style.display = 'none';
+            
+            // Complete login
+            localStorage.setItem('isLoggedIn', 'true');
+            localStorage.setItem('userData', JSON.stringify(data.user));
+            localStorage.setItem('token', data.token);
             checkLoginState();
             showPage('home');
+        } else {
+            alert(data.message || 'OTP verification failed');
         }
     } catch (error) {
-        console.error('Logout error:', error);
-        alert('Logout failed. Please try again.');
+        console.error('OTP verification error:', error);
+        alert('OTP verification failed. Please try again.');
+    }
+}
+
+async function handleLogout() {
+    try {
+        localStorage.removeItem("token"); 
+        localStorage.removeItem("isLoggedIn");
+        localStorage.removeItem("userData");
+
+        checkLoginState();
+        showPage("home");
+
+        alert("You have been logged out.");
+    } catch (error) {
+        console.error("Logout error:", error);
+        alert("Logout failed. Please try again.");
     }
 }
 
@@ -160,55 +223,39 @@ async function handleLogout() {
 async function handleRegister(event) {
     event.preventDefault();
     
-    // First ensure we have a CSRF token
+    const username = document.getElementById('id_username').value;
+    const email = document.getElementById('id_email').value;
+    const password1 = document.getElementById('id_password1').value;
+    const password2 = document.getElementById('id_password2').value;
+    const enable2fa = document.getElementById('enable_2fa').checked;
+
     try {
-        // Get fresh CSRF token
-        await fetch('/api/auth/check-auth/', {
-            method: 'GET',
-            credentials: 'include'
-        });
-
-        const username = document.getElementById('id_username').value;
-        const email = document.getElementById('id_email').value;
-        const password1 = document.getElementById('id_password1').value;
-        const password2 = document.getElementById('id_password2').value;
-
-        if (password1 !== password2) {
-            alert('Passwords do not match');
-            return;
-        }
-
-        const formData = {
-            username,
-            email,
-            password1,
-            password2
-        };
-
-        console.log('Sending registration data:', formData); // Debug log
-
         const response = await fetch('/api/auth/register/', {
             method: 'POST',
-            credentials: 'include',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCookie('csrftoken')
             },
-            body: JSON.stringify(formData)
+            body: JSON.stringify({
+                username,
+                email,
+                password1,
+                password2,
+                enable_2fa: enable2fa
+            })
         });
 
         const data = await response.json();
-        console.log('Server response:', data); // Debug log
-
+        
         if (response.ok) {
-            alert('Registration successful!');
-            window.location.href = '/login/';
+            alert('Registration successful! Please log in.');
+            showPage('login');
         } else {
-            alert(data.message || data.error || 'Registration failed');
+            alert(data.message || 'Registration failed');
         }
     } catch (error) {
         console.error('Registration error:', error);
-        alert('Registration failed. Please check the console for details.');
+        alert('Registration failed. Please try again.');
     }
 }
 
@@ -341,6 +388,22 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // OTP verification button
+    const verifyOTPButton = document.getElementById('verify-otp');
+    if (verifyOTPButton) {
+        verifyOTPButton.addEventListener('click', handleOTPVerification);
+    }
+
+    // Close modal when clicking outside
+    const modal = document.getElementById('otp-modal');
+    if (modal) {
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        };
+    }
 });
 
 async function initiate42OAuth() {
@@ -351,11 +414,10 @@ async function initiate42OAuth() {
         });
 
         const data = await response.json();
-        console.log("OAuth API Response:", data); // Debugging log
+        console.log("OAuth API Response:", data);
 
         if (response.ok && data.oauth_link) {
-            checkLoginState();
-            console.log("Redirecting to:", data.oauth_link); // Debugging log
+            console.log("Redirecting to:", data.oauth_link);
             window.location.href = data.oauth_link;
         } else {
             console.error('Error:', data);
@@ -369,3 +431,64 @@ async function initiate42OAuth() {
 
 // Event listener for OAuth button in login page
 document.getElementById('login-42').addEventListener('click', initiate42OAuth);
+
+async function checkOAuthLogin() {
+    try {
+        console.log('Checking OAuth login status...');
+        const response = await fetch('/api/auth/get-token/', {
+            method: "GET",
+            credentials: "include",  // Important for sending cookies
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            }
+        });
+
+        console.log('Response status:', response.status);
+        const data = await response.json();
+        console.log("OAuth login check response:", data);
+
+        if (response.ok && data.token) {
+            console.log("OAuth login successful, storing JWT...");
+            localStorage.setItem("token", data.token);
+            localStorage.setItem("isLoggedIn", "true");
+            
+            // Parse the JWT to get user data
+            const payload = JSON.parse(atob(data.token.split('.')[1]));
+            localStorage.setItem("userData", JSON.stringify({
+                username: payload.username,
+                email: payload.email
+            }));
+
+            checkLoginState();
+            showPage('home');
+            return true;
+        } else {
+            console.log("User not authenticated via OAuth:", data.error);
+            localStorage.setItem("isLoggedIn", "false");
+            localStorage.removeItem("token");
+            localStorage.removeItem("userData");
+            checkLoginState();
+            showPage('login');
+            return false;
+        }
+    } catch (error) {
+        console.error("Error checking OAuth login:", error);
+        localStorage.setItem("isLoggedIn", "false");
+        localStorage.removeItem("token");
+        localStorage.removeItem("userData");
+        checkLoginState();
+        showPage('login');
+        return false;
+    }
+}
+
+// Update window.onload
+window.onload = async function() {
+    console.log('Window loaded, checking auth state...');
+    if (window.location.pathname === '/home') {
+        await checkOAuthLogin();
+    } else {
+        checkLoginState();
+    }
+};

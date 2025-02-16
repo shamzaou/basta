@@ -39,8 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'userapp.apps.UserappConfig',
     'gameapp',
-    'userapp',
     'django_otp',
     'django_otp.plugins.otp_totp',
 ]
@@ -49,6 +49,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -151,16 +152,36 @@ TEMPLATES = [
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-
-# Add this to make sure sessions are being handled correctly
+# Session settings
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_COOKIE_AGE = 86400  # 24 hours in seconds
 SESSION_COOKIE_NAME = 'sessionid'
+SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_SAVE_EVERY_REQUEST = True
 
-CSRF_COOKIE_SAMESITE = 'Lax'
-CSRF_COOKIE_HTTPONLY = False  # False to allow JavaScript access
-CSRF_USE_SESSIONS = False
-CSRF_COOKIE_NAME = 'csrftoken'
+# CORS settings
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8000",
+]
+CORS_ALLOW_METHODS = [
+    'GET',
+    'POST',
+    'OPTIONS'
+]
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
@@ -179,5 +200,8 @@ REST_FRAMEWORK = {
 JWT_SETTINGS = {
     'JWT_SECRET_KEY': config('JWT_SECRET_KEY'),
     'JWT_EXP_DELTA_SECONDS': 4200,
-    'JWT_ALGORITHM': 'HS256'
+    'JWT_ALGORITHM': 'HS256',
+    'CLIENT_ID': config('CLIENT_ID'),
+    'CLIENT_SECRET': config('CLIENT_SECRET'),
+    'REDIRECT_URI': config('REDIRECT_URI')
 }

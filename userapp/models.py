@@ -7,8 +7,11 @@ class User(AbstractUser):
     profile_picture = models.ImageField(upload_to='profile_pictures/', null=True, blank=True)
     is_42_user = models.BooleanField(default=False)
     intra_id = models.CharField(max_length=50, null=True, blank=True)
+    two_factor_enabled = models.BooleanField(default=False)
     
-    # Add related_name to avoid clashes
+    # Override username to ensure it's unique
+    username = models.CharField(max_length=150, unique=True)
+    
     groups = models.ManyToManyField(
         'auth.Group',
         related_name='custom_user_set',
@@ -26,4 +29,4 @@ class User(AbstractUser):
     REQUIRED_FIELDS = ['username']
 
     class Meta:
-        db_table = 'auth_user'
+        db_table = 'userapp_user'
