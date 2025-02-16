@@ -85,10 +85,12 @@ def register_view(request):
                 email=email,
                 password=password
             )
+            user.save()
             print(f"User created successfully with ID: {user.id}")
             
             # Now try to log in
             login(request, user)
+            request.session.save() # this is for the refresh login problem
             print("User logged in successfully")
             
             return JsonResponse({
