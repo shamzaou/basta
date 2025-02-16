@@ -21,7 +21,7 @@ function showPage(pageId, pushState = true) {
         pageId = 'home'; // Fallback to home page if target doesn't exist
         targetPage = document.getElementById(pageId);
     }
-
+    
     // Only push state if we're actually changing pages and pushState is true
     if (pushState && pageId !== currentPage) {
         const newUrl = pageId === 'home' ? '/' : `/${pageId}`;
@@ -48,6 +48,12 @@ function showPage(pageId, pushState = true) {
     // Show target page
     targetPage.classList.add('active');
     targetPage.style.display = 'block';
+
+    // Load profile data if showing profile page
+    // if (pageId === 'profile') {
+    //     console.log('Loading profile page...'); // Debug log
+    //     loadUserProfile();
+    // }
 
     // Clean up any existing game
     if (window.currentGame) {
@@ -185,7 +191,6 @@ async function handleLogin(event) {
             },
             body: JSON.stringify({ email, password })
         });
-
         const data = await response.json();
         
         if (response.ok) {
@@ -355,13 +360,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Settings form handling
-    const settingsForm = document.getElementById('settings-form');
-    if (settingsForm) {
-        settingsForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            alert('Settings saved successfully!');
-        });
-    }
+    // const settingsForm = document.getElementById('settings-form');
+    // if (settingsForm) {
+    //     settingsForm.addEventListener('submit', (e) => {
+    //         e.preventDefault();
+    //         alert('Settings saved successfully!');
+    //     });
+    // }
     
     // Edit buttons in settings
     document.querySelectorAll('.edit-btn').forEach(button => {
@@ -409,4 +414,103 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Settings form handling
+    const settingsForm = document.getElementById('settings-form');
+    if (settingsForm) {
+        settingsForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                username: document.getElementById('username').value,
+                email: document.getElementById('email').value,
+                display_name: document.getElementById('display-name').value
+            };
+
+            try {
+                const updatedUser = await updateProfile(formData);
+                if (updatedUser) {
+                    localStorage.setItem('userData', JSON.stringify(updatedUser));
+                    alert('Settings saved successfully!');
+                    loadUserProfile(); // Reload profile data after update
+                }
+            } catch (error) {
+                console.error('Error updating profile:', error);
+                alert('Failed to save settings: ' + error.message);
+            }
+        });
+    }
 });
+
+// Update profile
+async function updateProfile(userData) {
+    try {
+        const response = await fetch('/api/auth/update-profile/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            credentials: 'include',
+            body: JSON.stringify(userData)
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+            alert('Profile updated successfully!');
+            return data.user;
+        } else {
+            throw new Error(data.message || 'Update failed');
+        }
+    } catch (error) {
+        console.error('Profile update error:', error);
+        alert('Failed to update profile: ' + error.message);
+    }
+}
+
+// Load user profile
+
+async function loadUserProfile() {
+    try {
+        const userData = JSON.parse(localStorage.getItem('userData'));
+        if (!userData) {
+            console.error('No user data found');
+            return;
+        }
+
+        // Get fresh data from server
+        const response = await fetch('/api/auth/check-auth/', {
+            method: 'GET',
+            credentials: 'include'
+        });
+
+        const data = await response.json();
+        if (!data.isAuthenticated) {
+            console.error('User not authenticated');
+            showPage('login');
+            return;
+        }
+
+        // Update profile elements
+        document.querySelector('.profile-info h2').textContent = data.user.username;
+        
+        // Update player stats if available
+        if (data.user.player) {
+            document.querySelector('.stat-card:nth-child(1) .stat-value').textContent = 
+                data.user.player.gamesPlayed || '0';
+            document.querySelector('.stat-card:nth-child(2) .stat-value').textContent = 
+                `${data.user.player.winRate || '0'}%`;
+            document.querySelector('.stat-card:nth-child(3) .stat-value').textContent = 
+                data.user.player.score || '0';
+        }
+
+        // Update profile picture if available
+        if (data.user.profile_picture) {
+            document.querySelector('.profile-avatar').src = data.user.profile_picture;
+        }
+
+    } catch (error) {
+        console.error('Error loading profile:', error);
+    }
+}

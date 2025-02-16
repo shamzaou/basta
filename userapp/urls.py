@@ -10,4 +10,5 @@ urlpatterns = [
     path('check-auth/', views.check_auth, name='check_auth'),
     path('api/auth/register/', register_view, name='register'),
     path('api/auth/check-auth/', check_auth, name='check-auth'),
+    path('api/auth/update-profile/', views.update_profile, name='update_profile'),
 ]

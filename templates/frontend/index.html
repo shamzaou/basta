@@ -71,49 +71,30 @@
                 <h1>Player Profile</h1>
                 <div class="profile-container">
                     <div class="profile-header">
-                        <img src="{% static 'frontend/assets/man.png' %}" alt="Profile Avatar" class="profile-avatar">
+                        <img src="/static/frontend/assets/man.png" alt="Profile Avatar" class="profile-avatar">
                         <div class="profile-info">
-                            <h2>PlayerOne</h2>
-                            <p>Joined: January 2024</p>
-                            <p>Rank: #42 Global</p>
+                            <h2>Username</h2>
+                            <p>Joined: <span class="join-date">Loading...</span></p>
+                            <p>Rank: <span class="player-rank">Loading...</span></p>
                         </div>
                     </div>
 
                     <div class="stats-grid">
                         <div class="stat-card">
                             <h3>Games Played</h3>
-                            <div class="stat-value">156</div>
+                            <div class="stat-value">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Wins</h3>
+                            <div class="stat-value">0</div>
+                        </div>
+                         <div class="stat-card">
+                            <h3>Loses</h3>
+                            <div class="stat-value">0</div>
                         </div>
                         <div class="stat-card">
                             <h3>Win Rate</h3>
-                            <div class="stat-value">68%</div>
-                        </div>
-                        <div class="stat-card">
-                            <h3>Best Score</h3>
-                            <div class="stat-value">11-0</div>
-                        </div>
-                        <div class="stat-card">
-                            <h3>Tournament Wins</h3>
-                            <div class="stat-value">3</div>
-                        </div>
-                    </div>
-
-                    <div class="match-history">
-                        <h2>Recent Matches</h2>
-                        <div class="match-card">
-                            <span>vs. Player2</span>
-                            <span>11-9</span>
-                            <span class="match-result win">WIN</span>
-                        </div>
-                        <div class="match-card">
-                            <span>vs. Player3</span>
-                            <span>7-11</span>
-                            <span class="match-result loss">LOSS</span>
-                        </div>
-                        <div class="match-card">
-                            <span>vs. Player4</span>
-                            <span>11-5</span>
-                            <span class="match-result win">WIN</span>
+                            <div class="stat-value">0%</div>
                         </div>
                     </div>
                 </div>

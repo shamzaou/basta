@@ -3,6 +3,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.contrib.auth import login, logout, authenticate
 from django.views.decorators.csrf import ensure_csrf_cookie
+from django.contrib.auth.decorators import login_required
 import json
 from .models import User
 
@@ -53,71 +54,58 @@ def login_view(request):
 @require_POST
 def register_view(request):
     try:
-        # Debug request content
-        print("Request content type:", request.content_type)
-        print("Raw request body:", request.body)
-        
         data = json.loads(request.body)
         email = data.get('email')
         password = data.get('password1')
         password2 = data.get('password2')
         username = data.get('username')
         
-        print(f"Registration attempt - Data received: {data}")
-        
-        # Validate all required fields with specific error messages
-        missing_fields = []
-        if not email: missing_fields.append('email')
-        if not password: missing_fields.append('password')
-        if not password2: missing_fields.append('password confirmation')
-        if not username: missing_fields.append('username')
-        
-        if missing_fields:
+        # Validate passwords match
+        if password != password2:
             return JsonResponse({
                 'status': 'error',
-                'message': f'Missing required fields: {", ".join(missing_fields)}'
+                'message': 'Passwords do not match'
             }, status=400)
-        
+
+        # Create user and player profile
         try:
-            # Create user without logging in first to test creation
             user = User.objects.create_user(
                 username=username,
                 email=email,
                 password=password
             )
-            print(f"User created successfully with ID: {user.id}")
             
-            # Now try to log in
+            # Force player profile creation
+            if not hasattr(user, 'player'):
+                from gameapp.models import Player
+                Player.objects.create(user=user)
+            
+            # Log the user in
             login(request, user)
-            print("User logged in successfully")
             
             return JsonResponse({
                 'status': 'success',
                 'user': {
                     'username': user.username,
-                    'email': user.email
+                    'email': user.email,
+                    'player': {
+                        'score': user.player.score
+                    }
                 }
             })
             
         except Exception as user_error:
-            print(f"Error creating user: {str(user_error)}")
+            print(f"Error in user creation: {str(user_error)}")
             return JsonResponse({
                 'status': 'error',
-                'message': f'User creation failed: {str(user_error)}'
-            }, status=500)
+                'message': str(user_error)
+            }, status=400)
             
     except json.JSONDecodeError as e:
-        print(f"JSON Decode Error: {str(e)}")
         return JsonResponse({
             'status': 'error',
-            'message': f'Invalid JSON format: {str(e)}'
+            'message': 'Invalid JSON format'
         }, status=400)
-    except Exception as e:
-        print(f"Unexpected error: {str(e)}")
-        return JsonResponse({
-            'status': 'error',
-            'message': f'Registration failed: {str(e)}'
-        }, status=500)
 
 @require_POST
 def logout_view(request):
@@ -133,3 +121,39 @@ def check_auth(request):
             'email': request.user.email,
         } if request.user.is_authenticated else None
     })
+    
+@login_required
+@require_POST
+def update_profile(request):
+    try:
+        data = json.loads(request.body)
+        user = request.user
+        
+        # Update user fields
+        if 'username' in data:
+            user.username = data['username']
+        if 'email' in data:
+            user.email = data['email']
+            
+        # Save user changes
+        user.save()
+        
+        # Update player profile if exists
+        if hasattr(user, 'player'):
+            if 'score' in data:
+                user.player.score = data['score']
+                user.player.save()
+        
+        return JsonResponse({
+            'status': 'success',
+            'user': {
+                'username': user.username,
+                'email': user.email,
+                'score': user.player.score if hasattr(user, 'player') else 0
+            }
+        })
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=400)
