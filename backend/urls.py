@@ -8,6 +8,7 @@ from gameapp.views import index  # Add this import
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/auth/', include('userapp.urls')),
+    path('tournaments/', include('tournaments.urls')),
     # Keep your catch-all route at the end
     re_path(r'^.*$', index, name='index'),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

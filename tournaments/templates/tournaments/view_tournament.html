@@ -1,0 +1,84 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tournament View</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'tournaments/css/view.css' %}">
+</head>
+<body>
+    <h1>Tournament ({{ status }})</h1>
+
+    <div class="section">
+        <h2>Players:</h2>
+        <ul class="players-list">
+            {% for player, score in player_scores.items %}
+            <li class="player-item">
+                <span>{{ player.nickname }}</span>
+                <span>-</span>
+                <span>Points: {{ score }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Matches:</h2>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Player 1</th>
+                        <th>Player 2</th>
+                        <th>Score</th>
+                        <th>Winner</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for match in matches %}
+                    <tr>
+                        <td>{{ match.player1.nickname }}</td>
+                        <td>{{ match.player2.nickname }}</td>
+                        <td>
+                            {% if match.is_complete %}
+                                {{ match.score_player1 }} - {{ match.score_player2 }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if match.winner %}
+                                {{ match.winner.nickname }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if not match.is_complete %}
+                            <form method="post" action="{% url 'tournaments:start_match' match.id %}">
+                                {% csrf_token %}
+                                <button type="submit">Start Match</button>
+                            </form>
+                            {% endif %}
+                            {% if match.is_complete %}
+                                <span class="status-finished">Finished</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if winner %}
+    <div class="winner-section">
+        <h2>Tournament Winner: {{ winner.nickname }}</h2>
+    </div>
+    {% endif %}
+</body>
+</html>

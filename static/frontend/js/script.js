@@ -31,21 +31,30 @@ function showPage(pageId) {
     // Handle game initializations
     if (pageId === 'game') {
         const modeSelection = document.getElementById('modeSelection');
-        modeSelection.style.display = 'flex';
-
-        document.getElementById('pvpButton').onclick = () => {
+        
+        // Check if we're coming from a tournament match
+        if (window.currentMatchId) {
             modeSelection.style.display = 'none';
             const gameContainer = document.querySelector('.game-container');
             window.currentGame = new window.PongGame(gameContainer, 'pvp');
             window.currentGame.physics.resetBall();
-        };
+        } else {
+            modeSelection.style.display = 'flex';
 
-        document.getElementById('aiButton').onclick = () => {
-            modeSelection.style.display = 'none';
-            const gameContainer = document.querySelector('.game-container');
-            window.currentGame = new window.PongGame(gameContainer, 'ai');
-            window.currentGame.physics.resetBall();
-        };
+            document.getElementById('pvpButton').onclick = () => {
+                modeSelection.style.display = 'none';
+                const gameContainer = document.querySelector('.game-container');
+                window.currentGame = new window.PongGame(gameContainer, 'pvp');
+                window.currentGame.physics.resetBall();
+            };
+
+            document.getElementById('aiButton').onclick = () => {
+                modeSelection.style.display = 'none';
+                const gameContainer = document.querySelector('.game-container');
+                window.currentGame = new window.PongGame(gameContainer, 'ai');
+                window.currentGame.physics.resetBall();
+            };
+        }
     } else if (pageId === 'tictactoe') {
         const gameContainer = document.querySelector('.tictactoe-container');
         window.currentGame = new window.TicTacToeGame(gameContainer);
@@ -206,6 +215,53 @@ async function handleRegister(event) {
     }
 }
 
+// Add function to start tournament match
+function startTournamentMatch(matchId) {
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    
+    if (!isLoggedIn) {
+        alert('Please log in to play matches');
+        showPage('login');
+        return;
+    }
+
+    // First, update match status in backend
+    fetch(`/tournaments/match/${matchId}/start/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show game page
+            showPage('game');
+            
+            // Hide mode selection and start PvP game directly
+            const modeSelection = document.getElementById('modeSelection');
+            if (modeSelection) {
+                modeSelection.style.display = 'none';
+            }
+            
+            // Initialize game in PvP mode
+            const gameContainer = document.querySelector('.game-container');
+            window.currentGame = new window.PongGame(gameContainer, 'pvp');
+            window.currentGame.physics.resetBall();
+            
+            // Store match ID for game completion
+            window.currentMatchId = matchId;
+        } else {
+            alert(data.message || 'Failed to start match');
+        }
+    })
+    .catch(error => {
+        console.error('Error starting match:', error);
+        alert('Failed to start match. Please try again.');
+    });
+}
+
 // Main initialization
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -334,5 +390,44 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('Account deletion initiated...');
             }
         });
+    }
+
+    // Add logo click handler
+    const logo = document.querySelector('.logo');
+    if (logo) {
+        logo.addEventListener('click', (e) => {
+            e.preventDefault();
+            showPage('home');
+        });
+    }
+
+    // Add auth check for game buttons
+    const playNowButton = document.getElementById('play-now-button');
+    const tournamentButton = document.querySelector('a[href="/tournaments/create/"]');
+
+    function checkAuthAndRedirect(e, destination) {
+        e.preventDefault();
+        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+        
+        if (!isLoggedIn) {
+            alert('Please log in to access this feature');
+            showPage('login');
+            return;
+        }
+
+        if (destination === 'game') {
+            showPage('game');
+        } else if (destination === 'tournament') {
+            window.location.href = '/tournaments/create/';
+        }
+    }
+
+    // Add handlers for game buttons
+    if (playNowButton) {
+        playNowButton.onclick = (e) => checkAuthAndRedirect(e, 'game');
+    }
+
+    if (tournamentButton) {
+        tournamentButton.onclick = (e) => checkAuthAndRedirect(e, 'tournament');
     }
 });
