@@ -217,41 +217,48 @@ async function handleRegister(event) {
 
 // Add function to start tournament match
 function startTournamentMatch(matchId) {
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    // Получаем CSRF токен
+    const csrftoken = getCookie('csrftoken');
     
-    if (!isLoggedIn) {
-        alert('Please log in to play matches');
-        showPage('login');
-        return;
-    }
-
-    // First, update match status in backend
     fetch(`/tournaments/match/${matchId}/start/`, {
         method: 'POST',
         headers: {
-            'X-CSRFToken': getCookie('csrftoken'),
-            'Content-Type': 'application/json'
-        }
+            'X-CSRFToken': csrftoken,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        credentials: 'include'  // Важно для передачи куки
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
-            // Show game page
-            showPage('game');
-            
-            // Hide mode selection and start PvP game directly
-            const modeSelection = document.getElementById('modeSelection');
-            if (modeSelection) {
-                modeSelection.style.display = 'none';
-            }
-            
-            // Initialize game in PvP mode
-            const gameContainer = document.querySelector('.game-container');
-            window.currentGame = new window.PongGame(gameContainer, 'pvp');
-            window.currentGame.physics.resetBall();
-            
-            // Store match ID for game completion
+            // Store match info
             window.currentMatchId = matchId;
+            window.currentMatchPlayers = {
+                player1: data.player1,
+                player2: data.player2
+            };
+            window.tournamentId = data.tournament_id;
+            
+            // Show game page and hide tournament view
+            document.querySelectorAll('.section').forEach(section => {
+                section.style.display = 'none';
+            });
+            
+            const gameContainer = document.getElementById('game');
+            if (gameContainer) {
+                gameContainer.style.display = 'block';
+                
+                // Initialize game in PvP mode
+                const pongContainer = gameContainer.querySelector('.game-container');
+                window.currentGame = new window.PongGame(pongContainer, 'pvp');
+                window.currentGame.physics.resetBall();
+            }
         } else {
             alert(data.message || 'Failed to start match');
         }

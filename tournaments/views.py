@@ -4,6 +4,8 @@ from django.shortcuts import render, redirect
 from .models import Tournament
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
+import json
+from django.views.decorators.csrf import csrf_protect
 
 # from  pong import templates
 
@@ -100,18 +102,25 @@ def view_tournament(request, tournament_id):
 from django.shortcuts import get_object_or_404, redirect
 from .models import Match
 
+@csrf_protect
 @require_POST
 def start_match(request, match_id):
     try:
         match = Match.objects.get(id=match_id)
-        # Add your logic to update match status
-        match.status = 'in_progress'
-        match.save()
-        
-        return JsonResponse({
-            'success': True,
-            'message': 'Match started successfully'
-        })
+        if not match.is_complete:
+            tournament = match.tournament
+            return JsonResponse({
+                'success': True,
+                'match_id': match_id,
+                'tournament_id': tournament.id,
+                'player1': match.player1.nickname,
+                'player2': match.player2.nickname
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': 'Match is already completed'
+            })
     except Match.DoesNotExist:
         return JsonResponse({
             'success': False,
@@ -163,3 +172,28 @@ def get_match_details(request, game_id):
     }
     
     return JsonResponse(details)
+
+@require_POST
+def finish_match(request, match_id):
+    try:
+        match = Match.objects.get(id=match_id)
+        data = json.loads(request.body)
+        
+        match.score_player1 = data['score_player1']
+        match.score_player2 = data['score_player2']
+        
+        # Определяем победителя
+        if data['score_player1'] > data['score_player2']:
+            match.winner = match.player1
+        else:
+            match.winner = match.player2
+            
+        match.is_complete = True
+        match.save()
+        
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=500)

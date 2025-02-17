@@ -455,9 +455,10 @@ class PongGame {
         this.state = {
             score: { player1: 0, player2: 0 },
             gameStatus: 'playing',
-            winner: null
+            winner: null,
+            matchId: window.currentMatchId,
+            tournamentId: window.tournamentId
         };
-
 
         // Initialize game components
         this.renderer = new GameRenderer(canvasContainer);
@@ -468,12 +469,18 @@ class PongGame {
         // Set initial ball velocity
         this.renderer.ball.position.copy(this.physics.resetBall());
 
-        // Bind event handlers
-        this.setupEventHandlers();
-        
+        // Update player names
+        if (window.currentMatchPlayers) {
+            const player1Name = document.getElementById('player1-name');
+            const player2Name = document.getElementById('player2-name');
+            if (player1Name && player2Name) {
+                player1Name.textContent = window.currentMatchPlayers.player1;
+                player2Name.textContent = window.currentMatchPlayers.player2;
+            }
+        }
+
         // Start game loop
         this.lastTime = 0;
-        this.lastStateUpdate = 0;
         this.animate(0);
     }
 
@@ -531,23 +538,39 @@ class PongGame {
     async finishMatch() {
         if (!this.state.matchId) return;
 
-        this.state.matchEndTime = new Date();
-        this.state.matchDuration = 
-            (this.state.matchEndTime - this.state.matchStartTime) / 1000; // in seconds
-
         try {
-            await fetch(`/api/game/match/${this.state.matchId}/finish`, {
+            const response = await fetch(`/tournaments/match/${this.state.matchId}/finish/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': getCookie('csrftoken')
                 },
                 body: JSON.stringify({
-                    final_score: this.state.score,
-                    duration: this.state.matchDuration,
+                    score_player1: this.state.score.player1,
+                    score_player2: this.state.score.player2,
                     winner: this.state.winner
                 })
             });
+
+            if (response.ok) {
+                // Show winner screen
+                const winnerScreen = document.getElementById('winner-screen');
+                const winnerText = document.getElementById('winner-text');
+                const returnButton = document.getElementById('return-to-tournament');
+                
+                if (winnerScreen && winnerText && returnButton) {
+                    const winner = this.state.score.player1 > this.state.score.player2 
+                        ? window.currentMatchPlayers.player1 
+                        : window.currentMatchPlayers.player2;
+                    
+                    winnerText.textContent = `${winner} Wins!`;
+                    winnerScreen.style.display = 'block';
+                    
+                    returnButton.onclick = () => {
+                        window.location.href = `/tournaments/${this.state.tournamentId}/`;
+                    };
+                }
+            }
         } catch (error) {
             console.error('Failed to finish match:', error);
         }

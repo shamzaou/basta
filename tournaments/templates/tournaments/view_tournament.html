@@ -10,6 +10,9 @@
     <link rel="stylesheet" href="{% static 'tournaments/css/view.css' %}">
 </head>
 <body>
+    <!-- Добавить CSRF токен в начало body -->
+    {% csrf_token %}
+
     <h1>Tournament ({{ status }})</h1>
 
     <div class="section">
@@ -59,10 +62,7 @@
                         </td>
                         <td>
                             {% if not match.is_complete %}
-                            <form method="post" action="{% url 'tournaments:start_match' match.id %}">
-                                {% csrf_token %}
-                                <button type="submit">Start Match</button>
-                            </form>
+                                <button onclick="startTournamentMatch({{ match.id }})" type="button">Start Match</button>
                             {% endif %}
                             {% if match.is_complete %}
                                 <span class="status-finished">Finished</span>
@@ -80,5 +80,39 @@
         <h2>Tournament Winner: {{ winner.nickname }}</h2>
     </div>
     {% endif %}
+
+    <!-- Add game container (initially hidden) -->
+    <div id="game" class="page" style="display: none;">
+        <div class="container">
+            <h1>Pong Game</h1>
+            <div class="game-container">
+                <!-- Добавим имена игроков -->
+                <div id="player1-name" class="player-name left">Player 1</div>
+                <div id="player2-name" class="player-name right">Player 2</div>
+                
+                <!-- Существующие UI элементы -->
+                <div id="score" class="ui-element">00 - 00</div>
+                <div id="instructions" class="ui-element">P1: W/S | P2: ↑/↓ | SPACE: Pause</div>
+                <div id="pauseText" class="ui-element">PAUSED</div>
+                
+                <!-- Добавим экран победителя (изначально скрыт) -->
+                <div id="winner-screen" class="ui-element" style="display: none;">
+                    <div id="winner-text"></div>
+                    <button id="return-to-tournament" class="return-button">Return to Tournament</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add necessary styles -->
+    <link rel="stylesheet" href="{% static 'frontend/css/styles.css' %}">
+
+    <!-- Scripts -->
+    <script src="{% static 'frontend/js/script.js' %}"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script type="module">
+        import PongGame from '{% static "frontend/js/pong.js" %}';
+        window.PongGame = PongGame;
+    </script>
 </body>
 </html>
