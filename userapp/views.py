@@ -75,6 +75,9 @@ def register_view(request):
                 password=password
             )
             
+            user.save()
+            print(f"User created successfully with ID: {user.id}")
+            
             # Force player profile creation
             if not hasattr(user, 'player'):
                 from gameapp.models import Player
@@ -82,6 +85,9 @@ def register_view(request):
             
             # Log the user in
             login(request, user)
+
+            request.session.save() # this is for the refresh login problem
+            print("User logged in successfully")
             
             return JsonResponse({
                 'status': 'success',

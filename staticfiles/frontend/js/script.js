@@ -140,36 +140,36 @@ async function handleLogout() {
     }
 }
 
-// Handle registration
-async function handleRegister(event) {
-    event.preventDefault();
+// Handle registration not ew
+// async function handleRegister(event) {
+//     event.preventDefault();
     
-    const formData = new FormData(document.getElementById('registerForm'));
-    const data = Object.fromEntries(formData.entries());
+//     const formData = new FormData(document.getElementById('registerForm'));
+//     const data = Object.fromEntries(formData.entries());
 
-    try {
-        const response = await fetch('/api/auth/register/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify(data)
-        });
+//     try {
+//         const response = await fetch('/api/auth/register/', {
+//             method: 'POST',
+//             headers: {
+//                 'Content-Type': 'application/json',
+//                 'X-CSRFToken': getCookie('csrftoken')
+//             },
+//             body: JSON.stringify(data)
+//         });
 
-        const responseData = await response.json();
+//         const responseData = await response.json();
         
-        if (response.ok) {
-            alert('Registration successful! Please log in.');
-            showPage('login');
-        } else {
-            alert(responseData.message || 'Registration failed');
-        }
-    } catch (error) {
-        console.error('Registration error:', error);
-        alert('Registration failed. Please try again.');
-    }
-}
+//         if (response.ok) {
+//             alert('Registration successful! Please log in.');
+//             showPage('login');
+//         } else {
+//             alert(responseData.message || 'Registration failed');
+//         }
+//     } catch (error) {
+//         console.error('Registration error:', error);
+//         alert('Registration failed. Please try again.');
+//     }
+// }
 
 // Main initialization
 document.addEventListener('DOMContentLoaded', () => {

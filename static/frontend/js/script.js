@@ -275,7 +275,7 @@ async function handleRegister(event) {
 
         if (response.ok) {
             alert('Registration successful!');
-            window.location.href = '/login/';
+            showPage('login');
         } else {
             alert(data.message || data.error || 'Registration failed');
         }
