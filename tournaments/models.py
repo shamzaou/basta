@@ -102,6 +102,7 @@ class Match(models.Model):
     score_player2 = models.PositiveIntegerField(null=True, blank=True)
     winner = models.ForeignKey('Player', null=True, blank=True, on_delete=models.SET_NULL, related_name='won_matches')
     is_complete = models.BooleanField(default=False)
+    is_additional = models.BooleanField(default=False)  # New field for additional matches
 
     @classmethod
     def get_match_details(cls, match_id):

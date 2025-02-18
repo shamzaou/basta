@@ -6,7 +6,7 @@ const GAME_CONFIG = {
     minBallSpeed: 0.1,
     paddleSpeed: 0.15,
     aiUpdateInterval: 1000,
-    pointsToWin: 11
+    pointsToWin: 3
 };
 
 // Game state enumeration

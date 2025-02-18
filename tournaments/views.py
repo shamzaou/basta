@@ -62,37 +62,40 @@ from django.shortcuts import render, get_object_or_404
 from .models import Tournament, Player, Match
 
 def view_tournament(request, tournament_id):
-    # Получаем данные турнира
     tournament = get_object_or_404(Tournament, id=tournament_id)
     players = tournament.players.all()
-
-    # Получаем все матчи турнира
-    matches = tournament.matches.all()
-    # get match details
-    # matche = Match.objects.all()
-    # print(matche)
-
-    # Очки игроков
+    
+    # Get regular and additional matches separately
+    regular_matches = tournament.matches.filter(is_additional=False)
+    additional_matches = tournament.matches.filter(is_additional=True)
+    
+    # Calculate scores
     player_scores = {player: player.get_score() for player in players}
+    
+    # Check if all regular matches are complete
+    all_regular_complete = not regular_matches.filter(is_complete=False).exists()
+    
+    # Check if additional matches are needed
+    need_additional_matches = False
+    if all_regular_complete and not additional_matches.exists():
+        max_score = max(score for score in player_scores.values())
+        top_players = [player for player, score in player_scores.items() if score == max_score]
+        if len(top_players) > 1:
+            need_additional_matches = True
+            create_additional_matches(tournament, top_players)
+            # Refresh additional matches after creation
+            additional_matches = tournament.matches.filter(is_additional=True)
 
-    # Статус турнира
     status = tournament.get_status()
-
-    # Проверяем, завершены ли все матчи
-    if status == "(completed)":
-        # Проверяем, нужен ли дополнительный турнир
-        if not Match.objects.filter(tournament=tournament, is_complete=False).exists():
-            create_additional_matches(tournament)
-
-    # Победитель
     winner = tournament.get_winner()
 
-    # Формируем данные для отображения
     context = {
         'tournament': tournament,
         'players': players,
         'player_scores': player_scores,
-        'matches': matches,
+        'regular_matches': regular_matches,
+        'additional_matches': additional_matches,
+        'has_additional_matches': additional_matches.exists(),
         'status': status,
         'winner': winner,
     }
@@ -134,28 +137,16 @@ def start_match(request, match_id):
 
 
 # Логика для создания и отображения дополнительных матчей
-def create_additional_matches(tournament):
-    players = tournament.players.all()
-    max_score = max(player.get_score() for player in players)
-    top_players = [player for player in players if player.get_score() == max_score]
-
-    # Если два игрока, создаем один матч
-    if len(top_players) == 2:
+def create_additional_matches(tournament, top_players):
+    from itertools import combinations
+    # Create matches only between top players
+    for player1, player2 in combinations(top_players, 2):
         Match.objects.create(
             tournament=tournament,
-            player1=top_players[0],
-            player2=top_players[1],
+            player1=player1,
+            player2=player2,
+            is_additional=True  # Mark as additional match
         )
-
-    # Если три и более, создаем круговой турнир
-    elif len(top_players) > 2:
-        from itertools import combinations
-        for player1, player2 in combinations(top_players, 2):
-            Match.objects.create(
-                tournament=tournament,
-                player1=player1,
-                player2=player2,
-            )
 
 def get_match_details(request, game_id):
     # Retrieve the match; return a 404 error if it doesn't exist

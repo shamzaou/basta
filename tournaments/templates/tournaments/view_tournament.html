@@ -29,7 +29,7 @@
     </div>
 
     <div class="section">
-        <h2>Matches:</h2>
+        <h2>Regular Matches:</h2>
         <div class="table-container">
             <table>
                 <thead>
@@ -42,7 +42,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for match in matches %}
+                    {% for match in regular_matches %}
                     <tr>
                         <td>{{ match.player1.nickname }}</td>
                         <td>{{ match.player2.nickname }}</td>
@@ -74,6 +74,55 @@
             </table>
         </div>
     </div>
+
+    {% if has_additional_matches %}
+    <div class="section additional-matches">
+        <h2>Tiebreaker Matches:</h2>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Player 1</th>
+                        <th>Player 2</th>
+                        <th>Score</th>
+                        <th>Winner</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for match in additional_matches %}
+                    <tr>
+                        <td>{{ match.player1.nickname }}</td>
+                        <td>{{ match.player2.nickname }}</td>
+                        <td>
+                            {% if match.is_complete %}
+                                {{ match.score_player1 }} - {{ match.score_player2 }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if match.winner %}
+                                {{ match.winner.nickname }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if not match.is_complete %}
+                                <button onclick="startTournamentMatch({{ match.id }})" type="button">Start Match</button>
+                            {% endif %}
+                            {% if match.is_complete %}
+                                <span class="status-finished">Finished</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
 
     {% if winner %}
     <div class="winner-section">
