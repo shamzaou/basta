@@ -162,6 +162,27 @@ button:hover {
     border: 4px solid var(--success-color);
     box-shadow: 0 0 20px var(--success-color);
     animation: glow 1.5s ease-in-out infinite alternate;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.winner-section h2 {
+    font-size: clamp(20px, 4vw, 28px);
+    margin-bottom: 0;
+}
+
+.winner-section .home-button {
+    font-size: clamp(16px, 3vw, 20px);
+    padding: 15px 30px;
+    margin-top: 10px;
+    min-width: 250px;
+}
+
+.winner-section .home-button:hover {
+    transform: scale(1.1);
+    box-shadow: inset 0 0 30px 0 var(--secondary-color);
 }
 
 @keyframes glow {

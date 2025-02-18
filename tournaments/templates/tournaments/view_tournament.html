@@ -77,7 +77,8 @@
 
     {% if winner %}
     <div class="winner-section">
-        <h2>Tournament Winner: {{ winner.nickname }}</h2>
+        <h2>🏆 Tournament Winner: {{ winner.nickname }} 🏆</h2>
+        <button onclick="window.location.href='/'" class="home-button">Return to Home</button>
     </div>
     {% endif %}
 
