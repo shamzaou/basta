@@ -183,7 +183,8 @@ async function handleLogin(event) {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCookie('csrftoken')
             },
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({ email, password }),
+            credentials: 'include'  // Ensure cookies are included in the request
         });
 
         const data = await response.json();
@@ -294,8 +295,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Force initial logout state
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('userData');
+    // localStorage.removeItem('isLoggedIn');
+    // localStorage.removeItem('userData');
     
     // Check login state
     checkLoginState();
