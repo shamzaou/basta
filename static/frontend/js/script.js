@@ -49,10 +49,19 @@ function showPage(pageId, pushState = true) {
     targetPage.classList.add('active');
     targetPage.style.display = 'block';
 
+    if (pageId === 'profile') {
+        loadProfileData();
+    }
+
     // Clean up any existing game
     if (window.currentGame) {
         window.currentGame.cleanup();
         window.currentGame = null;
+    }
+
+    if (pageId === 'settings') {
+        loadProfileData();
+        loadSettingsData();
     }
 
     // Handle game initializations
@@ -173,9 +182,6 @@ function getCookie(name) {
 async function handleLogin(event) {
     event.preventDefault();
     
-    const email = document.getElementById('login-username').value;
-    const password = document.getElementById('password').value;
-
     try {
         const response = await fetch('/api/auth/login/', {
             method: 'POST',
@@ -183,18 +189,24 @@ async function handleLogin(event) {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCookie('csrftoken')
             },
-            body: JSON.stringify({ email, password }),
-            credentials: 'include'  // Ensure cookies are included in the request
+            credentials: 'include',
+            body: JSON.stringify({
+                email: document.getElementById('login-username').value,
+                password: document.getElementById('password').value
+            })
         });
 
         const data = await response.json();
+        console.log('Login response:', data); // Debug log
         
-        if (response.ok) {
+        if (response.ok && data.token) {
             localStorage.setItem('isLoggedIn', 'true');
             localStorage.setItem('userData', JSON.stringify(data.user));
+            localStorage.setItem('authToken', data.token);
             checkLoginState();
             showPage('home');
         } else {
+            console.error('Login failed:', data.message);
             alert(data.message || 'Login failed');
         }
     } catch (error) {
@@ -206,16 +218,20 @@ async function handleLogin(event) {
 // Handle logout
 async function handleLogout() {
     try {
+        const authToken = localStorage.getItem('authToken');
         const response = await fetch('/api/auth/logout/', {
             method: 'POST',
             headers: {
-                'X-CSRFToken': getCookie('csrftoken')
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Authorization': `Token ${authToken}`
             }
         });
 
         if (response.ok) {
+            // Clear all auth data
             localStorage.removeItem('isLoggedIn');
             localStorage.removeItem('userData');
+            localStorage.removeItem('authToken');
             checkLoginState();
             showPage('home');
         }
@@ -366,22 +382,55 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Edit buttons in settings
     document.querySelectorAll('.edit-btn').forEach(button => {
-        button.addEventListener('click', () => {
+        button.addEventListener('click', async () => {
             const fieldContainer = button.closest('.field-container');
+            const input = fieldContainer.querySelector('.field-input');
+            const display = fieldContainer.querySelector('.field-display');
             const isEditing = fieldContainer.classList.contains('editing');
+            const fieldType = input.id; // This will be either 'username' or 'email'
             
             if (isEditing) {
-                const input = fieldContainer.querySelector('.field-input');
-                const display = fieldContainer.querySelector('.field-display');
-                display.textContent = input.value;
+                const newValue = input.value;
+                const authToken = localStorage.getItem('authToken');
+                
+                try {
+                    const response = await fetch('/api/auth/profile/', {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Token ${authToken}`,
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify({
+                            [fieldType]: newValue
+                        })
+                    });
+
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        display.textContent = newValue;
+                        // Update userData in localStorage
+                        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+                        userData[fieldType] = newValue;
+                        localStorage.setItem('userData', JSON.stringify(userData));
+                        alert(`${fieldType.charAt(0).toUpperCase() + fieldType.slice(1)} updated successfully!`);
+                    } else {
+                        alert(data.message || `Failed to update ${fieldType}`);
+                        input.value = display.textContent; // Reset to original value
+                    }
+                } catch (error) {
+                    console.error(`Error updating ${fieldType}:`, error);
+                    alert(`Failed to update ${fieldType}`);
+                    input.value = display.textContent; // Reset to original value
+                }
+                
                 fieldContainer.classList.remove('editing');
                 button.textContent = 'Edit';
-                button.classList.remove('save');
             } else {
                 fieldContainer.classList.add('editing');
                 button.textContent = 'Save';
-                button.classList.add('save');
-                fieldContainer.querySelector('.field-input').focus();
+                input.focus();
             }
         });
     });
@@ -411,3 +460,92 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+async function loadProfileData() {
+    try {
+        const authToken = localStorage.getItem('authToken');
+        console.log('Attempting to load profile with token:', authToken); // Debug log
+        
+        if (!authToken) {
+            console.error('No auth token found');
+            showPage('login');
+            return;
+        }
+
+        const response = await fetch('/api/auth/profile/', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Token ${authToken}`,
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('Profile data loaded:', data);
+            
+            // Update UI elements
+            const avatarElement = document.getElementById('profile-avatar');
+            const usernameElement = document.getElementById('profile-username');
+            const joinedElement = document.getElementById('profile-joined');
+            
+            if (avatarElement) {
+                avatarElement.src = data.avatar || '/static/frontend/assets/man.png';
+            }
+            if (usernameElement) {
+                usernameElement.textContent = data.username;
+            }
+            if (joinedElement) {
+                joinedElement.textContent = data.date_joined;
+            }
+        } else {
+            if (response.status === 401) {
+                console.log('Token expired or invalid, redirecting to login');
+                localStorage.removeItem('isLoggedIn');
+                localStorage.removeItem('authToken');
+                showPage('login');
+            } else {
+                console.error('Failed to load profile:', await response.text());
+            }
+        }
+    } catch (error) {
+        console.error('Error loading profile:', error);
+    }
+}
+
+async function loadSettingsData() {
+    try {
+        const authToken = localStorage.getItem('authToken');
+        if (!authToken) {
+            showPage('login');
+            return;
+        }
+
+        const response = await fetch('/api/auth/profile/', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Token ${authToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('Settings data loaded:', data);
+            
+            // Update username field in settings
+            const usernameDisplay = document.querySelector('#settings-form .field-container .field-display');
+            const usernameInput = document.querySelector('#settings-form .field-container .field-input');
+            
+            if (usernameDisplay && data.username) {
+                usernameDisplay.textContent = data.username;
+            }
+            if (usernameInput && data.username) {
+                usernameInput.value = data.username;
+            }
+        }
+    } catch (error) {
+        console.error('Error loading settings:', error);
+    }
+}

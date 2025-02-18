@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+import os
 AUTH_USER_MODEL = 'userapp.User'
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -40,9 +41,18 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'gameapp',
     'userapp',
+    'rest_framework',
+    'rest_framework.authtoken',  # Add this line
     'django_extensions',
 ]
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.TokenAuthentication',  # Add this line
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+    ),
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -161,3 +171,6 @@ CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_HTTPONLY = False  # False to allow JavaScript access
 CSRF_USE_SESSIONS = False
 CSRF_COOKIE_NAME = 'csrftoken'
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
