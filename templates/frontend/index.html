@@ -11,11 +11,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'frontend/css/styles.css' %}">
 </head>
-<body class="is-logged-out">
+<body>
     <header>
         <div class="container">
             <nav>
-                <a href="#" class="logo">FAST_PONG</a>
+                <a href="/home" onclick="showPage('home'); return false;" class="logo">FAST_PONG</a>
                 <div class="hamburger" id="hamburger-menu">
                     <span></span>
                     <span></span>
@@ -78,11 +78,10 @@
                 <h1>Player Profile</h1>
                 <div class="profile-container">
                     <div class="profile-header">
-                        <img src="{% static 'frontend/assets/man.png' %}" alt="Profile Avatar" class="profile-avatar">
+                        <img id="profile-avatar" src="{% static 'frontend/assets/man.png' %}" alt="Profile Avatar" class="profile-avatar">
                         <div class="profile-info">
-                            <h2>PlayerOne</h2>
-                            <p>Joined: January 2024</p>
-                            <p>Rank: #42 Global</p>
+                            <h2 id="profile-username">Loading...</h2>
+                            <p>Joined: <span id="profile-joined">Loading...</span></p>
                         </div>
                     </div>
 
@@ -98,10 +97,6 @@
                         <div class="stat-card">
                             <h3>Best Score</h3>
                             <div class="stat-value">11-0</div>
-                        </div>
-                        <div class="stat-card">
-                            <h3>Tournament Wins</h3>
-                            <div class="stat-value">3</div>
                         </div>
                     </div>
 

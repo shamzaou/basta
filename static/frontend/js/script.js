@@ -1,26 +1,57 @@
 // Page navigation
-function showPage(pageId) {    
+// Track current page for navigation
+let currentPage = 'home';
+
+function showPage(pageId, pushState = true) {
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     
     // Handle page access permissions
     if (isLoggedIn && ['login', 'register'].includes(pageId)) {
+        console.log('Redirecting to home: logged-in user attempting to access auth page');
         pageId = 'home';
     } else if (!isLoggedIn && ['profile', 'settings'].includes(pageId)) {
+        console.log('Redirecting to login: non-logged-in user attempting to access protected page');
         pageId = 'login';
     }
 
-    // Update URL and page visibility
-    history.pushState({}, '', '/' + pageId);
+    // Validate page exists
+    const targetPage = document.getElementById(pageId);
+    if (!targetPage) {
+        console.error(`Page ${pageId} not found`);
+        pageId = 'home'; // Fallback to home page if target doesn't exist
+        targetPage = document.getElementById(pageId);
+    }
+
+    // Only push state if we're actually changing pages and pushState is true
+    if (pushState && pageId !== currentPage) {
+        const newUrl = pageId === 'home' ? '/' : `/${pageId}`;
+        history.pushState({ pageId }, '', newUrl);
+    }
+
+    // Store current page
+    currentPage = pageId;
+
+    // Update active page in navigation
+    document.querySelectorAll('.nav-links a').forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === `/${pageId}` || (pageId === 'home' && link.getAttribute('href') === '/')) {
+            link.classList.add('active');
+        }
+    });
+
+    // Hide all pages
     document.querySelectorAll('.page').forEach(page => {
         page.classList.remove('active');
         page.style.display = 'none';
     });
 
-    const targetPage = document.getElementById(pageId);
-    if (!targetPage) return;
-
+    // Show target page
     targetPage.classList.add('active');
     targetPage.style.display = 'block';
+
+    if (pageId === 'profile') {
+        loadProfileData();
+    }
 
     // Clean up any existing game
     if (window.currentGame) {
@@ -28,7 +59,17 @@ function showPage(pageId) {
         window.currentGame = null;
     }
 
+    if (pageId === 'settings') {
+        loadProfileData();
+        loadSettingsData();
+    }
+
     // Handle game initializations
+    initializeGameIfNeeded(pageId);
+}
+
+// Separate function for game initialization
+function initializeGameIfNeeded(pageId) {
     if (pageId === 'game') {
         const modeSelection = document.getElementById('modeSelection');
         
@@ -38,34 +79,74 @@ function showPage(pageId) {
             const gameContainer = document.querySelector('.game-container');
             window.currentGame = new window.PongGame(gameContainer, 'pvp');
             window.currentGame.physics.resetBall();
-        } else {
+        } else if (modeSelection) {
             modeSelection.style.display = 'flex';
-
-            document.getElementById('pvpButton').onclick = () => {
-                modeSelection.style.display = 'none';
-                const gameContainer = document.querySelector('.game-container');
-                window.currentGame = new window.PongGame(gameContainer, 'pvp');
-                window.currentGame.physics.resetBall();
-            };
-
-            document.getElementById('aiButton').onclick = () => {
-                modeSelection.style.display = 'none';
-                const gameContainer = document.querySelector('.game-container');
-                window.currentGame = new window.PongGame(gameContainer, 'ai');
-                window.currentGame.physics.resetBall();
-            };
+            
+            const pvpButton = document.getElementById('pvpButton');
+            const aiButton = document.getElementById('aiButton');
+            
+            if (pvpButton) {
+                pvpButton.onclick = () => {
+                    modeSelection.style.display = 'none';
+                    const gameContainer = document.querySelector('.game-container');
+                    window.currentGame = new window.PongGame(gameContainer, 'pvp');
+                    window.currentGame.physics.resetBall();
+                };
+            }
+            
+            if (aiButton) {
+                aiButton.onclick = () => {
+                    modeSelection.style.display = 'none';
+                    const gameContainer = document.querySelector('.game-container');
+                    window.currentGame = new window.PongGame(gameContainer, 'ai');
+                    window.currentGame.physics.resetBall();
+                };
+            }
         }
     } else if (pageId === 'tictactoe') {
         const gameContainer = document.querySelector('.tictactoe-container');
-        window.currentGame = new window.TicTacToeGame(gameContainer);
+        if (gameContainer) {
+            window.currentGame = new window.TicTacToeGame(gameContainer);
+        }
     }
 }
 
-// Handle browser back/forward buttons
-window.addEventListener('popstate', () => {
+// Handle browser back/forward navigation
+window.addEventListener('popstate', (event) => {
+    if (!event.state) {
+        // If no state exists, create one based on current URL
+        const path = window.location.pathname;
+        const pageId = path.substring(1) || 'home';
+        history.replaceState({ pageId }, '', path);
+        showPage(pageId, false);
+        return;
+    }
+
+    showPage(event.state.pageId, false);
+});
+
+// Initialize history state on page load
+window.addEventListener('load', () => {
     const path = window.location.pathname;
-    const pageId = path.substring(1) || 'home';  // Remove leading slash
-    showPage(pageId);
+    const initialPage = path.substring(1) || 'home';
+    
+    // Set initial history state if it doesn't exist
+    if (!history.state) {
+        history.replaceState({ pageId: initialPage }, '', path);
+    }
+    
+    showPage(initialPage, false);
+    checkLoginState(); // Ensure login state is checked after page is shown
+});
+
+// Add click handler for navigation links to prevent default behavior
+document.addEventListener('click', (event) => {
+    const link = event.target.closest('a');
+    if (link && link.getAttribute('href')?.startsWith('/')) {
+        event.preventDefault();
+        const pageId = link.getAttribute('href').substring(1) || 'home';
+        showPage(pageId, true);
+    }
 });
 
 // Check login state and update UI accordingly
@@ -108,9 +189,6 @@ function getCookie(name) {
 async function handleLogin(event) {
     event.preventDefault();
     
-    const email = document.getElementById('login-username').value;
-    const password = document.getElementById('password').value;
-
     try {
         const response = await fetch('/api/auth/login/', {
             method: 'POST',
@@ -118,17 +196,24 @@ async function handleLogin(event) {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCookie('csrftoken')
             },
-            body: JSON.stringify({ email, password })
+            credentials: 'include',
+            body: JSON.stringify({
+                email: document.getElementById('login-username').value,
+                password: document.getElementById('password').value
+            })
         });
 
         const data = await response.json();
+        console.log('Login response:', data); // Debug log
         
-        if (response.ok) {
+        if (response.ok && data.token) {
             localStorage.setItem('isLoggedIn', 'true');
             localStorage.setItem('userData', JSON.stringify(data.user));
+            localStorage.setItem('authToken', data.token);
             checkLoginState();
             showPage('home');
         } else {
+            console.error('Login failed:', data.message);
             alert(data.message || 'Login failed');
         }
     } catch (error) {
@@ -140,16 +225,20 @@ async function handleLogin(event) {
 // Handle logout
 async function handleLogout() {
     try {
+        const authToken = localStorage.getItem('authToken');
         const response = await fetch('/api/auth/logout/', {
             method: 'POST',
             headers: {
-                'X-CSRFToken': getCookie('csrftoken')
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Authorization': `Token ${authToken}`
             }
         });
 
         if (response.ok) {
+            // Clear all auth data
             localStorage.removeItem('isLoggedIn');
             localStorage.removeItem('userData');
+            localStorage.removeItem('authToken');
             checkLoginState();
             showPage('home');
         }
@@ -205,7 +294,7 @@ async function handleRegister(event) {
 
         if (response.ok) {
             alert('Registration successful!');
-            window.location.href = '/login/';
+            showPage('login');
         } else {
             alert(data.message || data.error || 'Registration failed');
         }
@@ -283,8 +372,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Force initial logout state
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('userData');
+    // localStorage.removeItem('isLoggedIn');
+    // localStorage.removeItem('userData');
     
     // Check login state
     checkLoginState();
@@ -354,22 +443,55 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Edit buttons in settings
     document.querySelectorAll('.edit-btn').forEach(button => {
-        button.addEventListener('click', () => {
+        button.addEventListener('click', async () => {
             const fieldContainer = button.closest('.field-container');
+            const input = fieldContainer.querySelector('.field-input');
+            const display = fieldContainer.querySelector('.field-display');
             const isEditing = fieldContainer.classList.contains('editing');
+            const fieldType = input.id; // This will be either 'username' or 'email'
             
             if (isEditing) {
-                const input = fieldContainer.querySelector('.field-input');
-                const display = fieldContainer.querySelector('.field-display');
-                display.textContent = input.value;
+                const newValue = input.value;
+                const authToken = localStorage.getItem('authToken');
+                
+                try {
+                    const response = await fetch('/api/auth/profile/', {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Token ${authToken}`,
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify({
+                            [fieldType]: newValue
+                        })
+                    });
+
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        display.textContent = newValue;
+                        // Update userData in localStorage
+                        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+                        userData[fieldType] = newValue;
+                        localStorage.setItem('userData', JSON.stringify(userData));
+                        alert(`${fieldType.charAt(0).toUpperCase() + fieldType.slice(1)} updated successfully!`);
+                    } else {
+                        alert(data.message || `Failed to update ${fieldType}`);
+                        input.value = display.textContent; // Reset to original value
+                    }
+                } catch (error) {
+                    console.error(`Error updating ${fieldType}:`, error);
+                    alert(`Failed to update ${fieldType}`);
+                    input.value = display.textContent; // Reset to original value
+                }
+                
                 fieldContainer.classList.remove('editing');
                 button.textContent = 'Edit';
-                button.classList.remove('save');
             } else {
                 fieldContainer.classList.add('editing');
                 button.textContent = 'Save';
-                button.classList.add('save');
-                fieldContainer.querySelector('.field-input').focus();
+                input.focus();
             }
         });
     });
@@ -438,3 +560,92 @@ document.addEventListener('DOMContentLoaded', () => {
         tournamentButton.onclick = (e) => checkAuthAndRedirect(e, 'tournament');
     }
 });
+
+async function loadProfileData() {
+    try {
+        const authToken = localStorage.getItem('authToken');
+        console.log('Attempting to load profile with token:', authToken); // Debug log
+        
+        if (!authToken) {
+            console.error('No auth token found');
+            showPage('login');
+            return;
+        }
+
+        const response = await fetch('/api/auth/profile/', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Token ${authToken}`,
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('Profile data loaded:', data);
+            
+            // Update UI elements
+            const avatarElement = document.getElementById('profile-avatar');
+            const usernameElement = document.getElementById('profile-username');
+            const joinedElement = document.getElementById('profile-joined');
+            
+            if (avatarElement) {
+                avatarElement.src = data.avatar || '/static/frontend/assets/man.png';
+            }
+            if (usernameElement) {
+                usernameElement.textContent = data.username;
+            }
+            if (joinedElement) {
+                joinedElement.textContent = data.date_joined;
+            }
+        } else {
+            if (response.status === 401) {
+                console.log('Token expired or invalid, redirecting to login');
+                localStorage.removeItem('isLoggedIn');
+                localStorage.removeItem('authToken');
+                showPage('login');
+            } else {
+                console.error('Failed to load profile:', await response.text());
+            }
+        }
+    } catch (error) {
+        console.error('Error loading profile:', error);
+    }
+}
+
+async function loadSettingsData() {
+    try {
+        const authToken = localStorage.getItem('authToken');
+        if (!authToken) {
+            showPage('login');
+            return;
+        }
+
+        const response = await fetch('/api/auth/profile/', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Token ${authToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('Settings data loaded:', data);
+            
+            // Update username field in settings
+            const usernameDisplay = document.querySelector('#settings-form .field-container .field-display');
+            const usernameInput = document.querySelector('#settings-form .field-container .field-input');
+            
+            if (usernameDisplay && data.username) {
+                usernameDisplay.textContent = data.username;
+            }
+            if (usernameInput && data.username) {
+                usernameInput.value = data.username;
+            }
+        }
+    } catch (error) {
+        console.error('Error loading settings:', error);
+    }
+}

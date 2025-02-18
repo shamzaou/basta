@@ -6,3 +6,7 @@ flake8>=6.1.0
 black>=23.12.1
 isort>=5.13.2
 Pillow>=10.1.0
+djangorestframework==3.14.0
+django-extensions
+Werkzeug
+pyOpenSSL
