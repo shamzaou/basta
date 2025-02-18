@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-k@ial)6g@p=y@umgg_oc31#*xu&(g5t&cw=2^n0+3%((z+d)iq
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'userapp',
     'rest_framework',
     'rest_framework.authtoken',  # Add this line
+    'django_extensions',
 ]
 
 REST_FRAMEWORK = {
@@ -164,6 +165,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_COOKIE_AGE = 86400  # 24 hours in seconds
 SESSION_COOKIE_NAME = 'sessionid'
+SESSION_SAVE_EVERY_REQUEST = True  # Ensure the session is saved on every request
 
 CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_HTTPONLY = False  # False to allow JavaScript access
