@@ -3,3 +3,44 @@ docker run -d \                                                                 
     --network=$(docker inspect basta-db-1 --format='{{range $k, $v := .NetworkSettings.Networks}}{{$k}}{{end}}') \
     -p 8080:8080 \
     adminer
+
+
+
+changes from tournaments to master:
+~/Desktop/basta (master*) » git pull                                 shamzaou@lab2r4s1
+Updating 3ed07c0..58f5910
+Fast-forward
+ backend/settings.py                                     |   1 +
+ backend/urls.py                                         |   4 +-
+ static/frontend/css/styles.css                          | 167 +++++++++++--
+ static/frontend/js/pong.js                              |  51 ++--
+ static/frontend/js/script.js                            | 104 +++++++-
+ templates/frontend/index.html                           |  20 +-
+ tournaments/__init__.py                                 |   0
+ tournaments/admin.py                                    |   3 +
+ tournaments/apps.py                                     |   6 +
+ tournaments/forms.py                                    |  12 +
+ tournaments/migrations/0001_initial.py                  |  32 +++
+ tournaments/migrations/0002_match.py                    |  25 ++
+ .../0003_rename_completed_match_is_complete_and_more.py |  44 ++++
+ .../0004_match_score_player1_match_score_player2.py     |  23 ++
+ ...lter_player_nickname_alter_player_unique_together.py |  22 ++
+ tournaments/migrations/0006_match_is_additional.py      |  15 ++
+ tournaments/migrations/__init__.py                      |   0
+ tournaments/models.py                                   | 133 ++++++++++
+ tournaments/static/tournaments/css/add.css              | 154 ++++++++++++
+ tournaments/static/tournaments/css/create.css           |  96 ++++++++
+ tournaments/static/tournaments/css/view.css             | 295 +++++++++++++++++++++++
+ tournaments/templates/tournaments/add_players.html      |  28 +++
+ .../templates/tournaments/create_tournament.html        |  21 ++
+ tournaments/templates/tournaments/view.html             |   1 +
+ tournaments/templates/tournaments/view_tournament.html  | 176 ++++++++++++++
+ tournaments/tests.py                                    |  34 +++
+ tournaments/urls.py                                     |  14 ++
+ tournaments/views.py                                    | 193 +++++++++++++++
+ 28 files changed, 1629 insertions(+), 45 deletions(-)
+ create mode 100644 tournaments/__init__.py
+ create mode 100644 tournaments/admin.py
+ create mode 100644 tournaments/apps.py
+ create mode 100644 tournaments/forms.py
+ create mode 100644 tournaments/migrations/0001_initial.py
