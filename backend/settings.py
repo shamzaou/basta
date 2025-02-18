@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'gameapp',
     'userapp',
+    'tournaments',
     'rest_framework',
     'rest_framework.authtoken',  # Add this line
     'django_extensions',

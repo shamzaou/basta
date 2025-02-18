@@ -66,11 +66,14 @@ h3 {
 }
 
 p {
+    font-family: 'Press Start 2P', cursive;
     margin-bottom: 1.25em;
-    max-width: 37.5em;
+    max-width: 50em;
     margin-left: auto;
     margin-right: auto;
     text-align: center;
+    font-size: 0.8em;
+    line-height: 1.8;
 }
 
 /* Header and Navigation */
@@ -230,20 +233,24 @@ nav {
 }
 
 .cta-button {
-    display: inline-block;
+    margin-top: 1em;
     background-color: var(--primary-color);
     color: var(--background-color);
-    padding: 0.75em 1.5em;
-    text-decoration: none;
-    border-radius: var(--border-radius);
-    transition: all var(--transition-speed) ease;
     font-family: 'Press Start 2P', cursive;
-    font-size: 0.875em;
+    font-size: 0.75em;
+    padding: 0.75em 1em;
+    border-radius: 0.3125em;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: block;
+    width: 180px;
 }
 
 .cta-button:hover {
     background-color: var(--secondary-color);
     transform: scale(1.05);
+    color: var(--background-color);
+    text-decoration: none;
 }
 
 /* Pong Animation */
@@ -252,7 +259,12 @@ nav {
     height: 12.5em;
     position: relative;
     margin-top: 2.5em;
+    margin-bottom: 3em;
     overflow: hidden;
+}
+
+.pong-animation + p {
+    margin-top: 3em;
 }
 
 .paddle {
@@ -587,8 +599,12 @@ nav {
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    body {
+    body, html {
         font-size: 14px;
+    }
+
+    h1 {
+        font-size: 2.2em;
     }
 
     .hamburger {
@@ -632,12 +648,8 @@ nav {
 }
 
 @media (max-width: 480px) {
-    body {
+    body, html {
         font-size: 12px;
-    }
-
-    .logo {
-        font-size: 1.25em;
     }
 
     h1 {
@@ -1014,19 +1026,11 @@ body.is-logged-out .logged-out {
 }
 
 #score {
-    top: 5%;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: clamp(24px, 5vw, 36px);
+    top: 10% !important; /* Перемещаем счет выше */
 }
 
 #instructions {
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 18px;
-    color: #ff00aa;
-    text-shadow: 0 0 5px #ff00aa66;
+    bottom: 5% !important; /* Опускаем инструкции ниже */
 }
 
 #pauseText {
@@ -1069,3 +1073,118 @@ body.is-logged-out .logged-out {
 }
 
 /* tictactoe */
+
+.btn-group {
+    display: inline-flex;
+    gap: 0.5em;
+    margin-top: 2em;
+}
+
+.btn-group .cta-button {
+    margin: 0;
+    width: 180px;
+}
+
+.btn-group .btn {
+    margin-right: 1em;
+}
+
+.btn-group .btn:last-child {
+    margin-right: 0;
+}
+
+.cta-button {
+    margin-top: 1em;
+    background-color: var(--primary-color);
+    color: var(--background-color);
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.75em;
+    padding: 0.75em 1em;
+    border-radius: 0.3125em;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: block;
+}
+
+.cta-button:hover {
+    background-color: var(--secondary-color);
+    transform: scale(1.05);
+    color: var(--background-color);
+    text-decoration: none;
+}
+
+/* Button group styles */
+.btn-group {
+    display: inline-flex;
+    gap: 0.5em;
+    margin-top: 2em;
+}
+
+.btn-group .cta-button {
+    margin: 0;
+    width: 180px;
+}
+
+.text-center {
+    text-align: center;
+    margin-top: 1em;
+}
+
+/* Player names styling */
+.player-name {
+    position: absolute;
+    top: 15%;
+    font-family: 'Press Start 2P', sans-serif;
+    font-size: 24px;
+    color: #00ff00;
+    text-shadow: 2px 2px 4px rgba(0, 255, 0, 0.5);
+    z-index: 10;
+}
+
+.player-name.left {
+    left: 25%;
+    transform: translateX(-50%);
+}
+
+.player-name.right {
+    right: 25%;
+    transform: translateX(50%);
+}
+
+/* Winner screen styling */
+#winner-screen {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.9);
+    padding: 30px;
+    border: 4px solid #00ff00;
+    border-radius: 10px;
+    text-align: center;
+    display: none;
+}
+
+#winner-text {
+    font-size: 36px;
+    color: #00ff00;
+    text-shadow: 2px 2px 4px rgba(0, 255, 0, 0.5);
+    margin-bottom: 20px;
+}
+
+.return-button {
+    padding: 15px 30px;
+    font-family: 'Press Start 2P', sans-serif;
+    font-size: 18px;
+    color: #000;
+    background-color: #00ff00;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.return-button:hover {
+    background-color: #ff00ff;
+    transform: scale(1.05);
+}

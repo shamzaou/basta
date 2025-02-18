@@ -7,6 +7,8 @@ from gameapp.views import index
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/auth/', include('userapp.urls')),  # This will include all auth routes
+    path('api/auth/', include('userapp.urls')),
+    path('tournaments/', include('tournaments.urls')),
+    # Keep your catch-all route at the end
     re_path(r'^.*$', index, name='index'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

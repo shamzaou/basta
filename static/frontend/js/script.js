@@ -72,7 +72,14 @@ function showPage(pageId, pushState = true) {
 function initializeGameIfNeeded(pageId) {
     if (pageId === 'game') {
         const modeSelection = document.getElementById('modeSelection');
-        if (modeSelection) {
+        
+        // Check if we're coming from a tournament match
+        if (window.currentMatchId) {
+            modeSelection.style.display = 'none';
+            const gameContainer = document.querySelector('.game-container');
+            window.currentGame = new window.PongGame(gameContainer, 'pvp');
+            window.currentGame.physics.resetBall();
+        } else if (modeSelection) {
             modeSelection.style.display = 'flex';
             
             const pvpButton = document.getElementById('pvpButton');
@@ -297,6 +304,60 @@ async function handleRegister(event) {
     }
 }
 
+// Add function to start tournament match
+function startTournamentMatch(matchId) {
+    // Получаем CSRF токен
+    const csrftoken = getCookie('csrftoken');
+    
+    fetch(`/tournaments/match/${matchId}/start/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        credentials: 'include'  // Важно для передачи куки
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Store match info
+            window.currentMatchId = matchId;
+            window.currentMatchPlayers = {
+                player1: data.player1,
+                player2: data.player2
+            };
+            window.tournamentId = data.tournament_id;
+            
+            // Show game page and hide tournament view
+            document.querySelectorAll('.section').forEach(section => {
+                section.style.display = 'none';
+            });
+            
+            const gameContainer = document.getElementById('game');
+            if (gameContainer) {
+                gameContainer.style.display = 'block';
+                
+                // Initialize game in PvP mode
+                const pongContainer = gameContainer.querySelector('.game-container');
+                window.currentGame = new window.PongGame(pongContainer, 'pvp');
+                window.currentGame.physics.resetBall();
+            }
+        } else {
+            alert(data.message || 'Failed to start match');
+        }
+    })
+    .catch(error => {
+        console.error('Error starting match:', error);
+        alert('Failed to start match. Please try again.');
+    });
+}
+
 // Main initialization
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -458,6 +519,45 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('Account deletion initiated...');
             }
         });
+    }
+
+    // Add logo click handler
+    const logo = document.querySelector('.logo');
+    if (logo) {
+        logo.addEventListener('click', (e) => {
+            e.preventDefault();
+            showPage('home');
+        });
+    }
+
+    // Add auth check for game buttons
+    const playNowButton = document.getElementById('play-now-button');
+    const tournamentButton = document.querySelector('a[href="/tournaments/create/"]');
+
+    function checkAuthAndRedirect(e, destination) {
+        e.preventDefault();
+        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+        
+        if (!isLoggedIn) {
+            alert('Please log in to access this feature');
+            showPage('login');
+            return;
+        }
+
+        if (destination === 'game') {
+            showPage('game');
+        } else if (destination === 'tournament') {
+            window.location.href = '/tournaments/create/';
+        }
+    }
+
+    // Add handlers for game buttons
+    if (playNowButton) {
+        playNowButton.onclick = (e) => checkAuthAndRedirect(e, 'game');
+    }
+
+    if (tournamentButton) {
+        tournamentButton.onclick = (e) => checkAuthAndRedirect(e, 'tournament');
     }
 });
 
