@@ -69,11 +69,20 @@ class Tournament(models.Model):
     def get_winner(self):
         if self.matches.filter(is_complete=False).exists():
             return None
+            
+        # Check if we already have additional matches
+        has_additional = self.matches.filter(is_additional=True).exists()
+        
         players = self.players.all()
         max_score = max(player.get_score() for player in players)
         top_players = [player for player in players if player.get_score() == max_score]
+        
         if len(top_players) == 1:
             return top_players[0]
+        elif has_additional:
+            # If we already had additional matches and still have multiple top players,
+            # return all of them as co-winners
+            return top_players
         return None
 
     def __str__(self):

@@ -129,6 +129,14 @@
         <h2>🏆 Tournament Winner: {{ winner.nickname }} 🏆</h2>
         <button onclick="window.location.href='/'" class="home-button">Return to Home</button>
     </div>
+    {% elif winners %}
+    <div class="winner-section">
+        <h2>🏆 Tournament Co-Winners 🏆</h2>
+        {% for winner in winners %}
+            <h3>{{ winner.nickname }}</h3>
+        {% endfor %}
+        <button onclick="window.location.href='/'" class="home-button">Return to Home</button>
+    </div>
     {% endif %}
 
     <!-- Add game container (initially hidden) -->

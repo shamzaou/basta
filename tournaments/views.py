@@ -65,17 +65,14 @@ def view_tournament(request, tournament_id):
     tournament = get_object_or_404(Tournament, id=tournament_id)
     players = tournament.players.all()
     
-    # Get regular and additional matches separately
     regular_matches = tournament.matches.filter(is_additional=False)
     additional_matches = tournament.matches.filter(is_additional=True)
     
-    # Calculate scores
     player_scores = {player: player.get_score() for player in players}
     
-    # Check if all regular matches are complete
     all_regular_complete = not regular_matches.filter(is_complete=False).exists()
     
-    # Check if additional matches are needed
+    # Check if additional matches are needed only if we don't already have them
     need_additional_matches = False
     if all_regular_complete and not additional_matches.exists():
         max_score = max(score for score in player_scores.values())
@@ -83,11 +80,16 @@ def view_tournament(request, tournament_id):
         if len(top_players) > 1:
             need_additional_matches = True
             create_additional_matches(tournament, top_players)
-            # Refresh additional matches after creation
             additional_matches = tournament.matches.filter(is_additional=True)
 
     status = tournament.get_status()
     winner = tournament.get_winner()
+    
+    # Handle multiple winners
+    winners = []
+    if isinstance(winner, list):
+        winners = winner
+        winner = None
 
     context = {
         'tournament': tournament,
@@ -98,6 +100,7 @@ def view_tournament(request, tournament_id):
         'has_additional_matches': additional_matches.exists(),
         'status': status,
         'winner': winner,
+        'winners': winners,
     }
     return render(request, 'tournaments/view_tournament.html', context)
 
