@@ -16,24 +16,48 @@ from django.core.files.base import ContentFile
 from rest_framework.authentication import SessionAuthentication, TokenAuthentication
 
 
-@api_view(['GET'])
+@api_view(['GET', 'PUT'])
 @permission_classes([IsAuthenticated])
 @authentication_classes([TokenAuthentication, SessionAuthentication])
 def profile_view(request):
     """Get user profile information"""
-    try:
-        user = request.user
-        return Response({
-            'username': user.username,
-            'email': user.email,
-            'avatar': user.profile_picture.url if user.profile_picture else None,
-            'date_joined': user.date_joined.strftime('%B %Y')
-        })
-    except Exception as e:
-        print(f"Profile view error: {str(e)}")  # Debug log
-        return Response({
-            'error': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    if request.method == 'GET':
+        try:
+            user = request.user
+            return Response({
+                'username': user.username,
+                'email': user.email,
+                'avatar': user.profile_picture.url if user.profile_picture else None,
+                'date_joined': user.date_joined.strftime('%B %Y')
+            })
+        except Exception as e:
+            print(f"Profile view error: {str(e)}")
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    elif request.method == 'PUT':
+        try:
+            user = request.user
+            data = request.data
+            
+            if 'username' in data:
+                if User.objects.exclude(pk=user.pk).filter(username=data['username']).exists():
+                    return Response({
+                        'status': 'error',
+                        'message': 'Username already taken'
+                    }, status=400)
+                user.username = data['username']
+                user.save()
+            
+            return Response({
+                'status': 'success',
+                'username': user.username
+            })
+        except Exception as e:
+            return Response({
+                'status': 'error',
+                'message': str(e)
+            }, status=400)
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
@@ -215,3 +239,48 @@ def check_auth(request):
             'email': request.user.email,
         } if request.user.is_authenticated else None
     })
+
+@api_view(['GET', 'PUT'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([TokenAuthentication, SessionAuthentication])
+def user_settings_view(request):
+    """Handle user settings get/update"""
+    if request.method == 'GET':
+        user = request.user
+        return Response({
+            'username': user.username,
+            'email': user.email,
+            'display_name': user.get_full_name() or user.username,
+            'avatar': user.profile_picture.url if user.profile_picture else None,
+        })
+    elif request.method == 'PUT':
+        user = request.user
+        data = request.data
+        
+        if 'username' in data:
+            # Validate username is unique
+            if User.objects.exclude(pk=user.pk).filter(username=data['username']).exists():
+                return Response({
+                    'status': 'error',
+                    'message': 'Username already taken'
+                }, status=400)
+            user.username = data['username']
+        
+        if 'email' in data:
+            user.email = data['email']
+            
+        if 'display_name' in data:
+            names = data['display_name'].split(' ', 1)
+            user.first_name = names[0]
+            user.last_name = names[1] if len(names) > 1 else ''
+        
+        user.save()
+        return Response({
+            'status': 'success',
+            'user': {
+                'username': user.username,
+                'email': user.email,
+                'display_name': user.get_full_name() or user.username,
+                'avatar': user.profile_picture.url if user.profile_picture else None,
+            }
+        })

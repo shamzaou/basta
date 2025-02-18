@@ -59,6 +59,11 @@ function showPage(pageId, pushState = true) {
         window.currentGame = null;
     }
 
+    if (pageId === 'settings') {
+        loadProfileData();
+        loadSettingsData();
+    }
+
     // Handle game initializations
     initializeGameIfNeeded(pageId);
 }
@@ -377,22 +382,55 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Edit buttons in settings
     document.querySelectorAll('.edit-btn').forEach(button => {
-        button.addEventListener('click', () => {
+        button.addEventListener('click', async () => {
             const fieldContainer = button.closest('.field-container');
+            const input = fieldContainer.querySelector('.field-input');
+            const display = fieldContainer.querySelector('.field-display');
             const isEditing = fieldContainer.classList.contains('editing');
+            const fieldType = input.id; // This will be either 'username' or 'email'
             
             if (isEditing) {
-                const input = fieldContainer.querySelector('.field-input');
-                const display = fieldContainer.querySelector('.field-display');
-                display.textContent = input.value;
+                const newValue = input.value;
+                const authToken = localStorage.getItem('authToken');
+                
+                try {
+                    const response = await fetch('/api/auth/profile/', {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Token ${authToken}`,
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify({
+                            [fieldType]: newValue
+                        })
+                    });
+
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        display.textContent = newValue;
+                        // Update userData in localStorage
+                        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+                        userData[fieldType] = newValue;
+                        localStorage.setItem('userData', JSON.stringify(userData));
+                        alert(`${fieldType.charAt(0).toUpperCase() + fieldType.slice(1)} updated successfully!`);
+                    } else {
+                        alert(data.message || `Failed to update ${fieldType}`);
+                        input.value = display.textContent; // Reset to original value
+                    }
+                } catch (error) {
+                    console.error(`Error updating ${fieldType}:`, error);
+                    alert(`Failed to update ${fieldType}`);
+                    input.value = display.textContent; // Reset to original value
+                }
+                
                 fieldContainer.classList.remove('editing');
                 button.textContent = 'Edit';
-                button.classList.remove('save');
             } else {
                 fieldContainer.classList.add('editing');
                 button.textContent = 'Save';
-                button.classList.add('save');
-                fieldContainer.querySelector('.field-input').focus();
+                input.focus();
             }
         });
     });
@@ -473,5 +511,41 @@ async function loadProfileData() {
         }
     } catch (error) {
         console.error('Error loading profile:', error);
+    }
+}
+
+async function loadSettingsData() {
+    try {
+        const authToken = localStorage.getItem('authToken');
+        if (!authToken) {
+            showPage('login');
+            return;
+        }
+
+        const response = await fetch('/api/auth/profile/', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Token ${authToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('Settings data loaded:', data);
+            
+            // Update username field in settings
+            const usernameDisplay = document.querySelector('#settings-form .field-container .field-display');
+            const usernameInput = document.querySelector('#settings-form .field-container .field-input');
+            
+            if (usernameDisplay && data.username) {
+                usernameDisplay.textContent = data.username;
+            }
+            if (usernameInput && data.username) {
+                usernameInput.value = data.username;
+            }
+        }
+    } catch (error) {
+        console.error('Error loading settings:', error);
     }
 }
