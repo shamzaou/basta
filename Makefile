@@ -35,7 +35,7 @@ down:
 	docker-compose down
 
 
-restart: clean down build up
+restart: down build up
 
 logs:
 	docker-compose logs -f

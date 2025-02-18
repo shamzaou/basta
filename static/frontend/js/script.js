@@ -49,6 +49,10 @@ function showPage(pageId, pushState = true) {
     targetPage.classList.add('active');
     targetPage.style.display = 'block';
 
+    if (pageId === 'profile') {
+        loadProfileData();
+    }
+
     // Clean up any existing game
     if (window.currentGame) {
         window.currentGame.cleanup();
@@ -173,9 +177,6 @@ function getCookie(name) {
 async function handleLogin(event) {
     event.preventDefault();
     
-    const email = document.getElementById('login-username').value;
-    const password = document.getElementById('password').value;
-
     try {
         const response = await fetch('/api/auth/login/', {
             method: 'POST',
@@ -183,17 +184,24 @@ async function handleLogin(event) {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCookie('csrftoken')
             },
-            body: JSON.stringify({ email, password })
+            credentials: 'include',
+            body: JSON.stringify({
+                email: document.getElementById('login-username').value,
+                password: document.getElementById('password').value
+            })
         });
 
         const data = await response.json();
+        console.log('Login response:', data); // Debug log
         
-        if (response.ok) {
+        if (response.ok && data.token) {
             localStorage.setItem('isLoggedIn', 'true');
             localStorage.setItem('userData', JSON.stringify(data.user));
+            localStorage.setItem('authToken', data.token);
             checkLoginState();
             showPage('home');
         } else {
+            console.error('Login failed:', data.message);
             alert(data.message || 'Login failed');
         }
     } catch (error) {
@@ -205,16 +213,20 @@ async function handleLogin(event) {
 // Handle logout
 async function handleLogout() {
     try {
+        const authToken = localStorage.getItem('authToken');
         const response = await fetch('/api/auth/logout/', {
             method: 'POST',
             headers: {
-                'X-CSRFToken': getCookie('csrftoken')
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Authorization': `Token ${authToken}`
             }
         });
 
         if (response.ok) {
+            // Clear all auth data
             localStorage.removeItem('isLoggedIn');
             localStorage.removeItem('userData');
+            localStorage.removeItem('authToken');
             checkLoginState();
             showPage('home');
         }
@@ -294,8 +306,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Force initial logout state
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('userData');
+    // localStorage.removeItem('isLoggedIn');
+    // localStorage.removeItem('userData');
     
     // Check login state
     checkLoginState();
@@ -410,3 +422,56 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+async function loadProfileData() {
+    try {
+        const authToken = localStorage.getItem('authToken');
+        console.log('Attempting to load profile with token:', authToken); // Debug log
+        
+        if (!authToken) {
+            console.error('No auth token found');
+            showPage('login');
+            return;
+        }
+
+        const response = await fetch('/api/auth/profile/', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Token ${authToken}`,
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('Profile data loaded:', data);
+            
+            // Update UI elements
+            const avatarElement = document.getElementById('profile-avatar');
+            const usernameElement = document.getElementById('profile-username');
+            const joinedElement = document.getElementById('profile-joined');
+            
+            if (avatarElement) {
+                avatarElement.src = data.avatar || '/static/frontend/assets/man.png';
+            }
+            if (usernameElement) {
+                usernameElement.textContent = data.username;
+            }
+            if (joinedElement) {
+                joinedElement.textContent = data.date_joined;
+            }
+        } else {
+            if (response.status === 401) {
+                console.log('Token expired or invalid, redirecting to login');
+                localStorage.removeItem('isLoggedIn');
+                localStorage.removeItem('authToken');
+                showPage('login');
+            } else {
+                console.error('Failed to load profile:', await response.text());
+            }
+        }
+    } catch (error) {
+        console.error('Error loading profile:', error);
+    }
+}
