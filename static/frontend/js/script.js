@@ -633,18 +633,47 @@ document.addEventListener('DOMContentLoaded', () => {
         loginWith42Button.addEventListener('click', initiate42OAuth);
     }
 
-    // Add tournament button handler
-    const tournamentButton = document.getElementById('tournament-button');
+    // // Add tournament button handler
+    // const tournamentButton = document.getElementById('tournament-button');
+    // if (tournamentButton) {
+    //     tournamentButton.addEventListener('click', (e) => {
+    //         e.preventDefault();
+    //         if (localStorage.getItem('isLoggedIn') === 'true') {
+    //             showPage('tournament');
+    //         } else {
+    //             alert('Please log in to create or join tournaments');
+    //             showPage('login');
+    //         }
+    //     });
+    // }
+    // Tournament button handling
+    const playNowButton = document.getElementById('play-now-button');
+    const tournamentButton = document.querySelector('a[href="/tournaments/create/"]');
+
+    function checkAuthAndRedirect(e, destination) {
+        e.preventDefault();
+        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+        
+        if (!isLoggedIn) {
+            alert('Please log in to access this feature');
+            showPage('login');
+            return;
+        }
+
+        if (destination === 'game') {
+            showPage('game');
+        } else if (destination === 'tournament') {
+            window.location.href = '/tournaments/create/';
+        }
+    }
+
+    // Add handlers for game buttons
+    if (playNowButton) {
+        playNowButton.onclick = (e) => checkAuthAndRedirect(e, 'game');
+    }
+
     if (tournamentButton) {
-        tournamentButton.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (localStorage.getItem('isLoggedIn') === 'true') {
-                showPage('tournament');
-            } else {
-                alert('Please log in to create or join tournaments');
-                showPage('login');
-            }
-        });
+        tournamentButton.onclick = (e) => checkAuthAndRedirect(e, 'tournament');
     }
 
     // Add tournament form handler
@@ -866,3 +895,5 @@ async function handleTournamentCreation(event) {
         alert('Failed to create tournament. Please try again.');
     }
 }
+
+
