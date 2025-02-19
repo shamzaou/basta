@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'frontend/css/styles.css' %}">
+    <link rel="stylesheet" href="{% static 'tournaments/css/tournament.css' %}">
 </head>
 <body>
     <header>
@@ -65,7 +66,7 @@
                 <p>Ready to compete? Let the strongest man win!</p>
                 <div class="text-center">
                     <div class="btn-group" role="group" aria-label="Button group">
-                        <a href="#" class="btn cta-button" id="play-now-button">PLAY NOW</a>
+                        <a href="#" onclick="showPage('game')" class="btn cta-button" id="play-now-button">PLAY NOW</a>
                         <a href="/tournaments/create/" class="btn cta-button">TOURNAMENT</a>
                     </div>
                 </div>

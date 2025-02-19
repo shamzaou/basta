@@ -1,8 +1,10 @@
 # gameapp/views.py
 from django.shortcuts import render
-from django.contrib.auth import logout
+from django.http import JsonResponse
 
 def index(request):
-    # Force logout on page load (temporary, for testing)
-    logout(request)
+    """Main entry point - handles both full page and SPA requests"""
+    # Check if this is an AJAX request
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'status': 'success'})
     return render(request, 'frontend/index.html')

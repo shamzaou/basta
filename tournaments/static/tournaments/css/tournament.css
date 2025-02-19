@@ -1,0 +1,80 @@
+.tournament-page {
+    padding: 20px;
+}
+
+.tournament-page .title {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.tournament-page .form-container {
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.tournament-page .input-group {
+    margin-bottom: 15px;
+}
+
+.tournament-page .error {
+    color: red;
+    margin-top: 10px;
+}
+
+.tournament-page .section {
+    margin-bottom: 40px;
+}
+
+.tournament-page .players-list {
+    list-style: none;
+    padding: 0;
+}
+
+.tournament-page .player-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.tournament-page .table-container {
+    overflow-x: auto;
+}
+
+.tournament-page table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.tournament-page th, 
+.tournament-page td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.tournament-page .status-finished {
+    color: #28a745;
+}
+
+.tournament-page .winner-section {
+    text-align: center;
+    margin-top: 40px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.tournament-page .home-button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
