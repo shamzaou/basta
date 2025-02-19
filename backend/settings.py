@@ -44,7 +44,7 @@ INSTALLED_APPS = [
     'gameapp',
     'django_otp',
     'django_otp.plugins.otp_totp',
-    'userapp',
+    #'userapp',
     'tournaments',
     'rest_framework',
     'rest_framework.authtoken',  # Add this line
@@ -171,14 +171,14 @@ SESSION_COOKIE_AGE = 86400  # 24 hours in seconds
 SESSION_COOKIE_NAME = 'sessionid'
 
 SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
-SESSION_COOKIE_HTTPONLY = True # T ONOT ALLOW JS ACCESS
+SESSION_COOKIE_HTTPONLY = False # T ONOT ALLOW JS ACCESS
 SESSION_COOKIE_SAMESITE = 'Lax'
 SESSION_SAVE_EVERY_REQUEST = True
 
 # CORS settings
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8000",
+    "https://localhost:8000",
 ]
 CORS_ALLOW_METHODS = [
     'GET',

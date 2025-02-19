@@ -355,7 +355,7 @@ def oauth_callback(request):
     error = request.GET.get('error')
     if error:
         print(f"OAuth Error: {error} - {request.GET.get('error_description')}")
-        return redirect("http://localhost:8000/login")
+        return redirect("https://localhost:8000/login")
 
     code = request.GET.get("code")
     if not code:
@@ -382,7 +382,7 @@ def oauth_callback(request):
         
         if response.status_code != 200:
             print("Token exchange failed:", response.text)
-            return redirect("http://localhost:8000/login")
+            return redirect("https://localhost:8000/login")
 
         access_token = response.json().get("access_token")
 
@@ -393,7 +393,7 @@ def oauth_callback(request):
         
         if user_info_response.status_code != 200:
             print("User info fetch failed:", user_info_response.text)
-            return redirect("http://localhost:8000/login")
+            return redirect("https://localhost:8000/login")
 
         user_info = user_info_response.json()
         username = user_info.get("login")
@@ -431,7 +431,7 @@ def oauth_callback(request):
         print("Session data:", dict(request.session))
 
         # Create response with session cookie
-        response = redirect("http://localhost:8000/home")
+        response = redirect("https://localhost:8000/home")
         response.set_cookie(
             'sessionid',
             request.session.session_key,
@@ -455,7 +455,7 @@ def oauth_callback(request):
         
     except Exception as e:
         print("OAuth callback error:", str(e))
-        return redirect("http://localhost:8000/login")
+        return redirect("https://localhost:8000/login")
 
 @csrf_exempt
 def get_token(request):

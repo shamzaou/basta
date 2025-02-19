@@ -17,3 +17,4 @@ sendgrid-django
 django-extensions
 Werkzeug
 pyOpenSSL
+python-decouple

@@ -184,7 +184,7 @@
         if (response.ok) {
             alert('OTP verified successfully!');
             localStorage.setItem('access_token', data.token);
-            window.location.href = data.redirect_url || 'http://localhost:8000/profile/';
+            window.location.href = data.redirect_url || 'https://localhost:8000/profile/';
         } else {
             console.error('OTP verification failed:', data);
             alert('OTP verification failed: ' + (data.error || 'Unexpected error.'));

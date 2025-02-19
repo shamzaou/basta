@@ -8,6 +8,7 @@ chmod +x /app/scripts/init_db.sh
 
 
 # Apply database migrations
+python manage.py makemigrations userapp
 python manage.py makemigrations
 python manage.py migrate
 
