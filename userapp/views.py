@@ -20,14 +20,13 @@ from rest_framework.authentication import SessionAuthentication, TokenAuthentica
 @permission_classes([IsAuthenticated])
 @authentication_classes([TokenAuthentication, SessionAuthentication])
 def profile_view(request):
-    """Get user profile information"""
     if request.method == 'GET':
         try:
             user = request.user
             return Response({
                 'username': user.username,
                 'email': user.email,
-                'display_name': user.username,
+                'display_name': user.display_name if hasattr(user, 'display_name') else user.username,
                 'avatar': user.profile_picture.url if user.profile_picture else None,
                 'date_joined': user.date_joined.strftime('%B %Y')
             })
@@ -57,24 +56,18 @@ def profile_view(request):
                     }, status=400)
                 user.email = data['email']
             
-            # Handle display_name update
+            # Handle display_name separately from username
             if 'display_name' in data:
                 display_name = data['display_name'].strip()
-                if display_name:
-                    # Update username as display_name
-                    if User.objects.exclude(pk=user.pk).filter(username=display_name).exists():
-                        return Response({
-                            'status': 'error',
-                            'message': 'Display name already taken'
-                        }, status=400)
-                    user.username = display_name
+                if hasattr(user, 'display_name'):
+                    user.display_name = display_name
             
             user.save()
             return Response({
                 'status': 'success',
                 'username': user.username,
                 'email': user.email,
-                'display_name': user.username
+                'display_name': user.display_name if hasattr(user, 'display_name') else user.username
             })
         except Exception as e:
             print(f"Error updating profile: {str(e)}")
