@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from decouple import config
 from pathlib import Path
+import os
 AUTH_USER_MODEL = 'userapp.User'
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -27,7 +28,7 @@ SECRET_KEY = 'django-insecure-k@ial)6g@p=y@umgg_oc31#*xu&(g5t&cw=2^n0+3%((z+d)iq
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -43,8 +44,20 @@ INSTALLED_APPS = [
     'gameapp',
     'django_otp',
     'django_otp.plugins.otp_totp',
+    'userapp',
+    'tournaments',
+    'rest_framework',
+    'rest_framework.authtoken',  # Add this line
+    'django_extensions',
 ]
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.TokenAuthentication',  # Add this line
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+    ),
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -156,8 +169,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_COOKIE_AGE = 86400  # 24 hours in seconds
 SESSION_COOKIE_NAME = 'sessionid'
+
 SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
-SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_HTTPONLY = True # T ONOT ALLOW JS ACCESS
 SESSION_COOKIE_SAMESITE = 'Lax'
 SESSION_SAVE_EVERY_REQUEST = True
 
@@ -205,3 +219,8 @@ JWT_SETTINGS = {
     'CLIENT_SECRET': config('CLIENT_SECRET'),
     'REDIRECT_URI': config('REDIRECT_URI')
 }
+
+CSRF_COOKIE_NAME = 'csrftoken'
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

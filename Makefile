@@ -28,14 +28,14 @@ build:
 up:
 	@echo "$(GREEN)Starting Docker containers...$(RESET)"
 	docker-compose up -d
-	@echo "$(GREEN)Services are running. Access the application at http://localhost:8000$(RESET)"
+	@echo "$(GREEN)Services are running. Access the application at https://localhost:8000$(RESET)"
 
 down:
 	@echo "$(GREEN)Stopping Docker containers...$(RESET)"
 	docker-compose down
 
 
-restart: clean down build up
+restart: down build up
 
 logs:
 	docker-compose logs -f

@@ -3,12 +3,12 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.contrib.auth import login, logout, authenticate
 from django.views.decorators.csrf import ensure_csrf_cookie
+
 from django.views.decorators.csrf import csrf_exempt
 from decouple import config
-import json
-import jwt
-import datetime
-from .models import User
+
+from rest_framework.authtoken.models import Token  # Add this import
+
 from django.core.mail import send_mail
 from django.conf import settings
 from .utils import jwt_required
@@ -21,15 +21,117 @@ from django.core.cache import cache
 import logging
 from rest_framework.decorators import api_view
 
+import json
+import jwt
+import datetime
+from .models import User
+
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from django.core.files.storage import default_storage
+import base64
+from django.core.files.base import ContentFile
+from rest_framework.authentication import SessionAuthentication, TokenAuthentication
+
 logger = logging.getLogger(__name__)
+
+
+
+@api_view(['GET', 'PUT'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([TokenAuthentication, SessionAuthentication])
+def profile_view(request):
+    """Get user profile information"""
+    if request.method == 'GET':
+        try:
+            user = request.user
+            return Response({
+                'username': user.username,
+                'email': user.email,
+                'avatar': user.profile_picture.url if user.profile_picture else None,
+                'date_joined': user.date_joined.strftime('%B %Y')
+            })
+        except Exception as e:
+            print(f"Profile view error: {str(e)}")
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    elif request.method == 'PUT':
+        try:
+            user = request.user
+            data = request.data
+            
+            if 'username' in data:
+                if User.objects.exclude(pk=user.pk).filter(username=data['username']).exists():
+                    return Response({
+                        'status': 'error',
+                        'message': 'Username already taken'
+                    }, status=400)
+                user.username = data['username']
+                user.save()
+            
+            return Response({
+                'status': 'success',
+                'username': user.username
+            })
+        except Exception as e:
+            return Response({
+                'status': 'error',
+                'message': str(e)
+            }, status=400)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_profile(request):
+    """Update user profile information"""
+    user = request.user
+    data = request.data
+
+    # Update basic fields
+    if 'first_name' in data:
+        user.first_name = data['first_name']
+    if 'last_name' in data:
+        user.last_name = data['last_name']
+    
+    # Handle profile picture upload
+    if 'profile_picture' in data:
+        # If there's an existing picture, delete it
+        if user.profile_picture:
+            default_storage.delete(user.profile_picture.path)
+        
+        # Handle base64 encoded image
+        if data['profile_picture'].startswith('data:image'):
+            format, imgstr = data['profile_picture'].split(';base64,')
+            ext = format.split('/')[-1]
+            filename = f'profile_pictures/{user.id}.{ext}'
+            data = ContentFile(base64.b64decode(imgstr))
+            user.profile_picture.save(filename, data, save=False)
+
+    user.save()
+    return Response({
+        'status': 'success',
+        'user': {
+            'username': user.username,
+            'email': user.email,
+            'avatar': user.profile_picture.url if user.profile_picture else None,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+        }
+    })
+
 
 @require_POST
 def login_view(request):
     try:
         data = json.loads(request.body)
+
         email = data.get("email")
         password = data.get("password")
-
+        
+        print(f"Login attempt for email: {email}")  # Debug log
+        
         if not email or not password:
             return JsonResponse({"status": "error", "message": "Email and password are required."}, status=400)
 
@@ -69,27 +171,22 @@ def login_view(request):
                 })
             else:
                 # No 2FA required, proceed with normal login
-                payload = {
-                    "user_id": user.id,
-                    "email": user.email,
-                    "username": user.username,
-                    "exp": datetime.datetime.utcnow() + datetime.timedelta(seconds=settings.JWT_SETTINGS["JWT_EXP_DELTA_SECONDS"]),
-                    "iat": datetime.datetime.utcnow(),
-                }
-                token = jwt.encode(payload, settings.JWT_SETTINGS["JWT_SECRET_KEY"], algorithm=settings.JWT_SETTINGS["JWT_ALGORITHM"])
-
-                # Return success with token for immediate login
+                login(request, user)
+                Token.objects.filter(user=user).delete()
+                token = Token.objects.create(user=user)
+                
                 return JsonResponse({
                     "status": "success",
-                    "requires_2fa": False,  # Explicitly indicate no 2FA
-                    "token": token,
+                    "requires_2fa": False,
+                    "token": token.key,
                     "user": {
                         "id": user.id,
                         "email": user.email,
-                        "username": user.username
+                        "username": user.username,
+                        "profile_picture": user.profile_picture.url if user.profile_picture else None,
                     }
                 })
-        
+    
     except Exception as e:
         print(f"Login error: {str(e)}")  # Debug log
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
@@ -175,7 +272,13 @@ def register_view(request):
                 password=password,
                 two_factor_enabled=enable_2fa
             )
+            user.save()
             print(f"User created successfully with ID: {user.id}")
+            
+            # Now try to log in
+            login(request, user)
+            request.session.save() # this is for the refresh login problem
+            print("User logged in successfully")
             
             return JsonResponse({
                 'status': 'success',
@@ -420,3 +523,48 @@ def verify_otp_view(request):
             return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
     except User.DoesNotExist:
         return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['GET', 'PUT'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([TokenAuthentication, SessionAuthentication])
+def user_settings_view(request):
+    """Handle user settings get/update"""
+    if request.method == 'GET':
+        user = request.user
+        return Response({
+            'username': user.username,
+            'email': user.email,
+            'display_name': user.get_full_name() or user.username,
+            'avatar': user.profile_picture.url if user.profile_picture else None,
+        })
+    elif request.method == 'PUT':
+        user = request.user
+        data = request.data
+        
+        if 'username' in data:
+            # Validate username is unique
+            if User.objects.exclude(pk=user.pk).filter(username=data['username']).exists():
+                return Response({
+                    'status': 'error',
+                    'message': 'Username already taken'
+                }, status=400)
+            user.username = data['username']
+        
+        if 'email' in data:
+            user.email = data['email']
+            
+        if 'display_name' in data:
+            names = data['display_name'].split(' ', 1)
+            user.first_name = names[0]
+            user.last_name = names[1] if len(names) > 1 else ''
+        
+        user.save()
+        return Response({
+            'status': 'success',
+            'user': {
+                'username': user.username,
+                'email': user.email,
+                'display_name': user.get_full_name() or user.username,
+                'avatar': user.profile_picture.url if user.profile_picture else None,
+            }
+        })

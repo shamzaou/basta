@@ -1,17 +1,16 @@
 // Page navigation
-function showPage(pageId) {    
+// Track current page for navigation
+let currentPage = 'home';
+
+function showPage(pageId, pushState = true) {
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     
-    // List of pages that should only be visible when logged in
-    const loggedInOnlyPages = ['profile', 'settings'];
-    // List of pages that should only be visible when logged out
-    const loggedOutOnlyPages = ['login', 'register'];
-    
-    if (isLoggedIn && loggedOutOnlyPages.includes(pageId)) {
-        console.log('Attempting to access auth page while logged in, redirecting to home');
+    // Handle page access permissions
+    if (isLoggedIn && ['login', 'register'].includes(pageId)) {
+        console.log('Redirecting to home: logged-in user attempting to access auth page');
         pageId = 'home';
-    } else if (!isLoggedIn && loggedInOnlyPages.includes(pageId)) {
-        console.log('Attempting to access protected page while logged out, redirecting to login');
+    } else if (!isLoggedIn && ['profile', 'settings'].includes(pageId)) {
+        console.log('Redirecting to login: non-logged-in user attempting to access protected page');
         pageId = 'login';
     }
 
@@ -20,54 +19,139 @@ function showPage(pageId) {
         checkOAuthLogin(); // This will handle setting the login state
     }
 
-    // Update URL without page reload
-    history.pushState({}, '', '/' + pageId);
-    
-    // Remove any stray classes or styles
-    document.querySelectorAll('.page').forEach(page => {
-        page.classList.remove('active');
-        page.style.removeProperty('display');
-        console.log(`Deactivating page: ${page.id}`);
-    });
-    
-    // Add these debug lines before activating the page
+    // Validate page exists
     const targetPage = document.getElementById(pageId);
-    console.log('Debug - Target Page:', {
-        id: pageId,
-        element: targetPage,
-        classList: targetPage?.classList.toString(),
-        display: targetPage?.style.display,
-        computedStyle: targetPage ? window.getComputedStyle(targetPage).display : 'none'
-    });
-
-    if (targetPage) {
-        console.log(`Activating page: ${pageId}`);
-        targetPage.classList.add('active');
-        targetPage.style.display = 'block';
-        
-        // Also log the computed style to verify visibility
-        const computedStyle = window.getComputedStyle(targetPage);
-        console.log(`Page ${pageId} computed display after activation:`, computedStyle.display);
+    if (!targetPage) {
+        console.error(`Page ${pageId} not found`);
+        pageId = 'home'; // Fallback to home page if target doesn't exist
+        targetPage = document.getElementById(pageId);
     }
 
-    // Show selected page
-    // const targetPage = document.getElementById(pageId);
-    if (targetPage) {
-        console.log(`Activating page: ${pageId}`);
-        targetPage.classList.add('active');
-        targetPage.style.display = 'block';
+    // Only push state if we're actually changing pages and pushState is true
+    if (pushState && pageId !== currentPage) {
+        const newUrl = pageId === 'home' ? '/' : `/${pageId}`;
+        history.pushState({ pageId }, '', newUrl);
+    }
+
+    // Store current page
+    currentPage = pageId;
+
+    // Update active page in navigation
+    document.querySelectorAll('.nav-links a').forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === `/${pageId}` || (pageId === 'home' && link.getAttribute('href') === '/')) {
+            link.classList.add('active');
+        }
+    });
+
+    // Hide all pages
+    document.querySelectorAll('.page').forEach(page => {
+        page.classList.remove('active');
+        page.style.display = 'none';
+    });
+
+    // Show target page
+    targetPage.classList.add('active');
+    targetPage.style.display = 'block';
+
+    if (pageId === 'profile') {
+        loadProfileData();
+    }
+
+    // Clean up any existing game
+    if (window.currentGame) {
+        window.currentGame.cleanup();
+        window.currentGame = null;
+    }
+
+    if (pageId === 'settings') {
+        loadProfileData();
+        loadSettingsData();
+    }
+
+    // Handle game initializations
+    initializeGameIfNeeded(pageId);
+}
+
+// Separate function for game initialization
+function initializeGameIfNeeded(pageId) {
+    if (pageId === 'game') {
+        const modeSelection = document.getElementById('modeSelection');
         
-        // Also log the computed style to verify visibility
-        const computedStyle = window.getComputedStyle(targetPage);
-        console.log(`Page ${pageId} computed display:`, computedStyle.display);
+        // Check if we're coming from a tournament match
+        if (window.currentMatchId) {
+            modeSelection.style.display = 'none';
+            const gameContainer = document.querySelector('.game-container');
+            window.currentGame = new window.PongGame(gameContainer, 'pvp');
+            window.currentGame.physics.resetBall();
+        } else if (modeSelection) {
+            modeSelection.style.display = 'flex';
+            
+            const pvpButton = document.getElementById('pvpButton');
+            const aiButton = document.getElementById('aiButton');
+            
+            if (pvpButton) {
+                pvpButton.onclick = () => {
+                    modeSelection.style.display = 'none';
+                    const gameContainer = document.querySelector('.game-container');
+                    window.currentGame = new window.PongGame(gameContainer, 'pvp');
+                    window.currentGame.physics.resetBall();
+                };
+            }
+            
+            if (aiButton) {
+                aiButton.onclick = () => {
+                    modeSelection.style.display = 'none';
+                    const gameContainer = document.querySelector('.game-container');
+                    window.currentGame = new window.PongGame(gameContainer, 'ai');
+                    window.currentGame.physics.resetBall();
+                };
+            }
+        }
+    } else if (pageId === 'tictactoe') {
+        const gameContainer = document.querySelector('.tictactoe-container');
+        if (gameContainer) {
+            window.currentGame = new window.TicTacToeGame(gameContainer);
+        }
     }
 }
 
-// Handle browser back/forward buttons
-window.addEventListener('popstate', () => {
+// Handle browser back/forward navigation
+window.addEventListener('popstate', (event) => {
+    if (!event.state) {
+        // If no state exists, create one based on current URL
+        const path = window.location.pathname;
+        const pageId = path.substring(1) || 'home';
+        history.replaceState({ pageId }, '', path);
+        showPage(pageId, false);
+        return;
+    }
+
+    showPage(event.state.pageId, false);
+});
+
+// Initialize history state on page load
+window.addEventListener('load', () => {
     const path = window.location.pathname;
-    const pageId = path.substring(1) || 'home';  // Remove leading slash
-    showPage(pageId);
+    const initialPage = path.substring(1) || 'home';
+    
+    // Set initial history state if it doesn't exist
+    if (!history.state) {
+        history.replaceState({ pageId: initialPage }, '', path);
+    }
+    
+    showPage(initialPage, false);
+    checkLoginState(); // Ensure login state is checked after page is shown
+});
+
+// Add click handler for navigation links to prevent default behavior
+document.addEventListener('click', (event) => {
+    const link = event.target.closest('a');
+    if (link && link.getAttribute('href')?.startsWith('/')) {
+        event.preventDefault();
+        const pageId = link.getAttribute('href').substring(1) || 'home';
+        showPage(pageId, true);
+    }
 });
 
 // Check login state and update UI accordingly
@@ -110,9 +194,6 @@ function getCookie(name) {
 async function handleLogin(event) {
     event.preventDefault();
     
-    const email = document.getElementById('login-username').value;
-    const password = document.getElementById('password').value;
-
     try {
         const response = await fetch('/api/auth/login/', {
             method: 'POST',
@@ -120,7 +201,11 @@ async function handleLogin(event) {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCookie('csrftoken')
             },
-            body: JSON.stringify({ email, password })
+            credentials: 'include',
+            body: JSON.stringify({
+                email: document.getElementById('login-username').value,
+                password: document.getElementById('password').value
+            })
         });
 
         const data = await response.json();
@@ -130,7 +215,7 @@ async function handleLogin(event) {
             if (data.requires_2fa) {
                 // Password is correct, but 2FA is required
                 localStorage.setItem('temp_email', email);
-                alert(data.message); // "Please check your email for OTP"
+                alert(data.message);
                 
                 // Show OTP modal
                 const modal = document.getElementById('otp-modal');
@@ -143,13 +228,13 @@ async function handleLogin(event) {
                 // Normal login flow (no 2FA)
                 localStorage.setItem('isLoggedIn', 'true');
                 localStorage.setItem('userData', JSON.stringify(data.user));
-                localStorage.setItem('token', data.token);
+                localStorage.setItem('authToken', data.token);
                 checkLoginState();
                 showPage('home');
             }
         } else {
-            // Login failed
-            alert(data.message || 'Invalid email or password');
+            console.error('Login failed:', data.message);
+            alert(data.message || 'Login failed');
         }
     } catch (error) {
         console.error('Login error:', error);
@@ -205,17 +290,28 @@ async function handleOTPVerification(event) {
 
 async function handleLogout() {
     try {
-        localStorage.removeItem("token"); 
-        localStorage.removeItem("isLoggedIn");
-        localStorage.removeItem("userData");
+        const authToken = localStorage.getItem('authToken');
+        const response = await fetch('/api/auth/logout/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Authorization': `Token ${authToken}`
+            }
+        });
+
+        // Clear all auth data regardless of response
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('userData');
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('token');
 
         checkLoginState();
-        showPage("home");
-
-        alert("You have been logged out.");
+        showPage('home');
+        
+        alert('You have been logged out.');
     } catch (error) {
-        console.error("Logout error:", error);
-        alert("Logout failed. Please try again.");
+        console.error('Logout error:', error);
+        alert('Logout failed. Please try again.');
     }
 }
 
@@ -259,6 +355,60 @@ async function handleRegister(event) {
     }
 }
 
+// Add function to start tournament match
+function startTournamentMatch(matchId) {
+    // Получаем CSRF токен
+    const csrftoken = getCookie('csrftoken');
+    
+    fetch(`/tournaments/match/${matchId}/start/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        credentials: 'include'  // Важно для передачи куки
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Store match info
+            window.currentMatchId = matchId;
+            window.currentMatchPlayers = {
+                player1: data.player1,
+                player2: data.player2
+            };
+            window.tournamentId = data.tournament_id;
+            
+            // Show game page and hide tournament view
+            document.querySelectorAll('.section').forEach(section => {
+                section.style.display = 'none';
+            });
+            
+            const gameContainer = document.getElementById('game');
+            if (gameContainer) {
+                gameContainer.style.display = 'block';
+                
+                // Initialize game in PvP mode
+                const pongContainer = gameContainer.querySelector('.game-container');
+                window.currentGame = new window.PongGame(pongContainer, 'pvp');
+                window.currentGame.physics.resetBall();
+            }
+        } else {
+            alert(data.message || 'Failed to start match');
+        }
+    })
+    .catch(error => {
+        console.error('Error starting match:', error);
+        alert('Failed to start match. Please try again.');
+    });
+}
+
 // Main initialization
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -273,8 +423,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Force initial logout state
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('userData');
+    // localStorage.removeItem('isLoggedIn');
+    // localStorage.removeItem('userData');
     
     // Check login state
     checkLoginState();
@@ -344,22 +494,55 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Edit buttons in settings
     document.querySelectorAll('.edit-btn').forEach(button => {
-        button.addEventListener('click', () => {
+        button.addEventListener('click', async () => {
             const fieldContainer = button.closest('.field-container');
+            const input = fieldContainer.querySelector('.field-input');
+            const display = fieldContainer.querySelector('.field-display');
             const isEditing = fieldContainer.classList.contains('editing');
+            const fieldType = input.id; // This will be either 'username' or 'email'
             
             if (isEditing) {
-                const input = fieldContainer.querySelector('.field-input');
-                const display = fieldContainer.querySelector('.field-display');
-                display.textContent = input.value;
+                const newValue = input.value;
+                const authToken = localStorage.getItem('authToken');
+                
+                try {
+                    const response = await fetch('/api/auth/profile/', {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Token ${authToken}`,
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify({
+                            [fieldType]: newValue
+                        })
+                    });
+
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        display.textContent = newValue;
+                        // Update userData in localStorage
+                        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+                        userData[fieldType] = newValue;
+                        localStorage.setItem('userData', JSON.stringify(userData));
+                        alert(`${fieldType.charAt(0).toUpperCase() + fieldType.slice(1)} updated successfully!`);
+                    } else {
+                        alert(data.message || `Failed to update ${fieldType}`);
+                        input.value = display.textContent; // Reset to original value
+                    }
+                } catch (error) {
+                    console.error(`Error updating ${fieldType}:`, error);
+                    alert(`Failed to update ${fieldType}`);
+                    input.value = display.textContent; // Reset to original value
+                }
+                
                 fieldContainer.classList.remove('editing');
                 button.textContent = 'Edit';
-                button.classList.remove('save');
             } else {
                 fieldContainer.classList.add('editing');
                 button.textContent = 'Save';
-                button.classList.add('save');
-                fieldContainer.querySelector('.field-input').focus();
+                input.focus();
             }
         });
     });
@@ -404,6 +587,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
     }
+
+    // OAuth button handler
+    const loginWith42Button = document.getElementById('login-42');
+    if (loginWith42Button) {
+        loginWith42Button.addEventListener('click', initiate42OAuth);
+    }
 });
 
 async function initiate42OAuth() {
@@ -429,31 +618,25 @@ async function initiate42OAuth() {
     }
 }
 
-// Event listener for OAuth button in login page
-document.getElementById('login-42').addEventListener('click', initiate42OAuth);
-
 async function checkOAuthLogin() {
     try {
         console.log('Checking OAuth login status...');
         const response = await fetch('/api/auth/get-token/', {
             method: "GET",
-            credentials: "include",  // Important for sending cookies
+            credentials: "include",
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
             }
         });
 
-        console.log('Response status:', response.status);
         const data = await response.json();
         console.log("OAuth login check response:", data);
 
         if (response.ok && data.token) {
-            console.log("OAuth login successful, storing JWT...");
-            localStorage.setItem("token", data.token);
+            localStorage.setItem("authToken", data.token);
             localStorage.setItem("isLoggedIn", "true");
             
-            // Parse the JWT to get user data
             const payload = JSON.parse(atob(data.token.split('.')[1]));
             localStorage.setItem("userData", JSON.stringify({
                 username: payload.username,
@@ -466,7 +649,7 @@ async function checkOAuthLogin() {
         } else {
             console.log("User not authenticated via OAuth:", data.error);
             localStorage.setItem("isLoggedIn", "false");
-            localStorage.removeItem("token");
+            localStorage.removeItem("authToken");
             localStorage.removeItem("userData");
             checkLoginState();
             showPage('login');
@@ -475,7 +658,7 @@ async function checkOAuthLogin() {
     } catch (error) {
         console.error("Error checking OAuth login:", error);
         localStorage.setItem("isLoggedIn", "false");
-        localStorage.removeItem("token");
+        localStorage.removeItem("authToken");
         localStorage.removeItem("userData");
         checkLoginState();
         showPage('login');
@@ -492,3 +675,92 @@ window.onload = async function() {
         checkLoginState();
     }
 };
+
+async function loadProfileData() {
+    try {
+        const authToken = localStorage.getItem('authToken');
+        console.log('Attempting to load profile with token:', authToken); // Debug log
+        
+        if (!authToken) {
+            console.error('No auth token found');
+            showPage('login');
+            return;
+        }
+
+        const response = await fetch('/api/auth/profile/', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Token ${authToken}`,
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('Profile data loaded:', data);
+            
+            // Update UI elements
+            const avatarElement = document.getElementById('profile-avatar');
+            const usernameElement = document.getElementById('profile-username');
+            const joinedElement = document.getElementById('profile-joined');
+            
+            if (avatarElement) {
+                avatarElement.src = data.avatar || '/static/frontend/assets/man.png';
+            }
+            if (usernameElement) {
+                usernameElement.textContent = data.username;
+            }
+            if (joinedElement) {
+                joinedElement.textContent = data.date_joined;
+            }
+        } else {
+            if (response.status === 401) {
+                console.log('Token expired or invalid, redirecting to login');
+                localStorage.removeItem('isLoggedIn');
+                localStorage.removeItem('authToken');
+                showPage('login');
+            } else {
+                console.error('Failed to load profile:', await response.text());
+            }
+        }
+    } catch (error) {
+        console.error('Error loading profile:', error);
+    }
+}
+
+async function loadSettingsData() {
+    try {
+        const authToken = localStorage.getItem('authToken');
+        if (!authToken) {
+            showPage('login');
+            return;
+        }
+
+        const response = await fetch('/api/auth/profile/', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Token ${authToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('Settings data loaded:', data);
+            
+            // Update username field in settings
+            const usernameDisplay = document.querySelector('#settings-form .field-container .field-display');
+            const usernameInput = document.querySelector('#settings-form .field-container .field-input');
+            
+            if (usernameDisplay && data.username) {
+                usernameDisplay.textContent = data.username;
+            }
+            if (usernameInput && data.username) {
+                usernameInput.value = data.username;
+            }
+        }
+    } catch (error) {
+        console.error('Error loading settings:', error);
+    }
+}

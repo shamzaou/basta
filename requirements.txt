@@ -6,12 +6,14 @@ flake8>=6.1.0
 black>=23.12.1
 isort>=5.13.2
 Pillow>=10.1.0
-djangorestframework
 gunicorn
 psycopg2-binary
+djangorestframework==3.14.0
 djangorestframework-simplejwt
 python-decouple
 requests
 django-otp==1.0.0
 sendgrid-django
-djangorestframework
+django-extensions
+Werkzeug
+pyOpenSSL

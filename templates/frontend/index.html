@@ -5,14 +5,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ft_transcendence</title>
+    <!-- Add Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'frontend/css/styles.css' %}">
 </head>
-<body class="is-logged-out">
+<body>
     <header>
         <div class="container">
             <nav>
-                <a href="#" class="logo">FAST_PONG</a>
+                <a href="/home" onclick="showPage('home'); return false;" class="logo">FAST_PONG</a>
                 <div class="hamburger" id="hamburger-menu">
                     <span></span>
                     <span></span>
@@ -51,15 +54,20 @@
         <div id="home" class="page active">
             <div class="container">
                 <h1>ft_transcendence</h1>
-                <p>Welcome to the ultimate Pong experience! Challenge your friends, climb the leaderboard, and become the Pong champion.</p>
-                <div class="cta-container">
-                    <a href="#" class="cta-button" onclick="showPage('game')">PLAY NOW</a>
-                </div>
                 <div class="pong-animation">
                     <div class="paddle paddle-left"></div>
                     <div class="paddle paddle-right"></div>
                     <div class="ball"></div>
                     <div class="divider"></div>
+                </div>
+                <p>Welcome to Fast Pong, a unique 3D experience of the classic game of Pong(1972)!</p>
+                <p>Play with your friends, have exciting tournaments and see who will be the best player.</p>
+                <p>Ready to compete? Let the strongest man win!</p>
+                <div class="text-center">
+                    <div class="btn-group" role="group" aria-label="Button group">
+                        <a href="#" class="btn cta-button" id="play-now-button">PLAY NOW</a>
+                        <a href="/tournaments/create/" class="btn cta-button">TOURNAMENT</a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -70,11 +78,10 @@
                 <h1>Player Profile</h1>
                 <div class="profile-container">
                     <div class="profile-header">
-                        <img src="{% static 'frontend/assets/man.png' %}" alt="Profile Avatar" class="profile-avatar">
+                        <img id="profile-avatar" src="{% static 'frontend/assets/man.png' %}" alt="Profile Avatar" class="profile-avatar">
                         <div class="profile-info">
-                            <h2>PlayerOne</h2>
-                            <p>Joined: January 2024</p>
-                            <p>Rank: #42 Global</p>
+                            <h2 id="profile-username">Loading...</h2>
+                            <p>Joined: <span id="profile-joined">Loading...</span></p>
                         </div>
                     </div>
 
@@ -90,10 +97,6 @@
                         <div class="stat-card">
                             <h3>Best Score</h3>
                             <div class="stat-value">11-0</div>
-                        </div>
-                        <div class="stat-card">
-                            <h3>Tournament Wins</h3>
-                            <div class="stat-value">3</div>
                         </div>
                     </div>
 
@@ -200,13 +203,21 @@
             </div>
         </div>
 
-        <!-- Game Page Placeholder -->
+        <!-- Game Page -->
         <div id="game" class="page">
             <div class="container">
                 <h1>Pong Game</h1>
                 <div class="game-container">
-                    <!-- Game canvas will be inserted here -->
-                    <canvas id="pongCanvas"></canvas>
+                    <!-- Score and UI elements -->
+                    <div id="score" class="ui-element">00 - 00</div>
+                    <div id="instructions" class="ui-element">P1: W/S | P2: ↑/↓ | SPACE: Pause</div>
+                    <div id="pauseText" class="ui-element">PAUSED</div>
+                    
+                    <!-- Mode selection buttons -->
+                    <div id="modeSelection">
+                        <button id="pvpButton" class="mode-button">Player vs Player</button>
+                        <button id="aiButton" class="mode-button">Player vs AI</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -307,5 +318,17 @@
     </div>
 
     <script src="{% static 'frontend/js/script.js' %}"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script type="module">
+        import PongGame from '{% static "frontend/js/pong.js" %}';
+        import TicTacToeGame from '{% static "frontend/js/tictactoe.js" %}';
+        window.PongGame = PongGame; // Make them available globally
+        window.TicTacToeGame = TicTacToeGame;
+    </script>
+    
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>
