@@ -1,10 +1,11 @@
 #!/bin/bash
 
-# Wait for postgres
-while ! nc -z db 5432; do
-  echo "Waiting for postgres..."
-  sleep 1
-done
+# Make the init script executable
+chmod +x /app/scripts/init_db.sh
+
+# Run the init script
+/app/scripts/init_db.sh
+
 
 # Apply database migrations
 python manage.py makemigrations

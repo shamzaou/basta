@@ -14,6 +14,11 @@ function showPage(pageId, pushState = true) {
         pageId = 'login';
     }
 
+    // Check if this is an OAuth redirect
+    if (pageId === 'home' && window.location.pathname === '/home') {
+        checkOAuthLogin(); // This will handle setting the login state
+    }
+
     // Validate page exists
     const targetPage = document.getElementById(pageId);
     if (!targetPage) {
@@ -204,14 +209,29 @@ async function handleLogin(event) {
         });
 
         const data = await response.json();
-        console.log('Login response:', data); // Debug log
+        console.log('Login response:', data);
         
-        if (response.ok && data.token) {
-            localStorage.setItem('isLoggedIn', 'true');
-            localStorage.setItem('userData', JSON.stringify(data.user));
-            localStorage.setItem('authToken', data.token);
-            checkLoginState();
-            showPage('home');
+        if (response.ok) {
+            if (data.requires_2fa) {
+                // Password is correct, but 2FA is required
+                localStorage.setItem('temp_email', email);
+                alert(data.message);
+                
+                // Show OTP modal
+                const modal = document.getElementById('otp-modal');
+                modal.style.display = 'block';
+                document.getElementById('otp-input').focus();
+                
+                // Clear password field for security
+                document.getElementById('password').value = '';
+            } else {
+                // Normal login flow (no 2FA)
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('userData', JSON.stringify(data.user));
+                localStorage.setItem('authToken', data.token);
+                checkLoginState();
+                showPage('home');
+            }
         } else {
             console.error('Login failed:', data.message);
             alert(data.message || 'Login failed');
@@ -222,7 +242,52 @@ async function handleLogin(event) {
     }
 }
 
-// Handle logout
+// Handle OTP verification
+async function handleOTPVerification(event) {
+    event.preventDefault();
+    
+    const otp = document.getElementById('otp-input').value;
+    const email = localStorage.getItem('temp_email');
+
+    if (!otp || !email) {
+        alert('Please enter the OTP code');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/auth/verify-otp/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ email, otp })
+        });
+
+        const data = await response.json();
+        console.log('OTP verification response:', data);  // Debug log
+
+        if (response.ok) {
+            // Clear temporary storage
+            localStorage.removeItem('temp_email');
+            // Hide OTP modal
+            document.getElementById('otp-modal').style.display = 'none';
+            
+            // Complete login
+            localStorage.setItem('isLoggedIn', 'true');
+            localStorage.setItem('userData', JSON.stringify(data.user));
+            localStorage.setItem('token', data.token);
+            checkLoginState();
+            showPage('home');
+        } else {
+            alert(data.message || 'OTP verification failed');
+        }
+    } catch (error) {
+        console.error('OTP verification error:', error);
+        alert('OTP verification failed. Please try again.');
+    }
+}
+
 async function handleLogout() {
     try {
         const authToken = localStorage.getItem('authToken');
@@ -234,14 +299,16 @@ async function handleLogout() {
             }
         });
 
-        if (response.ok) {
-            // Clear all auth data
-            localStorage.removeItem('isLoggedIn');
-            localStorage.removeItem('userData');
-            localStorage.removeItem('authToken');
-            checkLoginState();
-            showPage('home');
-        }
+        // Clear all auth data regardless of response
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('userData');
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('token');
+
+        checkLoginState();
+        showPage('home');
+        
+        alert('You have been logged out.');
     } catch (error) {
         console.error('Logout error:', error);
         alert('Logout failed. Please try again.');
@@ -252,55 +319,39 @@ async function handleLogout() {
 async function handleRegister(event) {
     event.preventDefault();
     
-    // First ensure we have a CSRF token
+    const username = document.getElementById('id_username').value;
+    const email = document.getElementById('id_email').value;
+    const password1 = document.getElementById('id_password1').value;
+    const password2 = document.getElementById('id_password2').value;
+    const enable2fa = document.getElementById('enable_2fa').checked;
+
     try {
-        // Get fresh CSRF token
-        await fetch('/api/auth/check-auth/', {
-            method: 'GET',
-            credentials: 'include'
-        });
-
-        const username = document.getElementById('id_username').value;
-        const email = document.getElementById('id_email').value;
-        const password1 = document.getElementById('id_password1').value;
-        const password2 = document.getElementById('id_password2').value;
-
-        if (password1 !== password2) {
-            alert('Passwords do not match');
-            return;
-        }
-
-        const formData = {
-            username,
-            email,
-            password1,
-            password2
-        };
-
-        console.log('Sending registration data:', formData); // Debug log
-
         const response = await fetch('/api/auth/register/', {
             method: 'POST',
-            credentials: 'include',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCookie('csrftoken')
             },
-            body: JSON.stringify(formData)
+            body: JSON.stringify({
+                username,
+                email,
+                password1,
+                password2,
+                enable_2fa: enable2fa
+            })
         });
 
         const data = await response.json();
-        console.log('Server response:', data); // Debug log
-
+        
         if (response.ok) {
-            alert('Registration successful!');
+            alert('Registration successful! Please log in.');
             showPage('login');
         } else {
-            alert(data.message || data.error || 'Registration failed');
+            alert(data.message || 'Registration failed');
         }
     } catch (error) {
         console.error('Registration error:', error);
-        alert('Registration failed. Please check the console for details.');
+        alert('Registration failed. Please try again.');
     }
 }
 
@@ -521,45 +572,109 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Add logo click handler
-    const logo = document.querySelector('.logo');
-    if (logo) {
-        logo.addEventListener('click', (e) => {
-            e.preventDefault();
-            showPage('home');
-        });
+    // OTP verification button
+    const verifyOTPButton = document.getElementById('verify-otp');
+    if (verifyOTPButton) {
+        verifyOTPButton.addEventListener('click', handleOTPVerification);
     }
 
-    // Add auth check for game buttons
-    const playNowButton = document.getElementById('play-now-button');
-    const tournamentButton = document.querySelector('a[href="/tournaments/create/"]');
-
-    function checkAuthAndRedirect(e, destination) {
-        e.preventDefault();
-        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-        
-        if (!isLoggedIn) {
-            alert('Please log in to access this feature');
-            showPage('login');
-            return;
-        }
-
-        if (destination === 'game') {
-            showPage('game');
-        } else if (destination === 'tournament') {
-            window.location.href = '/tournaments/create/';
-        }
+    // Close modal when clicking outside
+    const modal = document.getElementById('otp-modal');
+    if (modal) {
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        };
     }
 
-    // Add handlers for game buttons
-    if (playNowButton) {
-        playNowButton.onclick = (e) => checkAuthAndRedirect(e, 'game');
-    }
-
-    if (tournamentButton) {
-        tournamentButton.onclick = (e) => checkAuthAndRedirect(e, 'tournament');
+    // OAuth button handler
+    const loginWith42Button = document.getElementById('login-42');
+    if (loginWith42Button) {
+        loginWith42Button.addEventListener('click', initiate42OAuth);
     }
 });
+
+async function initiate42OAuth() {
+    try {
+        const response = await fetch('/api/auth/redirect_uri/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = await response.json();
+        console.log("OAuth API Response:", data);
+
+        if (response.ok && data.oauth_link) {
+            console.log("Redirecting to:", data.oauth_link);
+            window.location.href = data.oauth_link;
+        } else {
+            console.error('Error:', data);
+            alert('Failed to initiate OAuth');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to initiate OAuth');
+    }
+}
+
+async function checkOAuthLogin() {
+    try {
+        console.log('Checking OAuth login status...');
+        const response = await fetch('/api/auth/get-token/', {
+            method: "GET",
+            credentials: "include",
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            }
+        });
+
+        const data = await response.json();
+        console.log("OAuth login check response:", data);
+
+        if (response.ok && data.token) {
+            localStorage.setItem("authToken", data.token);
+            localStorage.setItem("isLoggedIn", "true");
+            
+            const payload = JSON.parse(atob(data.token.split('.')[1]));
+            localStorage.setItem("userData", JSON.stringify({
+                username: payload.username,
+                email: payload.email
+            }));
+
+            checkLoginState();
+            showPage('home');
+            return true;
+        } else {
+            console.log("User not authenticated via OAuth:", data.error);
+            localStorage.setItem("isLoggedIn", "false");
+            localStorage.removeItem("authToken");
+            localStorage.removeItem("userData");
+            checkLoginState();
+            showPage('login');
+            return false;
+        }
+    } catch (error) {
+        console.error("Error checking OAuth login:", error);
+        localStorage.setItem("isLoggedIn", "false");
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("userData");
+        checkLoginState();
+        showPage('login');
+        return false;
+    }
+}
+
+// Update window.onload
+window.onload = async function() {
+    console.log('Window loaded, checking auth state...');
+    if (window.location.pathname === '/home') {
+        await checkOAuthLogin();
+    } else {
+        checkLoginState();
+    }
+};
 
 async function loadProfileData() {
     try {
