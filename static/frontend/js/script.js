@@ -187,6 +187,9 @@ function getCookie(name) {
             }
         }
     }
+    if (!cookieValue) {
+        console.warn(`Cookie ${name} not found`);
+    }
     return cookieValue;
 }
 
@@ -319,31 +322,59 @@ async function handleLogout() {
 async function handleRegister(event) {
     event.preventDefault();
     
-    const username = document.getElementById('id_username').value;
-    const email = document.getElementById('id_email').value;
-    const password1 = document.getElementById('id_password1').value;
-    const password2 = document.getElementById('id_password2').value;
-    const enable2fa = document.getElementById('enable_2fa').checked;
-
+    // First, get CSRF token
     try {
+        await fetch('/api/auth/register/', {
+            method: 'GET',
+            credentials: 'include',
+        });
+        
+        const formData = {
+            username: document.getElementById('id_username').value,
+            email: document.getElementById('id_email').value,
+            password1: document.getElementById('id_password1').value,
+            password2: document.getElementById('id_password2').value,
+            enable_2fa: document.getElementById('enable_2fa').checked
+        };
+
+        console.log('Sending registration data:', {
+            ...formData,
+            password1: '[HIDDEN]',
+            password2: '[HIDDEN]'
+        });
+
+        const csrftoken = getCookie('csrftoken');
+        console.log('CSRF Token:', csrftoken);
+
         const response = await fetch('/api/auth/register/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
+                'X-CSRFToken': csrftoken,
+                'Accept': 'application/json'
             },
-            body: JSON.stringify({
-                username,
-                email,
-                password1,
-                password2,
-                enable_2fa: enable2fa
-            })
+            credentials: 'include',
+            body: JSON.stringify(formData)
         });
 
-        const data = await response.json();
+        console.log('Registration response status:', response.status);
         
-        if (response.ok) {
+        if (!response.ok) {
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+                const data = await response.json();
+                throw new Error(data.message || 'Registration failed');
+            } else {
+                const text = await response.text();
+                console.error('Non-JSON response:', text);
+                throw new Error('Server error');
+            }
+        }
+
+        const data = await response.json();
+        console.log('Registration response data:', data);
+
+        if (data.status === 'success') {
             alert('Registration successful! Please log in.');
             showPage('login');
         } else {
@@ -351,7 +382,7 @@ async function handleRegister(event) {
         }
     } catch (error) {
         console.error('Registration error:', error);
-        alert('Registration failed. Please try again.');
+        alert(error.message || 'Registration failed. Please try again.');
     }
 }
 
@@ -593,6 +624,26 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loginWith42Button) {
         loginWith42Button.addEventListener('click', initiate42OAuth);
     }
+
+    // Add tournament button handler
+    const tournamentButton = document.getElementById('tournament-button');
+    if (tournamentButton) {
+        tournamentButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (localStorage.getItem('isLoggedIn') === 'true') {
+                showPage('tournament');
+            } else {
+                alert('Please log in to create or join tournaments');
+                showPage('login');
+            }
+        });
+    }
+
+    // Add tournament form handler
+    const tournamentForm = document.getElementById('tournament-form');
+    if (tournamentForm) {
+        tournamentForm.addEventListener('submit', handleTournamentCreation);
+    }
 });
 
 async function initiate42OAuth() {
@@ -762,5 +813,48 @@ async function loadSettingsData() {
         }
     } catch (error) {
         console.error('Error loading settings:', error);
+    }
+}
+
+// Add this function to handle tournament creation
+async function handleTournamentCreation(event) {
+    event.preventDefault();
+
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
+        alert('Please log in to create a tournament');
+        showPage('login');
+        return;
+    }
+
+    const tournamentName = document.getElementById('tournament-name').value;
+    const playerCount = document.getElementById('player-count').value;
+
+    try {
+        const response = await fetch('/api/tournaments/create/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Token ${authToken}`,
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                name: tournamentName,
+                player_count: parseInt(playerCount)
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            alert('Tournament created successfully!');
+            // You can add additional logic here to show the tournament details
+            // or redirect to a tournament view page
+        } else {
+            alert(data.message || 'Failed to create tournament');
+        }
+    } catch (error) {
+        console.error('Error creating tournament:', error);
+        alert('Failed to create tournament. Please try again.');
     }
 }

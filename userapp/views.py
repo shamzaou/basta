@@ -2,9 +2,8 @@
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.contrib.auth import login, logout, authenticate
-from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
 
-from django.views.decorators.csrf import csrf_exempt
 from decouple import config
 
 from rest_framework.authtoken.models import Token  # Add this import
@@ -234,81 +233,90 @@ def verify_otp(request):
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
 
 @ensure_csrf_cookie
-@require_POST
 def register_view(request):
-    try:
-        data = json.loads(request.body)
-        email = data.get('email')
-        password = data.get('password1')
-        password2 = data.get('password2')
-        username = data.get('username')
-        enable_2fa = data.get('enable_2fa', False)
+    if request.method == 'GET':
+        return JsonResponse({'status': 'ok'})  # Just for CSRF cookie
         
-        print(f"Registration attempt - Data received: {data}")
-        
-        # Validate all required fields
-        missing_fields = []
-        if not email: missing_fields.append('email')
-        if not password: missing_fields.append('password')
-        if not password2: missing_fields.append('password confirmation')
-        if not username: missing_fields.append('username')
-        
-        if missing_fields:
-            return JsonResponse({
-                'status': 'error',
-                'message': f'Missing required fields: {", ".join(missing_fields)}'
-            }, status=400)
-        
-        if password != password2:
-            return JsonResponse({
-                'status': 'error',
-                'message': 'Passwords do not match'
-            }, status=400)
-            
+    if request.method == 'POST':
         try:
-            user = User.objects.create_user(
-                username=username,
-                email=email,
-                password=password,
-                two_factor_enabled=enable_2fa
-            )
-            user.save()
-            print(f"User created successfully with ID: {user.id}")
+            print("Received registration request")
+            print("Headers:", request.headers)
+            data = json.loads(request.body)
+            print("Request data:", {**data, 'password1': '[HIDDEN]', 'password2': '[HIDDEN]'})
             
-            # Now try to log in
-            login(request, user)
-            request.session.save() # this is for the refresh login problem
-            print("User logged in successfully")
+            email = data.get('email')
+            password1 = data.get('password1')
+            password2 = data.get('password2')
+            username = data.get('username')
+            enable_2fa = data.get('enable_2fa', False)
             
-            return JsonResponse({
-                'status': 'success',
-                'message': 'Registration successful',
-                'user': {
-                    'username': user.username,
-                    'email': user.email,
-                    'two_factor_enabled': user.two_factor_enabled
-                }
-            })
+            print(f"Registration attempt - Data received: {data}")
+        
+            # Validate all required fields
+            missing_fields = []
+            if not email: missing_fields.append('email')
+            if not password1: missing_fields.append('password')
+            if not password2: missing_fields.append('password confirmation')
+            if not username: missing_fields.append('username')
             
-        except Exception as user_error:
-            print(f"Error creating user: {str(user_error)}")
+            if missing_fields:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': f'Missing required fields: {", ".join(missing_fields)}'
+                }, status=400)
+            
+            if password1 != password2:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Passwords do not match'
+                }, status=400)
+                
+            try:
+                user = User.objects.create_user(
+                    username=username,
+                    email=email,
+                    password=password1,
+                    two_factor_enabled=enable_2fa
+                )
+                user.save()
+                print(f"User created successfully with ID: {user.id}")
+                
+                # Now try to log in
+                login(request, user)
+                request.session.save() # this is for the refresh login problem
+                print("User logged in successfully")
+                
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'Registration successful',
+                    'user': {
+                        'username': user.username,
+                        'email': user.email,
+                        'two_factor_enabled': user.two_factor_enabled
+                    }
+                })
+                
+            except Exception as user_error:
+                print(f"Error creating user: {str(user_error)}")
+                return JsonResponse({
+                    'status': 'error',
+                    'message': f'User creation failed: {str(user_error)}'
+                }, status=500)
+                
+        except json.JSONDecodeError as e:
+            print(f"JSON Decode Error: {str(e)}")
             return JsonResponse({
                 'status': 'error',
-                'message': f'User creation failed: {str(user_error)}'
+                'message': f'Invalid JSON format: {str(e)}'
+            }, status=400)
+        except Exception as e:
+            print(f"Unexpected error: {str(e)}")
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Registration failed: {str(e)}'
             }, status=500)
-            
-    except json.JSONDecodeError as e:
-        print(f"JSON Decode Error: {str(e)}")
-        return JsonResponse({
-            'status': 'error',
-            'message': f'Invalid JSON format: {str(e)}'
-        }, status=400)
-    except Exception as e:
-        print(f"Unexpected error: {str(e)}")
-        return JsonResponse({
-            'status': 'error',
-            'message': f'Registration failed: {str(e)}'
-        }, status=500)
+
+    return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
 
 @require_POST
 def logout_view(request):
