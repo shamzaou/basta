@@ -544,6 +544,24 @@ async function loadSettingsData() {
             if (usernameInput && data.username) {
                 usernameInput.value = data.username;
             }
+
+			// Update email field in settings
+			const emailContainer = document.querySelector('#email').closest('.field-container');
+            const emailDisplay = emailContainer.querySelector('.field-display');
+            const emailInput = document.querySelector('#email');
+            
+            console.log('Email from server:', data.email); // Debug log
+            console.log('Found email display:', emailDisplay); // Debug log
+            console.log('Found email input:', emailInput); // Debug log
+            
+            if (emailDisplay && data.email) {
+                emailDisplay.textContent = data.email;
+                console.log('Updated email display to:', data.email); // Debug log
+            }
+            if (emailInput && data.email) {
+                emailInput.value = data.email;
+                console.log('Updated email input to:', data.email); // Debug log
+            }
         }
     } catch (error) {
         console.error('Error loading settings:', error);

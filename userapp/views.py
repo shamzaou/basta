@@ -47,11 +47,21 @@ def profile_view(request):
                         'message': 'Username already taken'
                     }, status=400)
                 user.username = data['username']
-                user.save()
             
+            # Add email handling
+            if 'email' in data:
+                if User.objects.exclude(pk=user.pk).filter(email=data['email']).exists():
+                    return Response({
+                        'status': 'error',
+                        'message': 'Email already taken'
+                    }, status=400)
+                user.email = data['email']
+            
+            user.save()
             return Response({
                 'status': 'success',
-                'username': user.username
+                'username': user.username,
+                'email': user.email
             })
         except Exception as e:
             return Response({
