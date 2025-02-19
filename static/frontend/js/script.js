@@ -198,6 +198,7 @@ async function handleLogin(event) {
     event.preventDefault();
     
     try {
+        const email = document.getElementById('login-username').value;  // Store email
         const response = await fetch('/api/auth/login/', {
             method: 'POST',
             headers: {
@@ -206,7 +207,7 @@ async function handleLogin(event) {
             },
             credentials: 'include',
             body: JSON.stringify({
-                email: document.getElementById('login-username').value,
+                email: email,
                 password: document.getElementById('password').value
             })
         });
@@ -216,8 +217,9 @@ async function handleLogin(event) {
         
         if (response.ok) {
             if (data.requires_2fa) {
-                // Password is correct, but 2FA is required
+                // Store email for OTP verification
                 localStorage.setItem('temp_email', email);
+                console.log('Stored email for 2FA:', email);
                 alert(data.message);
                 
                 // Show OTP modal
@@ -252,6 +254,8 @@ async function handleOTPVerification(event) {
     const otp = document.getElementById('otp-input').value;
     const email = localStorage.getItem('temp_email');
 
+    console.log('Verifying OTP for email:', email);  // Debug log
+
     if (!otp || !email) {
         alert('Please enter the OTP code');
         return;
@@ -264,13 +268,17 @@ async function handleOTPVerification(event) {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCookie('csrftoken')
             },
-            body: JSON.stringify({ email, otp })
+            credentials: 'include',
+            body: JSON.stringify({ 
+                email: email,
+                otp: otp 
+            })
         });
 
         const data = await response.json();
-        console.log('OTP verification response:', data);  // Debug log
+        console.log('OTP verification response:', data);
 
-        if (response.ok) {
+        if (data.status === 'success') {
             // Clear temporary storage
             localStorage.removeItem('temp_email');
             // Hide OTP modal
@@ -279,7 +287,7 @@ async function handleOTPVerification(event) {
             // Complete login
             localStorage.setItem('isLoggedIn', 'true');
             localStorage.setItem('userData', JSON.stringify(data.user));
-            localStorage.setItem('token', data.token);
+            localStorage.setItem('authToken', data.token);
             checkLoginState();
             showPage('home');
         } else {

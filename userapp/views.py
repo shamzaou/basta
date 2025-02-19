@@ -197,40 +197,66 @@ def verify_otp(request):
         email = data.get("email")
         otp = data.get("otp")
 
-        user = User.objects.get(email=email)
+        print(f"Verifying OTP - Email: {email}, OTP: {otp}")  # Debug log
+
+        if not email or not otp:
+            return JsonResponse({
+                "status": "error",
+                "message": "Email and OTP are required"
+            }, status=400)
+
+        try:
+            user = User.objects.get(email=email)
+            print(f"Found user: {user.username}")  # Debug log
+        except User.DoesNotExist:
+            print(f"No user found with email: {email}")  # Debug log
+            return JsonResponse({
+                "status": "error",
+                "message": "User not found"
+            }, status=404)
+
         cache_key = f"otp_{user.id}"
         cached_otp = cache.get(cache_key)
+        print(f"Cached OTP: {cached_otp}, Received OTP: {otp}")  # Debug log
 
         if cached_otp and cached_otp == otp:
-            # Create JWT token
-            payload = {
-                "user_id": user.id,
-                "email": user.email,
-                "username": user.username,
-                "exp": datetime.datetime.utcnow() + datetime.timedelta(seconds=settings.JWT_SETTINGS["JWT_EXP_DELTA_SECONDS"]),
-                "iat": datetime.datetime.utcnow(),
-            }
-            token = jwt.encode(payload, settings.JWT_SETTINGS["JWT_SECRET_KEY"], algorithm=settings.JWT_SETTINGS["JWT_ALGORITHM"])
+            # Login the user
+            login(request, user)
+            
+            # Create auth token
+            Token.objects.filter(user=user).delete()
+            token = Token.objects.create(user=user)
 
             # Clear the OTP
             cache.delete(cache_key)
 
             return JsonResponse({
                 "status": "success",
-                "token": token,
+                "token": token.key,
                 "user": {
                     "id": user.id,
                     "email": user.email,
-                    "username": user.username
+                    "username": user.username,
+                    "profile_picture": user.profile_picture.url if user.profile_picture else None,
                 }
             })
         else:
-            return JsonResponse({"status": "error", "message": "Invalid OTP"}, status=400)
+            return JsonResponse({
+                "status": "error",
+                "message": "Invalid OTP"
+            }, status=400)
 
-    except User.DoesNotExist:
-        return JsonResponse({"status": "error", "message": "User not found"}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({
+            "status": "error",
+            "message": "Invalid JSON format"
+        }, status=400)
     except Exception as e:
-        return JsonResponse({"status": "error", "message": str(e)}, status=500)
+        print(f"OTP verification error: {str(e)}")  # Debug log
+        return JsonResponse({
+            "status": "error",
+            "message": str(e)
+        }, status=500)
 
 @ensure_csrf_cookie
 def register_view(request):
