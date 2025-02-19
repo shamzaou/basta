@@ -387,11 +387,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const input = fieldContainer.querySelector('.field-input');
             const display = fieldContainer.querySelector('.field-display');
             const isEditing = fieldContainer.classList.contains('editing');
-            const fieldType = input.id; // This will be either 'username' or 'email'
+            const fieldType = input.id; // This will be either 'username', 'email', or 'display-name'
             
             if (isEditing) {
                 const newValue = input.value;
                 const authToken = localStorage.getItem('authToken');
+                
+                // Debug logs
+                console.log('Updating field:', fieldType);
+                console.log('New value:', newValue);
                 
                 try {
                     const response = await fetch('/api/auth/profile/', {
@@ -402,17 +406,18 @@ document.addEventListener('DOMContentLoaded', () => {
                             'X-CSRFToken': getCookie('csrftoken')
                         },
                         body: JSON.stringify({
-                            [fieldType]: newValue
+                            [fieldType === 'display-name' ? 'display_name' : fieldType]: newValue
                         })
                     });
 
                     const data = await response.json();
+                    console.log('Server response:', data); // Debug log
                     
                     if (response.ok) {
                         display.textContent = newValue;
                         // Update userData in localStorage
                         const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-                        userData[fieldType] = newValue;
+                        userData[fieldType === 'display-name' ? 'display_name' : fieldType] = newValue;
                         localStorage.setItem('userData', JSON.stringify(userData));
                         alert(`${fieldType.charAt(0).toUpperCase() + fieldType.slice(1)} updated successfully!`);
                     } else {
@@ -561,6 +566,17 @@ async function loadSettingsData() {
             if (emailInput && data.email) {
                 emailInput.value = data.email;
                 console.log('Updated email input to:', data.email); // Debug log
+            }
+
+			const displayNameContainer = document.querySelector('#display-name').closest('.field-container');
+            const displayNameDisplay = displayNameContainer.querySelector('.field-display');
+            const displayNameInput = document.querySelector('#display-name');
+            
+            if (displayNameDisplay && data.display_name) {
+                displayNameDisplay.textContent = data.display_name;
+            }
+            if (displayNameInput && data.display_name) {
+                displayNameInput.value = data.display_name;
             }
         }
     } catch (error) {
