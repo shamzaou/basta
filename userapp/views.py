@@ -42,13 +42,13 @@ logger = logging.getLogger(__name__)
 @permission_classes([IsAuthenticated])
 @authentication_classes([TokenAuthentication, SessionAuthentication])
 def profile_view(request):
+    """Get user profile information"""
     if request.method == 'GET':
         try:
             user = request.user
             return Response({
                 'username': user.username,
                 'email': user.email,
-                'display_name': user.display_name if hasattr(user, 'display_name') else user.username,
                 'avatar': user.profile_picture.url if user.profile_picture else None,
                 'date_joined': user.date_joined.strftime('%B %Y')
             })
@@ -69,30 +69,13 @@ def profile_view(request):
                         'message': 'Username already taken'
                     }, status=400)
                 user.username = data['username']
+                user.save()
             
-            if 'email' in data:
-                if User.objects.exclude(pk=user.pk).filter(email=data['email']).exists():
-                    return Response({
-                        'status': 'error',
-                        'message': 'Email already taken'
-                    }, status=400)
-                user.email = data['email']
-            
-            # Handle display_name separately from username
-            if 'display_name' in data:
-                display_name = data['display_name'].strip()
-                if hasattr(user, 'display_name'):
-                    user.display_name = display_name
-            
-            user.save()
             return Response({
                 'status': 'success',
-                'username': user.username,
-                'email': user.email,
-                'display_name': user.display_name if hasattr(user, 'display_name') else user.username
+                'username': user.username
             })
         except Exception as e:
-            print(f"Error updating profile: {str(e)}")
             return Response({
                 'status': 'error',
                 'message': str(e)
@@ -104,6 +87,12 @@ def update_profile(request):
     """Update user profile information"""
     user = request.user
     data = request.data
+
+    # Update basic fields
+    if 'first_name' in data:
+        user.first_name = data['first_name']
+    if 'last_name' in data:
+        user.last_name = data['last_name']
     
     # Handle profile picture upload
     if 'profile_picture' in data:
@@ -126,7 +115,8 @@ def update_profile(request):
             'username': user.username,
             'email': user.email,
             'avatar': user.profile_picture.url if user.profile_picture else None,
-			'display_name': user.username 
+            'first_name': user.first_name,
+            'last_name': user.last_name,
         }
     })
 

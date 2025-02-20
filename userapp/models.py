@@ -5,7 +5,6 @@ from django.db import models
 class User(AbstractUser):
     email = models.EmailField(unique=True)
     profile_picture = models.ImageField(upload_to='profile_pictures/', null=True, blank=True)
-    display_name = models.CharField(max_length=150, blank=True)
     is_42_user = models.BooleanField(default=False)
     intra_id = models.CharField(max_length=50, null=True, blank=True)
     two_factor_enabled = models.BooleanField(default=False)
