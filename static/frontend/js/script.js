@@ -647,6 +647,7 @@ document.addEventListener('DOMContentLoaded', () => {
     //     });
     // }
     // Tournament button handling
+    // Add auth check for game buttons
     const playNowButton = document.getElementById('play-now-button');
     const tournamentButton = document.querySelector('a[href="/tournaments/create/"]');
 
@@ -675,7 +676,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (tournamentButton) {
         tournamentButton.onclick = (e) => checkAuthAndRedirect(e, 'tournament');
     }
-
     // Add tournament form handler
     const tournamentForm = document.getElementById('tournament-form');
     if (tournamentForm) {
