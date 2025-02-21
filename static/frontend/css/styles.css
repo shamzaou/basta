@@ -122,17 +122,17 @@ nav {
 
 /* Avatar Dropdown Fixes */
 .nav-avatar {
-    width: 32px;  /* Fixed width */
-    height: 32px; /* Fixed height */
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     border: 2px solid var(--primary-color);
     transition: border-color var(--transition-speed) ease;
-    object-fit: cover; /* This ensures the image covers the area properly */
+    object-fit: cover;
     display: block;
 }
 
 .avatar-container {
-    width: 32px;  /* Container matches avatar size */
+    width: 32px;
     height: 32px;
     position: relative;
     cursor: pointer;
@@ -314,11 +314,37 @@ nav {
 }
 
 .profile-avatar {
-    width: 150px;
-    height: 150px;
+    width: 100px;
+    height: 100px;
     border-radius: 50%;
     object-fit: cover;
-    border: 3px solid var(--primary-color);
+    border: 2px solid var(--primary-color);
+}
+
+.current-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--primary-color);
+}
+
+.nav-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--primary-color);
+}
+
+/* Profile specific avatar */
+#profile-avatar {
+    width: 200px;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
+    margin: 0 auto;
 }
 
 .stats-grid {
@@ -474,6 +500,13 @@ nav {
     margin-bottom: 1em;
 }
 
+.avatar-upload {
+    display: flex;
+    align-items: center;
+    gap: 2em;
+    margin-bottom: 1em;
+}
+
 .current-avatar {
     width: 100px;
     height: 100px;
@@ -551,8 +584,8 @@ nav {
 }
 
 .danger-zone p {
-    margin: 0 0 1em 0;  /* Reset margin, just keep bottom margin for spacing */
-    text-align: left;   /* Ensure left alignment */
+    margin: 0 0 1em 0;
+    text-align: left;
 }
 
 @media (max-width: 768px) {
@@ -570,9 +603,9 @@ nav {
 .game-container {
     position: relative;
     width: 100%;
-    height: calc(100vh - 200px); /* Adjust based on your header/footer */
-    min-height: 400px; /* Minimum height */
-    max-height: 800px; /* Maximum height */
+    height: calc(100vh - 200px);
+    min-height: 400px;
+    max-height: 800px;
     margin: 20px auto;
     display: flex;
     justify-content: center;
@@ -987,15 +1020,15 @@ body.is-logged-out .logged-out {
     }
 }
 /* Center the OR divider and 42 login button */
-.auth-container p {  /* This targets the "OR" text */
+.auth-container p {
     text-align: center;
     margin: 20px 0;
 }
 
 #login-42 {
-    display: block;  /* Make button a block element */
-    margin: 0 auto;  /* Center the button */
-    max-width: 400px;  /* Match other buttons width */
+    display: block;
+    margin: 0 auto;
+    max-width: 400px;
 }
 
 /* Game-specific styles */
@@ -1046,7 +1079,7 @@ body.is-logged-out .logged-out {
     flex-direction: column;
     gap: 20px;
     z-index: 20;
-    pointer-events: auto; /* Allow clicking buttons */
+    pointer-events: auto;
 }
 
 .mode-button {
@@ -1069,3 +1102,28 @@ body.is-logged-out .logged-out {
 }
 
 /* tictactoe */
+
+/* Avatar sizes */
+/* .profile-avatar {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--primary-color);
+}
+
+.current-avatar {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--primary-color);
+}
+
+.nav-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--primary-color);
+} */

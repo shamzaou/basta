@@ -374,9 +374,35 @@ document.addEventListener('DOMContentLoaded', () => {
     // Settings form handling
     const settingsForm = document.getElementById('settings-form');
     if (settingsForm) {
-        settingsForm.addEventListener('submit', (e) => {
+        settingsForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            alert('Settings saved successfully!');
+            const authToken = localStorage.getItem('authToken');
+            
+            try {
+                const response = await fetch('/api/auth/profile/', {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Token ${authToken}`,
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        username: document.getElementById('username').value,
+                        email: document.getElementById('email').value,
+                        display_name: document.getElementById('display-name').value
+                    })
+                });
+
+                if (response.ok) {
+                    alert('Settings saved successfully!');
+                    loadProfileData(); // Refresh profile data
+                } else {
+                    alert('Failed to save settings');
+                }
+            } catch (error) {
+                console.error('Error saving settings:', error);
+                alert('Failed to save settings');
+            }
         });
     }
     
@@ -443,33 +469,150 @@ document.addEventListener('DOMContentLoaded', () => {
     // Avatar upload handling
     const avatarUpload = document.getElementById('avatar-upload');
     if (avatarUpload) {
-        avatarUpload.addEventListener('change', (event) => {
+        avatarUpload.addEventListener('change', async (event) => {
             const file = event.target.files[0];
             if (file) {
+                // Validate file size (5MB max)
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('File size too large. Maximum size is 5MB.');
+                    return;
+                }
+
+                // Validate file type
+                if (!file.type.startsWith('image/')) {
+                    alert('Please select an image file.');
+                    return;
+                }
+
+                const uploadBtn = document.querySelector('.upload-btn');
+                if (uploadBtn) {
+                    uploadBtn.textContent = 'Uploading...';
+                    uploadBtn.disabled = true;
+                }
+
                 const reader = new FileReader();
-                reader.onload = (e) => {
-                    document.querySelector('.current-avatar').src = e.target.result;
+                reader.onload = async (e) => {
+                    try {
+                        const base64Image = e.target.result;
+                        const authToken = localStorage.getItem('authToken');
+                        
+                        console.log('Starting avatar upload...'); // Debug log
+                        
+                        const response = await fetch('/api/auth/profile/', {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': `Token ${authToken}`,
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCookie('csrftoken')
+                            },
+                            body: JSON.stringify({
+                                profile_picture: base64Image
+                            })
+                        });
+
+                        const data = await response.json();
+                        console.log('Server response:', data); // Debug log
+
+                        if (response.ok && data.avatar) {
+                            // Update all avatar instances
+                            const avatarElements = document.querySelectorAll('.profile-avatar, .nav-avatar, .current-avatar');
+                            avatarElements.forEach(avatar => {
+                                if (avatar) {
+                                    avatar.src = data.avatar + '?t=' + new Date().getTime(); // Add timestamp to force refresh
+                                    avatar.style.display = 'block'; // Ensure avatar is visible
+                                    console.log('Updated avatar element:', avatar.className); // Debug log
+                                }
+                            });
+                            
+                            // Force profile page to reload avatar if we're on that page
+                            if (currentPage === 'profile') {
+                                loadProfileData();
+                            }
+                            
+                            alert('Avatar updated successfully!');
+                        } else {
+                            throw new Error(data.message || 'Failed to update avatar');
+                        }
+                    } catch (error) {
+                        console.error('Error updating avatar:', error);
+                        alert('Failed to update avatar. Please try again.');
+                    } finally {
+                        if (uploadBtn) {
+                            uploadBtn.textContent = 'Choose New Avatar';
+                            uploadBtn.disabled = false;
+                        }
+                    }
                 };
+
+                reader.onerror = () => {
+                    alert('Error reading file. Please try again.');
+                    if (uploadBtn) {
+                        uploadBtn.textContent = 'Choose New Avatar';
+                        uploadBtn.disabled = false;
+                    }
+                };
+
                 reader.readAsDataURL(file);
             }
         });
     }
     
-    // Delete account confirmation
+    // Delete account handling with custom modal
     const deleteAccountBtn = document.getElementById('delete-account');
-    if (deleteAccountBtn) {
+    const deleteModal = document.getElementById('delete-modal');
+    const confirmDeleteBtn = document.getElementById('confirm-delete');
+    const cancelDeleteBtn = document.getElementById('cancel-delete');
+
+    if (deleteAccountBtn && deleteModal) {
+        // Show modal when delete button is clicked
         deleteAccountBtn.addEventListener('click', () => {
-            if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-                alert('Account deletion initiated...');
+            deleteModal.style.display = 'block';
+        });
+
+        // Handle cancel button
+        cancelDeleteBtn.addEventListener('click', () => {
+            deleteModal.style.display = 'none';
+        });
+
+        // Handle delete confirmation
+        confirmDeleteBtn.addEventListener('click', () => {
+            // Get token before clearing storage
+            const token = localStorage.getItem('authToken');
+            
+            // Hide modal
+            deleteModal.style.display = 'none';
+            
+            // Clear storage
+            localStorage.clear();
+            
+            // Send delete request without waiting
+            fetch('/api/auth/delete-account/', {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Token ${token}`,
+                }
+            }).catch(console.error);
+            
+            // Redirect immediately
+            window.location.replace('/');
+        });
+
+        // Close modal if clicking outside
+        window.addEventListener('click', (event) => {
+            if (event.target === deleteModal) {
+                deleteModal.style.display = 'none';
             }
         });
     }
+
+    const profileAvatar = document.getElementById('profile-avatar');
+    console.log('Profile avatar element:', profileAvatar);
+    console.log('Profile avatar src:', profileAvatar?.src);
 });
 
 async function loadProfileData() {
     try {
         const authToken = localStorage.getItem('authToken');
-        console.log('Attempting to load profile with token:', authToken); // Debug log
         
         if (!authToken) {
             console.error('No auth token found');
@@ -481,8 +624,7 @@ async function loadProfileData() {
             method: 'GET',
             headers: {
                 'Authorization': `Token ${authToken}`,
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
+                'Content-Type': 'application/json'
             }
         });
 
@@ -490,28 +632,26 @@ async function loadProfileData() {
             const data = await response.json();
             console.log('Profile data loaded:', data);
             
-            // Update UI elements
-            const avatarElement = document.getElementById('profile-avatar');
+            // Update all avatar instances
+            const avatarElements = document.querySelectorAll('.profile-avatar, .nav-avatar, .current-avatar');
+            avatarElements.forEach(avatar => {
+                if (avatar) {
+                    avatar.src = data.avatar || '/static/frontend/assets/man.png';
+                    avatar.onerror = function() {
+                        this.src = '/static/frontend/assets/man.png';
+                    };
+                }
+            });
+
+            // Update other profile elements
             const usernameElement = document.getElementById('profile-username');
             const joinedElement = document.getElementById('profile-joined');
             
-            if (avatarElement) {
-                avatarElement.src = data.avatar || '/static/frontend/assets/man.png';
-            }
             if (usernameElement) {
                 usernameElement.textContent = data.username;
             }
             if (joinedElement) {
                 joinedElement.textContent = data.date_joined;
-            }
-        } else {
-            if (response.status === 401) {
-                console.log('Token expired or invalid, redirecting to login');
-                localStorage.removeItem('isLoggedIn');
-                localStorage.removeItem('authToken');
-                showPage('login');
-            } else {
-                console.error('Failed to load profile:', await response.text());
             }
         }
     } catch (error) {

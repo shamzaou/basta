@@ -10,4 +10,5 @@ urlpatterns = [
     path('check-auth/', views.check_auth, name='check-auth'),
     path('profile/', views.profile_view, name='profile'),
     path('settings/', views.user_settings_view, name='user-settings'),
+    path('delete-account/', views.delete_account, name='delete_account'),
 ]

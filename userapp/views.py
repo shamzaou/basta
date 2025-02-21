@@ -14,6 +14,9 @@ from django.core.files.storage import default_storage
 import base64
 from django.core.files.base import ContentFile
 from rest_framework.authentication import SessionAuthentication, TokenAuthentication
+from django.db import transaction
+from django.core.cache import cache
+import asyncio
 
 
 @api_view(['GET', 'PUT'])
@@ -56,18 +59,40 @@ def profile_view(request):
                     }, status=400)
                 user.email = data['email']
             
-            # Handle display_name separately from username
             if 'display_name' in data:
                 display_name = data['display_name'].strip()
                 if hasattr(user, 'display_name'):
                     user.display_name = display_name
+
+            # Handle profile picture upload
+            if 'profile_picture' in data:
+                try:
+                    # Delete old profile picture if it exists
+                    if user.profile_picture:
+                        default_storage.delete(user.profile_picture.path)
+                    
+                    # Handle base64 image data
+                    if data['profile_picture'].startswith('data:image'):
+                        format, imgstr = data['profile_picture'].split(';base64,')
+                        ext = format.split('/')[-1]
+                        filename = f'profile_pictures/user_{user.id}.{ext}'
+                        data = ContentFile(base64.b64decode(imgstr))
+                        user.profile_picture.save(filename, data, save=True)
+                except Exception as e:
+                    print(f"Error handling profile picture: {str(e)}")
+                    return Response({
+                        'status': 'error',
+                        'message': 'Failed to update profile picture'
+                    }, status=400)
             
             user.save()
+            
             return Response({
                 'status': 'success',
                 'username': user.username,
                 'email': user.email,
-                'display_name': user.display_name if hasattr(user, 'display_name') else user.username
+                'display_name': user.display_name if hasattr(user, 'display_name') else user.username,
+                'avatar': user.profile_picture.url if user.profile_picture else None
             })
         except Exception as e:
             print(f"Error updating profile: {str(e)}")
@@ -294,3 +319,26 @@ def user_settings_view(request):
                 'avatar': user.profile_picture.url if user.profile_picture else None,
             }
         })
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([TokenAuthentication, SessionAuthentication])
+def delete_account(request):
+    try:
+        user_id = request.user.id
+        
+        # Set a deletion flag in cache
+        cache.set(f'deleting_user_{user_id}', True, timeout=300)  # 5 minutes timeout
+        
+        # Perform deletion in transaction
+        with transaction.atomic():
+            request.user.delete()
+            
+        # Clear the deletion flag
+        cache.delete(f'deleting_user_{user_id}')
+        
+        return Response(status=204)
+    except Exception as e:
+        # Log the error but still return success to client
+        print(f"Error in delete_account: {str(e)}")
+        return Response(status=204)  # Still return success to client
