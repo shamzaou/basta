@@ -76,37 +76,17 @@ function showPage(pageId, pushState = true) {
 // Separate function for game initialization
 function initializeGameIfNeeded(pageId) {
     if (pageId === 'game') {
-        const modeSelection = document.getElementById('modeSelection');
-        
-        // Check if we're coming from a tournament match
-        if (window.currentMatchId) {
-            modeSelection.style.display = 'none';
-            const gameContainer = document.querySelector('.game-container');
-            window.currentGame = new window.PongGame(gameContainer, 'pvp');
-            window.currentGame.physics.resetBall();
-        } else if (modeSelection) {
-            modeSelection.style.display = 'flex';
+        console.log('Starting game initialization...');
+        const gameContainer = document.querySelector('.game-container');
+        if (gameContainer) {
+            // Clear container and ensure it's visible
+            gameContainer.innerHTML = '';
+            gameContainer.style.display = 'block';
             
-            const pvpButton = document.getElementById('pvpButton');
-            const aiButton = document.getElementById('aiButton');
-            
-            if (pvpButton) {
-                pvpButton.onclick = () => {
-                    modeSelection.style.display = 'none';
-                    const gameContainer = document.querySelector('.game-container');
-                    window.currentGame = new window.PongGame(gameContainer, 'pvp');
-                    window.currentGame.physics.resetBall();
-                };
-            }
-            
-            if (aiButton) {
-                aiButton.onclick = () => {
-                    modeSelection.style.display = 'none';
-                    const gameContainer = document.querySelector('.game-container');
-                    window.currentGame = new window.PongGame(gameContainer, 'ai');
-                    window.currentGame.physics.resetBall();
-                };
-            }
+            // Initialize game without specifying mode to show selection first
+            PongGame.initializeGame(gameContainer);
+        } else {
+            console.error('Game container not found');
         }
     } else if (pageId === 'tictactoe') {
         const gameContainer = document.querySelector('.tictactoe-container');
@@ -396,7 +376,6 @@ async function handleRegister(event) {
 
 // Add function to start tournament match
 function startTournamentMatch(matchId) {
-    // Получаем CSRF токен
     const csrftoken = getCookie('csrftoken');
     
     fetch(`/tournaments/match/${matchId}/start/`, {
@@ -406,7 +385,7 @@ function startTournamentMatch(matchId) {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
         },
-        credentials: 'include'  // Важно для передачи куки
+        credentials: 'include'
     })
     .then(response => {
         if (!response.ok) {
@@ -432,11 +411,8 @@ function startTournamentMatch(matchId) {
             const gameContainer = document.getElementById('game');
             if (gameContainer) {
                 gameContainer.style.display = 'block';
-                
-                // Initialize game in PvP mode
                 const pongContainer = gameContainer.querySelector('.game-container');
-                window.currentGame = new window.PongGame(pongContainer, 'pvp');
-                window.currentGame.physics.resetBall();
+                PongGame.initializeGame(pongContainer, 'pvp');
             }
         } else {
             alert(data.message || 'Failed to start match');

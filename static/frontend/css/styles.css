@@ -580,21 +580,23 @@ nav {
 
 /* Game Canvas */
 .game-container {
-    position: relative;
-    width: 100%;
-    height: calc(100vh - 200px); /* Adjust based on your header/footer */
-    min-height: 400px; /* Minimum height */
-    max-height: 800px; /* Maximum height */
+    position: relative !important;
+    width: 100% !important;
+    height: 600px !important;
+    min-height: 400px;
     margin: 20px auto;
-    display: flex;
-    justify-content: center;
-    align-items: center;
     background-color: #0a0a0a;
+    overflow: hidden;
+    display: block !important;
 }
 
-#pongCanvas {
-    width: 100%;
-    height: 100%;
+.game-container canvas {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 100%;
+    max-height: 100%;
 }
 
 /* Responsive Design */
@@ -1055,68 +1057,8 @@ body.is-logged-out .logged-out {
 #otp-input:focus {
     outline: none;
     border-color: var(--secondary-color);
-
-/* Game-specific styles */
-.game-container canvas {
-    margin: 0 auto;
-    display: block;
 }
 
-.ui-element {
-    position: absolute;
-    color: #00ccff;
-    text-shadow: 0 0 10px #00ccff66;
-    text-align: center;
-    font-family: 'Orbitron', sans-serif;
-    z-index: 10;
-}
-
-#score {
-    top: 10% !important; /* Перемещаем счет выше */
-}
-
-#instructions {
-    bottom: 5% !important; /* Опускаем инструкции ниже */
-}
-
-#pauseText {
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 48px;
-    display: none;
-}
-
-#modeSelection {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    z-index: 20;
-    pointer-events: auto; /* Allow clicking buttons */
-}
-
-.mode-button {
-    font-size: 24px;
-    color: #00ccff;
-    background: transparent;
-    border: 2px solid #00ccff;
-    padding: 15px 30px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-family: 'Orbitron', sans-serif;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    box-shadow: 0 0 10px #00ccff66;
-}
-
-.mode-button:hover {
-    background: #00ccff22;
-    box-shadow: 0 0 20px #00ccff;
-}
 
 /* tictactoe */
 
@@ -1233,4 +1175,35 @@ body.is-logged-out .logged-out {
 .return-button:hover {
     background-color: #ff00ff;
     transform: scale(1.05);
+}
+
+/* Add these styles at the root level */
+.game-mode-selection {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    z-index: 20;
+}
+
+.mode-button {
+    font-size: 24px;
+    color: #00ccff;
+    background: transparent;
+    border: 2px solid #00ccff;
+    padding: 15px 30px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Press Start 2P', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    box-shadow: 0 0 10px #00ccff66;
+}
+
+.mode-button:hover {
+    background: rgba(0, 204, 255, 0.1);
+    box-shadow: 0 0 20px #00ccff;
 }
