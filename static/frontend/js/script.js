@@ -14,11 +14,6 @@ function showPage(pageId, pushState = true) {
         pageId = 'login';
     }
 
-    // Check if this is an OAuth redirect
-    if (pageId === 'home' && window.location.pathname === '/home') {
-        checkOAuthLogin(); // This will handle setting the login state
-    }
-
     // Validate page exists
     const targetPage = document.getElementById(pageId);
     if (!targetPage) {
@@ -158,13 +153,13 @@ document.addEventListener('click', (event) => {
 function checkLoginState() {
     console.log('Checking login state...');
     
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true' && 
+                       (localStorage.getItem('authToken') || localStorage.getItem('jwtToken'));
+    
     console.log('isLoggedIn:', isLoggedIn);
     
     document.body.classList.remove('is-logged-in', 'is-logged-out');
     document.body.classList.add(isLoggedIn ? 'is-logged-in' : 'is-logged-out');
-    
-    console.log('Body classes after update:', document.body.classList.toString());
     
     // Get all nav links
     const loggedInNav = document.querySelector('.nav-links.logged-in');
@@ -709,6 +704,17 @@ async function initiate42OAuth() {
 async function checkOAuthLogin() {
     try {
         console.log('Checking OAuth login status...');
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        
+        if (!code) {
+            console.log('No OAuth code found in URL');
+            showPage('login');
+            return false;
+        }
+
+        console.log('OAuth code found:', code);
+
         const response = await fetch('/api/auth/get-token/', {
             method: "GET",
             credentials: "include",
@@ -722,29 +728,38 @@ async function checkOAuthLogin() {
         console.log("OAuth login check response:", data);
 
         if (response.ok && data.token) {
+            console.log('Successfully got token:', data.token);
+            
             localStorage.setItem("authToken", data.token);
             localStorage.setItem("isLoggedIn", "true");
             
-            const payload = JSON.parse(atob(data.token.split('.')[1]));
-            localStorage.setItem("userData", JSON.stringify({
-                username: payload.username,
-                email: payload.email
-            }));
+            try {
+                const profileResponse = await fetch('/api/auth/profile/', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Token ${data.token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (profileResponse.ok) {
+                    const profileData = await profileResponse.json();
+                    console.log('Profile data fetched:', profileData);
+                    localStorage.setItem("userData", JSON.stringify(profileData));
+                }
+            } catch (profileError) {
+                console.error("Error fetching profile:", profileError);
+            }
 
             checkLoginState();
+            window.history.replaceState({}, document.title, '/home');
             showPage('home');
             return true;
         } else {
-            console.log("User not authenticated via OAuth:", data.error);
-            localStorage.setItem("isLoggedIn", "false");
-            localStorage.removeItem("authToken");
-            localStorage.removeItem("userData");
-            checkLoginState();
-            showPage('login');
-            return false;
+            throw new Error(data.error || 'Failed to get token');
         }
     } catch (error) {
-        console.error("Error checking OAuth login:", error);
+        console.error("Error in OAuth login process:", error);
         localStorage.setItem("isLoggedIn", "false");
         localStorage.removeItem("authToken");
         localStorage.removeItem("userData");
@@ -757,11 +772,28 @@ async function checkOAuthLogin() {
 // Update window.onload
 window.onload = async function() {
     console.log('Window loaded, checking auth state...');
-    if (window.location.pathname === '/home') {
-        await checkOAuthLogin();
-    } else {
-        checkLoginState();
+    
+    // Check if this is an OAuth callback
+    if (window.location.pathname === '/home' && window.location.search.includes('code=')) {
+        console.log('OAuth callback detected');
+        try {
+            const success = await checkOAuthLogin();
+            if (!success) {
+                showPage('login');
+            }
+            return;
+        } catch (error) {
+            console.error('OAuth login failed:', error);
+            showPage('login');
+            return;
+        }
     }
+    
+    // Normal page load
+    checkLoginState();
+    const path = window.location.pathname;
+    const initialPage = path.substring(1) || 'home';
+    showPage(initialPage, false);
 };
 
 async function loadProfileData() {

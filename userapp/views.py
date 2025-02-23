@@ -389,7 +389,7 @@ def oauth_callback(request):
     error = request.GET.get('error')
     if error:
         print(f"OAuth Error: {error} - {request.GET.get('error_description')}")
-        return redirect("https://localhost:8000/login")
+        return redirect("https://localhost:443/login")
 
     code = request.GET.get("code")
     if not code:
@@ -401,33 +401,26 @@ def oauth_callback(request):
         payload = {
             "grant_type": "authorization_code",
             "code": code,
-            "redirect_uri": settings.JWT_SETTINGS["REDIRECT_URI"],
+            "redirect_uri": "https://localhost:443/home",
             "client_id": settings.JWT_SETTINGS["CLIENT_ID"],
             "client_secret": settings.JWT_SETTINGS["CLIENT_SECRET"],
         }
         
-        print("Requesting access token with payload:", {
-            **payload,
-            'client_secret': '[REDACTED]'  # Don't log the secret
-        })
-        
         response = requests.post(token_url, data=payload)
-        print("Token response:", response.text)  # Add this for debugging
         
         if response.status_code != 200:
             print("Token exchange failed:", response.text)
-            return redirect("https://localhost:8000/login")
+            return redirect("https://localhost:443/login")
 
         access_token = response.json().get("access_token")
-
+        
         # Fetch user info from 42 API
         user_info_url = "https://api.intra.42.fr/v2/me"
         headers = {"Authorization": f"Bearer {access_token}"}
         user_info_response = requests.get(user_info_url, headers=headers)
         
         if user_info_response.status_code != 200:
-            print("User info fetch failed:", user_info_response.text)
-            return redirect("https://localhost:8000/login")
+            return redirect("https://localhost:443/login")
 
         user_info = user_info_response.json()
         username = user_info.get("login")
@@ -443,6 +436,13 @@ def oauth_callback(request):
             }
         )
 
+        # Important: Log the user in
+        login(request, user)
+
+        # Create auth token
+        Token.objects.filter(user=user).delete()
+        token = Token.objects.create(user=user)
+
         # Create JWT token
         payload = {
             "user_id": str(user.id),
@@ -457,54 +457,83 @@ def oauth_callback(request):
             algorithm=settings.JWT_SETTINGS["JWT_ALGORITHM"]
         )
 
-        # Store in session
-        request.session["jwt_token"] = jwt_token
-        request.session.modified = True
-        
-        print("JWT Token stored in session:", jwt_token)
-        print("Session data:", dict(request.session))
-
-        # Create response with session cookie
-        response = redirect("https://localhost:8000/home")
+        # Create response with all necessary data
+        response = redirect("https://localhost:443/home")
         response.set_cookie(
             'sessionid',
             request.session.session_key,
             max_age=86400,
             httponly=True,
             samesite='Lax',
-            secure=False  # Set to True in production with HTTPS
+            secure=True
         )
         
-        # Set JWT token in cookie as well
         response.set_cookie(
             'jwt_token',
             jwt_token,
             max_age=86400,
             httponly=True,
             samesite='Lax',
-            secure=False  # Set to True in production with HTTPS
+            secure=True
         )
-        
+
+        response.set_cookie(
+            'auth_token',
+            token.key,
+            max_age=86400,
+            httponly=True,
+            samesite='Lax',
+            secure=True
+        )
+
+        # Set session data
+        request.session['is_authenticated'] = True
+        request.session['user_id'] = user.id
+        request.session.modified = True
+
         return response
         
     except Exception as e:
         print("OAuth callback error:", str(e))
-        return redirect("https://localhost:8000/login")
+        return redirect("https://localhost:443/login")
 
 @csrf_exempt
 def get_token(request):
-    # Try to get token from session first
-    token = request.session.get("jwt_token")
-    
-    # If not in session, try to get from cookie
-    if not token:
-        token = request.COOKIES.get('jwt_token')
-    
-    print("Session data:", dict(request.session))
-    print("Cookies:", dict(request.COOKIES))
-    print("Retrieved token:", token)
-    
-    if not token:
+    try:
+        # Check if user is authenticated via session
+        if request.session.get('is_authenticated'):
+            user_id = request.session.get('user_id')
+            user = User.objects.get(id=user_id)
+            
+            # Create new token
+            Token.objects.filter(user=user).delete()
+            token = Token.objects.create(user=user)
+            
+            # Create JWT token
+            payload = {
+                "user_id": str(user.id),
+                "email": user.email,
+                "username": user.username,
+                "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=1),
+                "iat": datetime.datetime.utcnow(),
+            }
+            jwt_token = jwt.encode(
+                payload,
+                settings.JWT_SETTINGS["JWT_SECRET_KEY"],
+                algorithm=settings.JWT_SETTINGS["JWT_ALGORITHM"]
+            )
+            
+            return JsonResponse({
+                "token": jwt_token,
+                "auth_token": token.key,
+                "user": {
+                    "id": user.id,
+                    "email": user.email,
+                    "username": user.username
+                }
+            })
+    except Exception as e:
+        print("Error in get_token:", str(e))
         return JsonResponse({
             "error": "Not authenticated",
             "debug_info": {
@@ -512,19 +541,6 @@ def get_token(request):
                 "cookies": dict(request.COOKIES)
             }
         }, status=401)
-
-    try:
-        # Verify the token
-        payload = jwt.decode(
-            token, 
-            settings.JWT_SETTINGS["JWT_SECRET_KEY"],
-            algorithms=[settings.JWT_SETTINGS["JWT_ALGORITHM"]]
-        )
-        return JsonResponse({"token": token})
-    except jwt.ExpiredSignatureError:
-        return JsonResponse({"error": "Token expired"}, status=401)
-    except jwt.InvalidTokenError:
-        return JsonResponse({"error": "Invalid token"}, status=401)
 
 @api_view(['POST'])
 def verify_otp_view(request):

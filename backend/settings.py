@@ -179,8 +179,8 @@ SESSION_SAVE_EVERY_REQUEST = True
 CORS_ALLOW_ALL_ORIGINS = True  # For development only
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8000",
-    "https://localhost:8000",
+    "http://localhost:443",
+    "https://localhost:443",
 ]
 CORS_ALLOW_METHODS = [
     'GET',
@@ -204,8 +204,8 @@ CSRF_COOKIE_SECURE = False
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:8000",
-    "https://localhost:8000",
+    "http://localhost:443",
+    "https://localhost:443",
 ]
 CSRF_USE_SESSIONS = False
 CSRF_COOKIE_NAME = 'csrftoken'
