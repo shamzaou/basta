@@ -682,7 +682,11 @@ async function initiate42OAuth() {
     try {
         const response = await fetch('/api/auth/redirect_uri/', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            credentials: 'include'
         });
 
         const data = await response.json();
@@ -690,6 +694,13 @@ async function initiate42OAuth() {
 
         if (response.ok && data.oauth_link) {
             console.log("Redirecting to:", data.oauth_link);
+            // Clear any existing auth data before redirecting
+            localStorage.setItem('isLoggedIn', 'false');
+            localStorage.removeItem('jwtToken');
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userData');
+            
+            // Redirect to 42's OAuth page
             window.location.href = data.oauth_link;
         } else {
             console.error('Error:', data);
@@ -701,6 +712,7 @@ async function initiate42OAuth() {
     }
 }
 
+// Update the checkOAuthLogin function to properly handle the OAuth flow
 async function checkOAuthLogin() {
     try {
         console.log('Checking OAuth login status...');
@@ -709,15 +721,16 @@ async function checkOAuthLogin() {
         
         if (!code) {
             console.log('No OAuth code found in URL');
-            showPage('login');
+            localStorage.setItem('isLoggedIn', 'false');
             return false;
         }
 
         console.log('OAuth code found:', code);
 
-        const response = await fetch('/api/auth/get-token/', {
-            method: "GET",
-            credentials: "include",
+        // Call oauth_callback endpoint
+        const response = await fetch(`/api/auth/oauth_callback/?code=${code}`, {
+            method: 'GET',
+            credentials: 'include',
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
@@ -725,42 +738,32 @@ async function checkOAuthLogin() {
         });
 
         const data = await response.json();
-        console.log("OAuth login check response:", data);
+        console.log("OAuth response:", data);
 
-        if (response.ok && data.token) {
-            console.log('Successfully got token:', data.token);
+        if (response.ok && data.success) {
+            console.log('Successfully authenticated with OAuth');
             
-            localStorage.setItem("authToken", data.token);
+            // Store authentication data
+            localStorage.setItem("jwtToken", data.jwt_token);
+            localStorage.setItem("authToken", data.auth_token);
             localStorage.setItem("isLoggedIn", "true");
+            localStorage.setItem("userData", JSON.stringify(data.user));
             
-            try {
-                const profileResponse = await fetch('/api/auth/profile/', {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Token ${data.token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                if (profileResponse.ok) {
-                    const profileData = await profileResponse.json();
-                    console.log('Profile data fetched:', profileData);
-                    localStorage.setItem("userData", JSON.stringify(profileData));
-                }
-            } catch (profileError) {
-                console.error("Error fetching profile:", profileError);
-            }
-
+            // Update UI state
             checkLoginState();
+            
+            // Clear URL parameters and show home page
             window.history.replaceState({}, document.title, '/home');
             showPage('home');
             return true;
         } else {
-            throw new Error(data.error || 'Failed to get token');
+            throw new Error(data.error || 'Authentication failed');
         }
     } catch (error) {
         console.error("Error in OAuth login process:", error);
+        // Ensure logout state on failure
         localStorage.setItem("isLoggedIn", "false");
+        localStorage.removeItem("jwtToken");
         localStorage.removeItem("authToken");
         localStorage.removeItem("userData");
         checkLoginState();
@@ -769,31 +772,31 @@ async function checkOAuthLogin() {
     }
 }
 
-// Update window.onload
+// Update window.onload to properly handle OAuth
 window.onload = async function() {
     console.log('Window loaded, checking auth state...');
     
-    // Check if this is an OAuth callback
-    if (window.location.pathname === '/home' && window.location.search.includes('code=')) {
-        console.log('OAuth callback detected');
-        try {
+    try {
+        // Check if this is an OAuth callback
+        if (window.location.pathname === '/home' && window.location.search.includes('code=')) {
+            console.log('OAuth callback detected');
             const success = await checkOAuthLogin();
-            if (!success) {
-                showPage('login');
+            if (success) {
+                console.log('OAuth login successful');
+                return;
             }
-            return;
-        } catch (error) {
-            console.error('OAuth login failed:', error);
-            showPage('login');
-            return;
         }
+        
+        // Normal page load
+        checkLoginState();
+        const path = window.location.pathname;
+        const initialPage = path.substring(1) || 'home';
+        showPage(initialPage, false);
+    } catch (error) {
+        console.error('Error during page load:', error);
+        localStorage.setItem('isLoggedIn', 'false');
+        showPage('login');
     }
-    
-    // Normal page load
-    checkLoginState();
-    const path = window.location.pathname;
-    const initialPage = path.substring(1) || 'home';
-    showPage(initialPage, false);
 };
 
 async function loadProfileData() {

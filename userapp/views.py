@@ -436,7 +436,7 @@ def oauth_callback(request):
             }
         )
 
-        # Important: Log the user in
+        # Log the user in
         login(request, user)
 
         # Create auth token
@@ -452,8 +452,8 @@ def oauth_callback(request):
             "iat": datetime.datetime.utcnow(),
         }
         jwt_token = jwt.encode(
-            payload, 
-            settings.JWT_SETTINGS["JWT_SECRET_KEY"], 
+            payload,
+            settings.JWT_SETTINGS["JWT_SECRET_KEY"],
             algorithm=settings.JWT_SETTINGS["JWT_ALGORITHM"]
         )
 
