@@ -42,13 +42,13 @@ logger = logging.getLogger(__name__)
 @permission_classes([IsAuthenticated])
 @authentication_classes([TokenAuthentication, SessionAuthentication])
 def profile_view(request):
-    """Get user profile information"""
     if request.method == 'GET':
         try:
             user = request.user
             return Response({
                 'username': user.username,
                 'email': user.email,
+                'display_name': user.display_name if hasattr(user, 'display_name') else user.username,
                 'avatar': user.profile_picture.url if user.profile_picture else None,
                 'date_joined': user.date_joined.strftime('%B %Y')
             })
@@ -69,13 +69,52 @@ def profile_view(request):
                         'message': 'Username already taken'
                     }, status=400)
                 user.username = data['username']
-                user.save()
+            
+            if 'email' in data:
+                if User.objects.exclude(pk=user.pk).filter(email=data['email']).exists():
+                    return Response({
+                        'status': 'error',
+                        'message': 'Email already taken'
+                    }, status=400)
+                user.email = data['email']
+            
+            if 'display_name' in data:
+                # Direct update of display_name
+                User.objects.filter(id=user.id).update(display_name=data['display_name'].strip())
+                user.refresh_from_db()
+                
+            # Handle profile picture upload
+            if 'profile_picture' in data:
+                try:
+                    # Delete old profile picture if it exists
+                    if user.profile_picture:
+                        default_storage.delete(user.profile_picture.path)
+                    
+                    # Handle base64 image data
+                    if data['profile_picture'].startswith('data:image'):
+                        format, imgstr = data['profile_picture'].split(';base64,')
+                        ext = format.split('/')[-1]
+                        filename = f'profile_pictures/user_{user.id}.{ext}'
+                        data = ContentFile(base64.b64decode(imgstr))
+                        user.profile_picture.save(filename, data, save=True)
+                except Exception as e:
+                    print(f"Error handling profile picture: {str(e)}")
+                    return Response({
+                        'status': 'error',
+                        'message': 'Failed to update profile picture'
+                    }, status=400)
+            
+            user.save()
             
             return Response({
                 'status': 'success',
-                'username': user.username
+                'username': user.username,
+                'email': user.email,
+                'display_name': user.display_name or user.username,
+                'avatar': user.profile_picture.url if user.profile_picture else None
             })
         except Exception as e:
+            print(f"Error updating profile: {str(e)}")
             return Response({
                 'status': 'error',
                 'message': str(e)
@@ -87,12 +126,6 @@ def update_profile(request):
     """Update user profile information"""
     user = request.user
     data = request.data
-
-    # Update basic fields
-    if 'first_name' in data:
-        user.first_name = data['first_name']
-    if 'last_name' in data:
-        user.last_name = data['last_name']
     
     # Handle profile picture upload
     if 'profile_picture' in data:
@@ -115,8 +148,7 @@ def update_profile(request):
             'username': user.username,
             'email': user.email,
             'avatar': user.profile_picture.url if user.profile_picture else None,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
+			'display_name': user.username 
         }
     })
 
@@ -602,3 +634,4 @@ def user_settings_view(request):
                 'avatar': user.profile_picture.url if user.profile_picture else None,
             }
         })
+

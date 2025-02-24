@@ -225,12 +225,12 @@ REST_FRAMEWORK = {
 }
 
 JWT_SETTINGS = {
-    'JWT_SECRET_KEY': config('JWT_SECRET_KEY'),
+    'JWT_SECRET_KEY': config('JWT_SECRET_KEY', default='your-secret-key-here'),
     'JWT_EXP_DELTA_SECONDS': 4200,
     'JWT_ALGORITHM': 'HS256',
-    'CLIENT_ID': config('CLIENT_ID'),
-    'CLIENT_SECRET': config('CLIENT_SECRET'),
-    'REDIRECT_URI': config('REDIRECT_URI')
+    'CLIENT_ID': config('CLIENT_ID', default='u-s4t2ud-132fa5622bce53a46a8bed31d7e99019853b85977cc5fece17d95b9ee8cdff22'),
+    'CLIENT_SECRET': config('CLIENT_SECRET', default='your-client-secret'),
+    'REDIRECT_URI': config('REDIRECT_URI', default='https://localhost:8000/profile')
 }
 
 MEDIA_URL = '/media/'
