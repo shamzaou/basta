@@ -12,7 +12,10 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/basta_db
       - DEBUG=1
-      - REDIRECT_URI=https://api.intra.42.fr/oauth/authorize?client_id=u-s4t2ud-132fa5622bce53a46a8bed31d7e99019853b85977cc5fece17d95b9ee8cdff22&redirect_uri=https%3A%2F%2Flocalhost%3A8000%2Fprofile&response_type=code
+      - JWT_SECRET_KEY=your-secret-key-here
+      - CLIENT_ID=u-s4t2ud-132fa5622bce53a46a8bed31d7e99019853b85977cc5fece17d95b9ee8cdff22
+      - CLIENT_SECRET=your-client-secret
+      - REDIRECT_URI=https://localhost:8000/profile
     networks:
       - basta-network
     entrypoint: ["/bin/bash", "/app/scripts/entrypoint.sh"]

@@ -18,3 +18,5 @@ django-extensions
 Werkzeug
 pyOpenSSL
 python-decouple
+django-extensions
+Werkzeug

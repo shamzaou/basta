@@ -514,11 +514,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const input = fieldContainer.querySelector('.field-input');
             const display = fieldContainer.querySelector('.field-display');
             const isEditing = fieldContainer.classList.contains('editing');
-            const fieldType = input.id; // This will be either 'username' or 'email'
+            const fieldType = input.id.replace('-', '_'); // Convert display-name to display_name
             
             if (isEditing) {
                 const newValue = input.value;
                 const authToken = localStorage.getItem('authToken');
+                
+                console.log('Sending update for:', fieldType);  // Debug log
+                console.log('New value:', newValue);  // Debug log
+                console.log('Auth token:', authToken);  // Debug log
                 
                 try {
                     const response = await fetch('/api/auth/profile/', {
@@ -534,6 +538,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
 
                     const data = await response.json();
+                    console.log('Server response:', data);  // Debug log
                     
                     if (response.ok) {
                         display.textContent = newValue;
@@ -822,6 +827,34 @@ async function loadSettingsData() {
             }
             if (usernameInput && data.username) {
                 usernameInput.value = data.username;
+            }
+
+			const emailContainer = document.querySelector('#email').closest('.field-container');
+            const emailDisplay = emailContainer.querySelector('.field-display');
+            const emailInput = document.querySelector('#email');
+            
+            console.log('Email from server:', data.email); // Debug log
+            console.log('Found email display:', emailDisplay); // Debug log
+            console.log('Found email input:', emailInput); // Debug log
+            
+            if (emailDisplay && data.email) {
+                emailDisplay.textContent = data.email;
+                console.log('Updated email display to:', data.email); // Debug log
+            }
+            if (emailInput && data.email) {
+                emailInput.value = data.email;
+                console.log('Updated email input to:', data.email); // Debug log
+            }
+
+			const displayNameContainer = document.querySelector('#display-name').closest('.field-container');
+            const displayNameDisplay = displayNameContainer.querySelector('.field-display');
+            const displayNameInput = document.querySelector('#display-name');
+            
+            if (displayNameDisplay && data.display_name) {
+                displayNameDisplay.textContent = data.display_name;
+            }
+            if (displayNameInput && data.display_name) {
+                displayNameInput.value = data.display_name;
             }
         }
     } catch (error) {
