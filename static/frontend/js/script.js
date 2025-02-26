@@ -570,16 +570,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Avatar upload handling
     const avatarUpload = document.getElementById('avatar-upload');
     if (avatarUpload) {
-        avatarUpload.addEventListener('change', (event) => {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    document.querySelector('.current-avatar').src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            }
-        });
+        console.log('Found avatar upload input, attaching listener');
+        avatarUpload.addEventListener('change', handleAvatarUpload);
+    } else {
+        console.error('Avatar upload input not found - check HTML ID');
     }
     
     // Delete account confirmation
@@ -856,6 +850,14 @@ async function loadSettingsData() {
             if (displayNameInput && data.display_name) {
                 displayNameInput.value = data.display_name;
             }
+
+			// Update avatar preview if it exists
+			const avatarPreview = document.querySelector('.current-avatar');
+			if (avatarPreview && data.avatar) {
+				avatarPreview.src = data.avatar;
+			} else if (avatarPreview) {
+				avatarPreview.src = '/static/frontend/assets/man.png';
+			}
         }
     } catch (error) {
         console.error('Error loading settings:', error);
@@ -905,4 +907,80 @@ async function handleTournamentCreation(event) {
     }
 }
 
+async function handleAvatarUpload(event) {
+    console.log('handleAvatarUpload called');
+    const file = event.target.files[0];
+    if (!file) {
+        console.error('No file selected');
+        return;
+    }
+    
+    console.log('File selected:', {
+        name: file.name,
+        size: file.size,
+        type: file.type
+    });
+    
+    if (file.size > 5 * 1024 * 1024) {
+        alert('File size must be less than 5MB');
+        return;
+    }
 
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const base64Image = e.target.result;
+        const authToken = localStorage.getItem('authToken');
+        
+        console.log('Base64 image length:', base64Image.length); 
+        console.log('Auth token present:', !!authToken);
+        
+        try {
+            console.log('Sending avatar update request...');
+            const response = await fetch('/api/auth/profile/', {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Token ${authToken}`,
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    profile_picture: base64Image
+                })
+            });
+
+            const data = await response.json();
+            console.log('Full server response:', data);
+            
+            if (response.ok && data.avatar) {
+                console.log('Avatar URL received:', data.avatar);
+                
+                // Update all avatar instances on the page with cache busting
+                const timestamp = new Date().getTime();
+                const avatars = document.querySelectorAll('.current-avatar, .nav-avatar, .profile-avatar');
+                avatars.forEach(avatar => {
+                    avatar.src = data.avatar + '?t=' + timestamp;
+                    console.log('Updated avatar src:', avatar.src);
+                });
+                
+                // Update user data in localStorage
+                const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+                userData.avatar = data.avatar;
+                localStorage.setItem('userData', JSON.stringify(userData));
+                
+                alert('Avatar updated successfully!');
+                
+                // Force reload page to ensure server data is refreshed
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                console.error('Avatar update failed:', data);
+                alert(data.message || 'Failed to update avatar');
+            }
+        } catch (error) {
+            console.error('Error updating avatar:', error);
+            alert('Failed to update avatar');
+        }
+    };
+    reader.readAsDataURL(file);
+}

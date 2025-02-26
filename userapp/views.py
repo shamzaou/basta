@@ -88,20 +88,33 @@ def profile_view(request):
                 try:
                     # Delete old profile picture if it exists
                     if user.profile_picture:
-                        default_storage.delete(user.profile_picture.path)
+                        print(f"Deleting old profile picture: {user.profile_picture.path}")
+                        try:
+                            default_storage.delete(user.profile_picture.path)
+                        except Exception as e:
+                            print(f"Error deleting old picture: {e}")
                     
                     # Handle base64 image data
                     if data['profile_picture'].startswith('data:image'):
                         format, imgstr = data['profile_picture'].split(';base64,')
                         ext = format.split('/')[-1]
-                        filename = f'profile_pictures/user_{user.id}.{ext}'
-                        data = ContentFile(base64.b64decode(imgstr))
-                        user.profile_picture.save(filename, data, save=True)
+                        filename = f'user_{user.id}.{ext}'
+                        print(f"Saving new profile picture as: {filename}")
+                        file_content = ContentFile(base64.b64decode(imgstr))
+                        
+                        # Save with explicit save=False and then save the user
+                        user.profile_picture.save(filename, file_content, save=False)
+                        user.save()
+                        
+                        print(f"New profile picture URL: {user.profile_picture.url}")
+                        print(f"Profile picture path: {user.profile_picture.path}")
                 except Exception as e:
                     print(f"Error handling profile picture: {str(e)}")
+                    import traceback
+                    traceback.print_exc()  # Print full traceback
                     return Response({
                         'status': 'error',
-                        'message': 'Failed to update profile picture'
+                        'message': f'Failed to update profile picture: {str(e)}'
                     }, status=400)
             
             user.save()
@@ -110,7 +123,7 @@ def profile_view(request):
                 'status': 'success',
                 'username': user.username,
                 'email': user.email,
-                'display_name': user.display_name or user.username,
+                'display_name': user.get_full_name() or user.username,
                 'avatar': user.profile_picture.url if user.profile_picture else None
             })
         except Exception as e:
@@ -138,18 +151,16 @@ def update_profile(request):
             format, imgstr = data['profile_picture'].split(';base64,')
             ext = format.split('/')[-1]
             filename = f'profile_pictures/{user.id}.{ext}'
-            data = ContentFile(base64.b64decode(imgstr))
-            user.profile_picture.save(filename, data, save=False)
+            file_content = ContentFile(base64.b64decode(imgstr))
+            user.profile_picture.save(filename, file_content, save=False)
 
     user.save()
     return Response({
         'status': 'success',
-        'user': {
-            'username': user.username,
-            'email': user.email,
-            'avatar': user.profile_picture.url if user.profile_picture else None,
-			'display_name': user.username 
-        }
+        'username': user.username,
+        'email': user.email,
+        'display_name': user.get_full_name() or user.username,
+        'avatar': user.profile_picture.url if user.profile_picture else None
     })
 
 
@@ -627,11 +638,9 @@ def user_settings_view(request):
         user.save()
         return Response({
             'status': 'success',
-            'user': {
-                'username': user.username,
-                'email': user.email,
-                'display_name': user.get_full_name() or user.username,
-                'avatar': user.profile_picture.url if user.profile_picture else None,
-            }
+            'username': user.username,
+            'email': user.email,
+            'display_name': user.get_full_name() or user.username,
+            'avatar': user.profile_picture.url if user.profile_picture else None
         })
 
