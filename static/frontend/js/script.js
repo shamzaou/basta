@@ -14,8 +14,32 @@ function showPage(pageId, pushState = true) {
         pageId = 'login';
     }
 
-    // Validate page exists
-    const targetPage = document.getElementById(pageId);
+    // Special handling for OAuth callback path
+    if (pageId === 'oauth/callback') {
+        console.log('Processing OAuth callback...');
+        // Extract code from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        
+        if (code) {
+            // Process the code through our token exchange function
+            checkOAuthLogin();
+            // Redirect to home page
+            pageId = 'home';
+        } else {
+            console.error('No code found in OAuth callback');
+            pageId = 'login';
+        }
+    }
+
+    // Check if this is an OAuth redirect on home page
+    const urlParams = new URLSearchParams(window.location.search);
+    if (pageId === 'home' && urlParams.has('code')) {
+        checkOAuthLogin();
+    }
+
+    // Changed: Use let instead of const for targetPage since we need to reassign it
+    let targetPage = document.getElementById(pageId);
     if (!targetPage) {
         console.error(`Page ${pageId} not found`);
         pageId = 'home'; // Fallback to home page if target doesn't exist
@@ -71,37 +95,17 @@ function showPage(pageId, pushState = true) {
 // Separate function for game initialization
 function initializeGameIfNeeded(pageId) {
     if (pageId === 'game') {
-        const modeSelection = document.getElementById('modeSelection');
-        
-        // Check if we're coming from a tournament match
-        if (window.currentMatchId) {
-            modeSelection.style.display = 'none';
-            const gameContainer = document.querySelector('.game-container');
-            window.currentGame = new window.PongGame(gameContainer, 'pvp');
-            window.currentGame.physics.resetBall();
-        } else if (modeSelection) {
-            modeSelection.style.display = 'flex';
+        console.log('Starting game initialization...');
+        const gameContainer = document.querySelector('.game-container');
+        if (gameContainer) {
+            // Clear container and ensure it's visible
+            gameContainer.innerHTML = '';
+            gameContainer.style.display = 'block';
             
-            const pvpButton = document.getElementById('pvpButton');
-            const aiButton = document.getElementById('aiButton');
-            
-            if (pvpButton) {
-                pvpButton.onclick = () => {
-                    modeSelection.style.display = 'none';
-                    const gameContainer = document.querySelector('.game-container');
-                    window.currentGame = new window.PongGame(gameContainer, 'pvp');
-                    window.currentGame.physics.resetBall();
-                };
-            }
-            
-            if (aiButton) {
-                aiButton.onclick = () => {
-                    modeSelection.style.display = 'none';
-                    const gameContainer = document.querySelector('.game-container');
-                    window.currentGame = new window.PongGame(gameContainer, 'ai');
-                    window.currentGame.physics.resetBall();
-                };
-            }
+            // Initialize game without specifying mode to show selection first
+            PongGame.initializeGame(gameContainer);
+        } else {
+            console.error('Game container not found');
         }
     } else if (pageId === 'tictactoe') {
         const gameContainer = document.querySelector('.tictactoe-container');
@@ -153,13 +157,13 @@ document.addEventListener('click', (event) => {
 function checkLoginState() {
     console.log('Checking login state...');
     
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true' && 
-                       (localStorage.getItem('authToken') || localStorage.getItem('jwtToken'));
-    
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     console.log('isLoggedIn:', isLoggedIn);
     
     document.body.classList.remove('is-logged-in', 'is-logged-out');
     document.body.classList.add(isLoggedIn ? 'is-logged-in' : 'is-logged-out');
+    
+    console.log('Body classes after update:', document.body.classList.toString());
     
     // Get all nav links
     const loggedInNav = document.querySelector('.nav-links.logged-in');
@@ -391,7 +395,6 @@ async function handleRegister(event) {
 
 // Add function to start tournament match
 function startTournamentMatch(matchId) {
-    // Получаем CSRF токен
     const csrftoken = getCookie('csrftoken');
     
     fetch(`/tournaments/match/${matchId}/start/`, {
@@ -401,7 +404,7 @@ function startTournamentMatch(matchId) {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
         },
-        credentials: 'include'  // Важно для передачи куки
+        credentials: 'include'
     })
     .then(response => {
         if (!response.ok) {
@@ -427,11 +430,8 @@ function startTournamentMatch(matchId) {
             const gameContainer = document.getElementById('game');
             if (gameContainer) {
                 gameContainer.style.display = 'block';
-                
-                // Initialize game in PvP mode
                 const pongContainer = gameContainer.querySelector('.game-container');
-                window.currentGame = new window.PongGame(pongContainer, 'pvp');
-                window.currentGame.physics.resetBall();
+                PongGame.initializeGame(pongContainer, 'pvp');
             }
         } else {
             alert(data.message || 'Failed to start match');
@@ -533,11 +533,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const input = fieldContainer.querySelector('.field-input');
             const display = fieldContainer.querySelector('.field-display');
             const isEditing = fieldContainer.classList.contains('editing');
-            const fieldType = input.id; // This will be either 'username' or 'email'
+            const fieldType = input.id.replace('-', '_'); // Convert display-name to display_name
             
             if (isEditing) {
                 const newValue = input.value;
                 const authToken = localStorage.getItem('authToken');
+                
+                console.log('Sending update for:', fieldType);  // Debug log
+                console.log('New value:', newValue);  // Debug log
+                console.log('Auth token:', authToken);  // Debug log
                 
                 try {
                     const response = await fetch('/api/auth/profile/', {
@@ -553,6 +557,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
 
                     const data = await response.json();
+                    console.log('Server response:', data);  // Debug log
                     
                     if (response.ok) {
                         display.textContent = newValue;
@@ -680,124 +685,110 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function initiate42OAuth() {
     try {
+        console.log("Initiating OAuth flow...");
+        
+        // Clear any existing OAuth data to ensure a fresh flow
+        localStorage.removeItem('oauth_state');
+        localStorage.removeItem('oauth_pending');
+        
         const response = await fetch('/api/auth/redirect_uri/', {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                'Accept': 'application/json'
+                'X-CSRFToken': getCookie('csrftoken')
             },
             credentials: 'include'
         });
 
         const data = await response.json();
+        
+        if (!response.ok) {
+            console.error("OAuth API Error:", data);
+            throw new Error(data.error || `HTTP error! status: ${response.status}`);
+        }
+
         console.log("OAuth API Response:", data);
 
-        if (response.ok && data.oauth_link) {
-            console.log("Redirecting to:", data.oauth_link);
-            // Clear any existing auth data before redirecting
-            localStorage.setItem('isLoggedIn', 'false');
-            localStorage.removeItem('jwtToken');
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('userData');
+        if (data.oauth_link) {
+            // Mark that we're starting OAuth flow
+            localStorage.setItem('oauth_pending', 'true');
             
-            // Redirect to 42's OAuth page
+            // Force navigation to 42's authorization page
+            console.log("Redirecting to:", data.oauth_link);
             window.location.href = data.oauth_link;
         } else {
-            console.error('Error:', data);
-            alert('Failed to initiate OAuth');
+            throw new Error('No OAuth link received');
         }
     } catch (error) {
-        console.error('Error:', error);
-        alert('Failed to initiate OAuth');
+        console.error('OAuth Initiation Error:', error);
+        alert('Failed to initiate OAuth login. Please try again.');
     }
 }
 
-// Update the checkOAuthLogin function to properly handle the OAuth flow
-async function checkOAuthLogin() {
-    try {
-        console.log('Checking OAuth login status...');
-        const urlParams = new URLSearchParams(window.location.search);
-        const code = urlParams.get('code');
+// Update the OAuth login function to ensure redirect to homepage
+function checkOAuthLogin() {
+    console.log("Checking OAuth login status...");
+    
+    // Get the authorization code from URL if present
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    
+    if (!code) {
+        console.log("No OAuth code found in URL");
+        return Promise.resolve();
+    }
+    
+    console.log("OAuth code found, exchanging for token...");
+    
+    // Clear the URL parameters without reloading the page
+    window.history.replaceState({}, document.title, window.location.pathname);
+    
+    // Exchange the code for a token
+    return fetch('/api/auth/get-token/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        credentials: 'include',
+        body: JSON.stringify({ code: code }),
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.text().then(text => {
+                console.error('Token endpoint error:', response.status, text);
+                throw new Error('Authentication failed: ' + response.status);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log("Token received successfully:", data);
         
-        if (!code) {
-            console.log('No OAuth code found in URL');
-            localStorage.setItem('isLoggedIn', 'false');
-            return false;
-        }
-
-        console.log('OAuth code found:', code);
-
-        // Call oauth_callback endpoint
-        const response = await fetch(`/api/auth/oauth_callback/?code=${code}`, {
-            method: 'GET',
-            credentials: 'include',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-            }
-        });
-
-        const data = await response.json();
-        console.log("OAuth response:", data);
-
-        if (response.ok && data.success) {
-            console.log('Successfully authenticated with OAuth');
-            
-            // Store authentication data
-            localStorage.setItem("jwtToken", data.jwt_token);
-            localStorage.setItem("authToken", data.auth_token);
-            localStorage.setItem("isLoggedIn", "true");
-            localStorage.setItem("userData", JSON.stringify(data.user));
-            
-            // Update UI state
-            checkLoginState();
-            
-            // Clear URL parameters and show home page
-            window.history.replaceState({}, document.title, '/home');
-            showPage('home');
-            return true;
-        } else {
-            throw new Error(data.error || 'Authentication failed');
-        }
-    } catch (error) {
-        console.error("Error in OAuth login process:", error);
-        // Ensure logout state on failure
-        localStorage.setItem("isLoggedIn", "false");
-        localStorage.removeItem("jwtToken");
-        localStorage.removeItem("authToken");
-        localStorage.removeItem("userData");
+        // Store all the necessary authentication data
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('authToken', data.auth_token);
+        localStorage.setItem('userData', JSON.stringify(data.user));
+        localStorage.setItem('isLoggedIn', 'true');
+        
+        // Update login state and UI immediately
         checkLoginState();
+        
+        // Use setTimeout to ensure the navigation happens after state is updated
+        setTimeout(() => {
+            // Force navigation to home page
+            console.log("Redirecting to home page after successful OAuth login");
+            window.location.href = '/';  // Use direct navigation instead of showPage
+        }, 100);
+        
+        return true;
+    })
+    .catch(error => {
+        console.error("OAuth Login Error:", error);
         showPage('login');
         return false;
-    }
+    });
 }
-
-// Update window.onload to properly handle OAuth
-window.onload = async function() {
-    console.log('Window loaded, checking auth state...');
-    
-    try {
-        // Check if this is an OAuth callback
-        if (window.location.pathname === '/home' && window.location.search.includes('code=')) {
-            console.log('OAuth callback detected');
-            const success = await checkOAuthLogin();
-            if (success) {
-                console.log('OAuth login successful');
-                return;
-            }
-        }
-        
-        // Normal page load
-        checkLoginState();
-        const path = window.location.pathname;
-        const initialPage = path.substring(1) || 'home';
-        showPage(initialPage, false);
-    } catch (error) {
-        console.error('Error during page load:', error);
-        localStorage.setItem('isLoggedIn', 'false');
-        showPage('login');
-    }
-};
 
 async function loadProfileData() {
     try {
@@ -881,6 +872,34 @@ async function loadSettingsData() {
             }
             if (usernameInput && data.username) {
                 usernameInput.value = data.username;
+            }
+
+			const emailContainer = document.querySelector('#email').closest('.field-container');
+            const emailDisplay = emailContainer.querySelector('.field-display');
+            const emailInput = document.querySelector('#email');
+            
+            console.log('Email from server:', data.email); // Debug log
+            console.log('Found email display:', emailDisplay); // Debug log
+            console.log('Found email input:', emailInput); // Debug log
+            
+            if (emailDisplay && data.email) {
+                emailDisplay.textContent = data.email;
+                console.log('Updated email display to:', data.email); // Debug log
+            }
+            if (emailInput && data.email) {
+                emailInput.value = data.email;
+                console.log('Updated email input to:', data.email); // Debug log
+            }
+
+			const displayNameContainer = document.querySelector('#display-name').closest('.field-container');
+            const displayNameDisplay = displayNameContainer.querySelector('.field-display');
+            const displayNameInput = document.querySelector('#display-name');
+            
+            if (displayNameDisplay && data.display_name) {
+                displayNameDisplay.textContent = data.display_name;
+            }
+            if (displayNameInput && data.display_name) {
+                displayNameInput.value = data.display_name;
             }
         }
     } catch (error) {

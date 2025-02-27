@@ -1,8 +1,6 @@
 # gameapp/views.py
 from django.shortcuts import render
-from django.contrib.auth import logout
 
 def index(request):
-    # Force logout on page load (temporary, for testing)
-    logout(request)
+    # Remove the forced logout to prevent OAuth issues
     return render(request, 'frontend/index.html')

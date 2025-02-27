@@ -1,7 +1,7 @@
 # userapp/views.py
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
-from django.contrib.auth import login, logout, authenticate
+from django.contrib.auth import login, logout, authenticate, get_user_model
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
 
 from decouple import config
@@ -364,8 +364,20 @@ def check_auth(request):
 def redirect_uri(request):
     if request.method == 'POST':
         try:
-            client_id = config('CLIENT_ID')
-            redirect_uri = config('REDIRECT_URI')
+            # First check if the settings exist
+            if not hasattr(settings, 'FORTYTWO_CLIENT_ID') or not hasattr(settings, 'FORTYTWO_REDIRECT_URI'):
+                print("ERROR: FORTYTWO_CLIENT_ID or FORTYTWO_REDIRECT_URI not defined in settings")
+                return JsonResponse({
+                    "error": "OAuth configuration is incomplete. Please check server settings."
+                }, status=500)
+            
+            # Use the FORTYTWO_ prefixed variables for consistency
+            client_id = settings.FORTYTWO_CLIENT_ID
+            redirect_uri = settings.FORTYTWO_REDIRECT_URI
+            
+            # Debug output
+            print(f"Using client_id: {client_id}")
+            print(f"Using redirect_uri: {redirect_uri}")
             
             oauth_link = (
                 f"https://api.intra.42.fr/oauth/authorize"
@@ -375,8 +387,6 @@ def redirect_uri(request):
             )
             
             print("Generated OAuth link:", oauth_link)
-            print("Client ID:", client_id)
-            print("Redirect URI:", redirect_uri)
             
             return JsonResponse({"oauth_link": oauth_link})
         except Exception as e:
@@ -498,49 +508,105 @@ def oauth_callback(request):
         return redirect("https://localhost:443/login")
 
 @csrf_exempt
+@require_POST
 def get_token(request):
     try:
-        # Check if user is authenticated via session
-        if request.session.get('is_authenticated'):
-            user_id = request.session.get('user_id')
-            user = User.objects.get(id=user_id)
+        # Extract code from request
+        body_unicode = request.body.decode('utf-8')
+        body_data = json.loads(body_unicode)
+        code = body_data.get('code')
+        
+        if not code:
+            return JsonResponse({'error': 'Authorization code is required'}, status=400)
+        
+        # Debugging: Print settings values to verify they're loaded
+        print(f"FORTYTWO_CLIENT_ID: {settings.FORTYTWO_CLIENT_ID}")
+        print(f"FORTYTWO_REDIRECT_URI: {settings.FORTYTWO_REDIRECT_URI}")
             
-            # Create new token
-            Token.objects.filter(user=user).delete()
-            token = Token.objects.create(user=user)
+        # Exchange code for access token with 42 API
+        token_url = 'https://api.intra.42.fr/oauth/token'
+        token_data = {
+            'grant_type': 'authorization_code',
+            'client_id': settings.FORTYTWO_CLIENT_ID,
+            'client_secret': settings.FORTYTWO_CLIENT_SECRET,
+            'code': code,
+            'redirect_uri': settings.FORTYTWO_REDIRECT_URI
+        }
+        
+        token_response = requests.post(token_url, data=token_data)
+        
+        if token_response.status_code != 200:
+            error_message = f"Token request failed with status {token_response.status_code}: {token_response.text}"
+            print(error_message)
+            return JsonResponse({'error': error_message}, status=401)
             
-            # Create JWT token
-            payload = {
-                "user_id": str(user.id),
-                "email": user.email,
-                "username": user.username,
-                "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=1),
-                "iat": datetime.datetime.utcnow(),
-            }
-            jwt_token = jwt.encode(
-                payload,
-                settings.JWT_SETTINGS["JWT_SECRET_KEY"],
-                algorithm=settings.JWT_SETTINGS["JWT_ALGORITHM"]
+        token_json = token_response.json()
+        access_token = token_json.get('access_token')
+        
+        # Get user info from 42 API
+        user_url = 'https://api.intra.42.fr/v2/me'
+        headers = {'Authorization': f'Bearer {access_token}'}
+        user_response = requests.get(user_url, headers=headers)
+        
+        if user_response.status_code != 200:
+            error_message = f"User data request failed with status {user_response.status_code}: {user_response.text}"
+            print(error_message)
+            return JsonResponse({'error': error_message}, status=401)
+            
+        user_data = user_response.json()
+        fortytwo_id = user_data.get('id')
+        email = user_data.get('email')
+        username = user_data.get('login')
+        
+        print(f"User data received: ID={fortytwo_id}, username={username}, email={email}")
+        
+        # Get or create user
+        User = get_user_model()
+        try:
+            user = User.objects.get(username=username)
+            print(f"Found existing user: {user.username}")
+        except User.DoesNotExist:
+            print(f"Creating new user with username: {username}")
+            user = User.objects.create_user(
+                username=username,
+                email=email,
             )
-            
-            return JsonResponse({
-                "token": jwt_token,
-                "auth_token": token.key,
-                "user": {
-                    "id": user.id,
-                    "email": user.email,
-                    "username": user.username
-                }
-            })
-    except Exception as e:
-        print("Error in get_token:", str(e))
+            # Store the 42 ID with the user
+            user.is_42_user = True
+            user.intra_id = fortytwo_id
+            user.save()
+        
+        # Log the user in explicitly
+        login(request, user)
+        
+        # Generate JWT token
+        payload = {
+            'user_id': user.id,
+            'username': user.username,
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)
+        }
+        
+        jwt_token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
+        
+        # Create a DRF token for API access
+        Token.objects.filter(user=user).delete()
+        token = Token.objects.create(user=user)
+        
+        # Return tokens and user data
         return JsonResponse({
-            "error": "Not authenticated",
-            "debug_info": {
-                "session_keys": list(request.session.keys()),
-                "cookies": dict(request.COOKIES)
+            'token': jwt_token,
+            'auth_token': token.key,
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'profile_picture': user.profile_picture.url if user.profile_picture else None,
             }
-        }, status=401)
+        })
+    
+    except Exception as e:
+        print(f"Error in get_token: {str(e)}")
+        return JsonResponse({'error': f'Authentication failed: {str(e)}'}, status=500)
 
 @api_view(['POST'])
 def verify_otp_view(request):
