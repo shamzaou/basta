@@ -14,7 +14,6 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/basta_db
       - DEBUG=1
-      # - REDIRECT_URI=https://api.intra.42.fr/oauth/authorize?client_id=u-s4t2ud-090324a2f7857894e3e85ac85528f481385fd823783cf44dd543a44544406790&redirect_uri=https%3A%2F%2Flocalhost%3A443%2Fhome&response_type=code
     networks:
       - basta-network
     entrypoint: ["/bin/bash", "/app/scripts/entrypoint.sh"]

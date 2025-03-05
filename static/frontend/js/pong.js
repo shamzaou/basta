@@ -74,13 +74,13 @@ class GamePhysics {
             this.ballSpin.z *= 0.5;
         }
 
-        // Paddle collisions
-        if (ball.position.x < -4.7 && ball.position.z > paddle1.position.z - 0.7 && 
-            ball.position.z < paddle1.position.z + 0.7) {
+        // Paddle collisions with larger hitbox (increased from 0.7 to 0.9)
+        if (ball.position.x < -4.7 && ball.position.z > paddle1.position.z - 0.9 && 
+            ball.position.z < paddle1.position.z + 0.9) {
             this.handlePaddleCollision(ball.position, paddle1.position, true);
         }
-        if (ball.position.x > 4.7 && ball.position.z > paddle2.position.z - 0.7 && 
-            ball.position.z < paddle2.position.z + 0.7) {
+        if (ball.position.x > 4.7 && ball.position.z > paddle2.position.z - 0.9 && 
+            ball.position.z < paddle2.position.z + 0.9) {
             this.handlePaddleCollision(ball.position, paddle2.position, false);
         }
 
@@ -98,6 +98,9 @@ class GameRenderer {
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x0a0a0a);
 
+        // Add CSS styles
+        this.injectStyles();
+
         // Set aspect ratio (4:3)
         this.aspectRatio = 4/3;
         
@@ -108,9 +111,206 @@ class GameRenderer {
         this.setupRenderer();
         this.setupLights();
         this.createGameObjects();
+        this.createUI();
 
         // Handle window resizing
         window.addEventListener('resize', () => this.handleResize(), false);
+    }
+
+    createUI() {
+        // Score display
+        const scoreDisplay = document.createElement('div');
+        scoreDisplay.id = 'score';
+        scoreDisplay.className = 'ui-element';
+        scoreDisplay.textContent = '00 - 00';
+        this.container.appendChild(scoreDisplay);
+
+        // Instructions
+        const instructions = document.createElement('div');
+        instructions.id = 'instructions';
+        instructions.className = 'ui-element';
+        instructions.textContent = 'P1: W/S | P2: ↑/↓ | SPACE: Pause';
+        this.container.appendChild(instructions);
+
+        // Player names
+        const player1Name = document.createElement('div');
+        player1Name.id = 'player1-name';
+        player1Name.className = 'player-name left';
+        this.container.appendChild(player1Name);
+
+        const player2Name = document.createElement('div');
+        player2Name.id = 'player2-name';
+        player2Name.className = 'player-name right';
+        this.container.appendChild(player2Name);
+
+        // Add game controls container
+        const gameControls = document.createElement('div');
+        gameControls.id = 'game-controls';
+        gameControls.className = 'ui-element game-controls';
+        gameControls.style.display = 'none'; // Hidden by default
+
+        // Add restart/next game button
+        const restartButton = document.createElement('button');
+        restartButton.className = 'game-button';
+        restartButton.id = 'restart-button';
+        gameControls.appendChild(restartButton);
+
+        this.container.appendChild(gameControls);
+    }
+
+    injectStyles() {
+        const style = document.createElement('style');
+        style.textContent = `
+            .game-container {
+                position: relative;
+                width: 100%;
+                height: calc(100vh - 200px);
+                min-height: 400px;
+                max-height: 800px;
+                margin: 20px auto;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                background-color: #0a0a0a;
+            }
+
+            .ui-element {
+                position: absolute;
+                color: #00ccff;
+                text-shadow: 0 0 10px #00ccff66;
+                text-align: center;
+                font-family: 'Press Start 2P', sans-serif;
+                z-index: 10;
+            }
+
+            #score {
+                top: 10%;
+                left: 50%;
+                transform: translateX(-50%);
+                font-size: 2em;
+            }
+
+            #instructions {
+                bottom: 5%;
+                left: 50%;
+                transform: translateX(-50%);
+                font-size: 1em;
+            }
+
+            #modeSelection {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+                z-index: 20;
+            }
+
+            .mode-button {
+                font-size: 24px;
+                color: #00ccff;
+                background: transparent;
+                border: 2px solid #00ccff;
+                padding: 15px 30px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                font-family: 'Press Start 2P', sans-serif;
+                text-transform: uppercase;
+                letter-spacing: 2px;
+                box-shadow: 0 0 10px #00ccff66;
+            }
+
+            .mode-button:hover {
+                background: #00ccff22;
+                box-shadow: 0 0 20px #00ccff;
+            }
+
+            .player-name {
+                position: absolute;
+                top: 15%;
+                font-family: 'Press Start 2P', sans-serif;
+                font-size: 24px;
+                color: #00ff00;
+                text-shadow: 2px 2px 4px rgba(0, 255, 0, 0.5);
+                z-index: 10;
+            }
+
+            .player-name.left {
+                left: 25%;
+                transform: translateX(-50%);
+            }
+
+            .player-name.right {
+                right: 25%;
+                transform: translateX(50%);
+            }
+
+            #winner-screen {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background-color: rgba(0, 0, 0, 0.9);
+                padding: 30px;
+                border: 4px solid #00ff00;
+                border-radius: 10px;
+                text-align: center;
+                display: none;
+                z-index: 100;
+            }
+
+            #winner-text {
+                font-size: 36px;
+                color: #00ff00;
+                text-shadow: 2px 2px 4px rgba(0, 255, 0, 0.5);
+                margin-bottom: 20px;
+            }
+
+            .return-button {
+                padding: 15px 30px;
+                font-family: 'Press Start 2P', sans-serif;
+                font-size: 18px;
+                color: #000;
+                background-color: #00ff00;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+
+            .return-button:hover {
+                background-color: #ff00ff;
+                transform: scale(1.05);
+            }
+
+            .game-controls {
+                position: absolute;
+                bottom: 15%;
+                left: 50%;
+                transform: translateX(-50%);
+                z-index: 20;
+            }
+
+            .game-button {
+                font-family: 'Press Start 2P', sans-serif;
+                font-size: 16px;
+                padding: 10px 20px;
+                color: #00ff00;
+                background: transparent;
+                border: 2px solid #00ff00;
+                border-radius: 4px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+
+            .game-button:hover {
+                background: rgba(0, 255, 0, 0.2);
+                transform: scale(1.05);
+            }
+        `;
+        document.head.appendChild(style);
     }
 
     calculateSize() {
@@ -132,15 +332,20 @@ class GameRenderer {
 
     setupCamera() {
         this.camera = new THREE.PerspectiveCamera(75, this.aspectRatio, 0.1, 1000);
-        this.camera.position.set(0, 7, 10);
+        this.camera.position.set(0, 6, 6);
         this.camera.lookAt(0, 0, 0);
     }
 
     setupRenderer() {
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        this.calculateSize(); // Make sure size is calculated
         this.renderer.setSize(this.width, this.height);
-        this.renderer.domElement.style.margin = 'auto';
-        this.renderer.domElement.style.display = 'block';
+        this.renderer.domElement.style.cssText = `
+            display: block;
+            margin: auto;
+            max-width: 100%;
+            height: auto;
+        `;
         this.container.appendChild(this.renderer.domElement);
     }
 
@@ -330,19 +535,19 @@ class InputHandler {
     update() {
         const paddleSpeed = GAME_CONFIG.paddleSpeed || 0.15;
         
-        // Paddle 1 controls (W/S)
-        if (this.keys.has('w') && this.paddle1.position.z > -2.5) {
+        // Paddle 1 controls (W/S) with tighter bounds
+        if (this.keys.has('w') && this.paddle1.position.z > -2.1) {
             this.paddle1.position.z -= paddleSpeed;
         }
-        if (this.keys.has('s') && this.paddle1.position.z < 2.5) {
+        if (this.keys.has('s') && this.paddle1.position.z < 2.1) {
             this.paddle1.position.z += paddleSpeed;
         }
 
-        // Paddle 2 controls (Arrow keys)
-        if (this.keys.has('arrowup') && this.paddle2.position.z > -2.5) {
+        // Paddle 2 controls (Arrow keys) with tighter bounds
+        if (this.keys.has('arrowup') && this.paddle2.position.z > -2.1) {
             this.paddle2.position.z -= paddleSpeed;
         }
-        if (this.keys.has('arrowdown') && this.paddle2.position.z < 2.5) {
+        if (this.keys.has('arrowdown') && this.paddle2.position.z < 2.1) {
             this.paddle2.position.z += paddleSpeed;
         }
     }
@@ -415,9 +620,9 @@ class PongAI {
         const distanceToTarget = Math.abs(this.paddle.position.z - (this.targetZ || 0));
         const speed = Math.min(this.MAX_SPEED, distanceToTarget / 10);
 
-        if (this.nextMove === 'up' && this.paddle.position.z > -2.5) {
+        if (this.nextMove === 'up' && this.paddle.position.z > -2.1) {
             this.paddle.position.z -= speed;
-        } else if (this.nextMove === 'down' && this.paddle.position.z < 2.5) {
+        } else if (this.nextMove === 'down' && this.paddle.position.z < 2.1) {
             this.paddle.position.z += speed;
         }
     }
@@ -479,9 +684,44 @@ class PongGame {
             }
         }
 
+        // Create pause overlay
+        this.createPauseOverlay();
+        
+        // Setup event handlers
+        this.setupEventHandlers();
+
         // Start game loop
         this.lastTime = 0;
         this.animate(0);
+    }
+
+    createPauseOverlay() {
+        if (!document.getElementById('pauseOverlay')) {
+            const overlay = document.createElement('div');
+            overlay.id = 'pauseOverlay';
+            overlay.style.cssText = `
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background-color: var(--background-color);
+                color: var(--secondary-color);
+                padding: 1rem 2rem;
+                border: 2px solid var(--primary-color);
+                border-radius: 4px;
+                font-family: 'Press Start 2P', cursive;
+                font-size: 1.5rem;
+                font-weight: bold;
+                // text-shadow: 0.125em 0.125em var(--secondary-color);
+                text-transform: uppercase;
+                letter-spacing: 2px;
+                display: none;
+                z-index: 1000;
+                box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            `;
+            overlay.textContent = 'Paused';
+            this.renderer.container.appendChild(overlay);
+        }
     }
 
     async initializeMatch() {
@@ -536,7 +776,17 @@ class PongGame {
     }
 
     async finishMatch() {
-        if (!this.state.matchId) return;
+        if (!this.state.matchId) {
+            // Show restart button for normal game
+            const gameControls = document.getElementById('game-controls');
+            const restartButton = document.getElementById('restart-button');
+            if (gameControls && restartButton) {
+                restartButton.textContent = 'Restart Game';
+                restartButton.onclick = () => this.restartGame();
+                gameControls.style.display = 'block';
+            }
+            return;
+        }
 
         try {
             const response = await fetch(`/tournaments/match/${this.state.matchId}/finish/`, {
@@ -553,27 +803,39 @@ class PongGame {
             });
 
             if (response.ok) {
-                // Show winner screen
-                const winnerScreen = document.getElementById('winner-screen');
-                const winnerText = document.getElementById('winner-text');
-                const returnButton = document.getElementById('return-to-tournament');
-                
-                if (winnerScreen && winnerText && returnButton) {
-                    const winner = this.state.score.player1 > this.state.score.player2 
-                        ? window.currentMatchPlayers.player1 
-                        : window.currentMatchPlayers.player2;
-                    
-                    winnerText.textContent = `${winner} Wins!`;
-                    winnerScreen.style.display = 'block';
-                    
-                    returnButton.onclick = () => {
+                // Show next game button for tournament
+                const gameControls = document.getElementById('game-controls');
+                const restartButton = document.getElementById('restart-button');
+                if (gameControls && restartButton) {
+                    restartButton.textContent = 'Next Game';
+                    restartButton.onclick = () => {
                         window.location.href = `/tournaments/${this.state.tournamentId}/`;
                     };
+                    gameControls.style.display = 'block';
                 }
             }
         } catch (error) {
             console.error('Failed to finish match:', error);
         }
+    }
+
+    restartGame() {
+        // Reset game state
+        this.state.score = { player1: 0, player2: 0 };
+        this.state.gameStatus = 'playing';
+        this.state.winner = null;
+        
+        // Reset ball position and velocity
+        this.renderer.ball.position.copy(this.physics.resetBall());
+        
+        // Hide game controls
+        const gameControls = document.getElementById('game-controls');
+        if (gameControls) {
+            gameControls.style.display = 'none';
+        }
+        
+        // Update score display
+        document.getElementById('score').textContent = '00 - 00';
     }
 
     updateScore(scorer) {
@@ -595,9 +857,8 @@ class PongGame {
     }
 
     setupEventHandlers() {
-        // Space to pause
         document.addEventListener('keydown', (e) => {
-            if (e.code === 'Space' && this.state.gameStatus !== 'menu') {
+            if (e.code === 'Space' && this.state.gameStatus !== 'finished') {
                 e.preventDefault();
                 this.togglePause();
             }
@@ -605,12 +866,15 @@ class PongGame {
     }
 
     togglePause() {
+        const overlay = document.getElementById('pauseOverlay');
+        if (!overlay) return;
+
         if (this.state.gameStatus === 'playing') {
             this.state.gameStatus = 'paused';
-            document.getElementById('pauseText').style.display = 'block';
+            overlay.style.display = 'block';
         } else if (this.state.gameStatus === 'paused') {
             this.state.gameStatus = 'playing';
-            document.getElementById('pauseText').style.display = 'none';
+            overlay.style.display = 'none';
         }
     }
 
@@ -664,6 +928,60 @@ class PongGame {
 
         this.renderer.render();
         this.lastTime = currentTime;
+    }
+
+    static initializeGame(container, mode) {
+        console.log('Initializing game...', { container, mode });
+        
+        // Clear container first
+        container.innerHTML = '';
+        
+        // Set container dimensions explicitly
+        container.style.cssText = `
+            position: relative;
+            width: 100%;
+            height: 600px;
+            background-color: #0a0a0a;
+            overflow: hidden;
+        `;
+
+        if (!mode && !window.currentMatchId) {
+            // Create mode selection
+            const modeSelection = document.createElement('div');
+            modeSelection.id = 'modeSelection';
+            modeSelection.className = 'game-mode-selection'; // Add the class instead of inline styles
+
+            const pvpButton = document.createElement('button');
+            pvpButton.className = 'mode-button';
+            pvpButton.textContent = 'Player vs Player';
+            pvpButton.onclick = () => {
+                modeSelection.remove();
+                this.startGame(container, 'pvp');
+            };
+
+            const aiButton = document.createElement('button');
+            aiButton.className = 'mode-button';
+            aiButton.textContent = 'Player vs AI';
+            aiButton.onclick = () => {
+                modeSelection.remove();
+                this.startGame(container, 'ai');
+            };
+
+            modeSelection.appendChild(pvpButton);
+            modeSelection.appendChild(aiButton);
+            container.appendChild(modeSelection);
+        } else {
+            this.startGame(container, mode || 'pvp');
+        }
+    }
+
+    static startGame(container, mode) {
+        try {
+            window.currentGame = new PongGame(container, mode);
+            console.log('Game initialized successfully with mode:', mode);
+        } catch (error) {
+            console.error('Error initializing game:', error);
+        }
     }
 }
 

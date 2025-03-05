@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 class User(AbstractUser):
+    display_name = models.CharField(max_length=150, blank=True, null=True)
     email = models.EmailField(unique=True)
     profile_picture = models.ImageField(upload_to='profile_pictures/', null=True, blank=True)
     is_42_user = models.BooleanField(default=False)
@@ -30,3 +31,7 @@ class User(AbstractUser):
 
     class Meta:
         db_table = 'userapp_user'
+
+    def get_display_name(self):
+        """Return display_name if set, otherwise return username"""
+        return self.display_name if self.display_name else self.username
