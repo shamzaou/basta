@@ -11,12 +11,11 @@ psycopg2-binary
 djangorestframework==3.14.0
 djangorestframework-simplejwt
 python-decouple
-requests
+requests>=2.25.0
 django-otp==1.0.0
 sendgrid-django
 django-extensions
 Werkzeug
 pyOpenSSL
 python-decouple
-django-extensions
-Werkzeug
+PyJWT>=2.0.0

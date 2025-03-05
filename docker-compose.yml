@@ -5,17 +5,15 @@ services:
     build: .
     volumes:
       - .:/app
+      - ./localhost.pem:/app/localhost.pem
+      - ./localhost-key.pem:/app/localhost-key.pem
     ports:
-      - "8000:8000"
+      - "443:443"
     depends_on:
       - db
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/basta_db
       - DEBUG=1
-      - JWT_SECRET_KEY=your-secret-key-here
-      - CLIENT_ID=u-s4t2ud-132fa5622bce53a46a8bed31d7e99019853b85977cc5fece17d95b9ee8cdff22
-      - CLIENT_SECRET=your-client-secret
-      - REDIRECT_URI=https://localhost:8000/profile
     networks:
       - basta-network
     entrypoint: ["/bin/bash", "/app/scripts/entrypoint.sh"]

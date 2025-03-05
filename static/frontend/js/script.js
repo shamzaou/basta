@@ -14,13 +14,32 @@ function showPage(pageId, pushState = true) {
         pageId = 'login';
     }
 
-    // Check if this is an OAuth redirect
-    if (pageId === 'home' && window.location.pathname === '/home') {
-        checkOAuthLogin(); // This will handle setting the login state
+    // Special handling for OAuth callback path
+    if (pageId === 'oauth/callback') {
+        console.log('Processing OAuth callback...');
+        // Extract code from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        
+        if (code) {
+            // Process the code through our token exchange function
+            checkOAuthLogin();
+            // Redirect to home page
+            pageId = 'home';
+        } else {
+            console.error('No code found in OAuth callback');
+            pageId = 'login';
+        }
     }
 
-    // Validate page exists
-    const targetPage = document.getElementById(pageId);
+    // Check if this is an OAuth redirect on home page
+    const urlParams = new URLSearchParams(window.location.search);
+    if (pageId === 'home' && urlParams.has('code')) {
+        checkOAuthLogin();
+    }
+
+    // Changed: Use let instead of const for targetPage since we need to reassign it
+    let targetPage = document.getElementById(pageId);
     if (!targetPage) {
         console.error(`Page ${pageId} not found`);
         pageId = 'home'; // Fallback to home page if target doesn't exist
@@ -666,84 +685,110 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function initiate42OAuth() {
     try {
+        console.log("Initiating OAuth flow...");
+        
+        // Clear any existing OAuth data to ensure a fresh flow
+        localStorage.removeItem('oauth_state');
+        localStorage.removeItem('oauth_pending');
+        
         const response = await fetch('/api/auth/redirect_uri/', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            credentials: 'include'
         });
 
         const data = await response.json();
+        
+        if (!response.ok) {
+            console.error("OAuth API Error:", data);
+            throw new Error(data.error || `HTTP error! status: ${response.status}`);
+        }
+
         console.log("OAuth API Response:", data);
 
-        if (response.ok && data.oauth_link) {
+        if (data.oauth_link) {
+            // Mark that we're starting OAuth flow
+            localStorage.setItem('oauth_pending', 'true');
+            
+            // Force navigation to 42's authorization page
             console.log("Redirecting to:", data.oauth_link);
             window.location.href = data.oauth_link;
         } else {
-            console.error('Error:', data);
-            alert('Failed to initiate OAuth');
+            throw new Error('No OAuth link received');
         }
     } catch (error) {
-        console.error('Error:', error);
-        alert('Failed to initiate OAuth');
+        console.error('OAuth Initiation Error:', error);
+        alert('Failed to initiate OAuth login. Please try again.');
     }
 }
 
-async function checkOAuthLogin() {
-    try {
-        console.log('Checking OAuth login status...');
-        const response = await fetch('/api/auth/get-token/', {
-            method: "GET",
-            credentials: "include",
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-            }
-        });
-
-        const data = await response.json();
-        console.log("OAuth login check response:", data);
-
-        if (response.ok && data.token) {
-            localStorage.setItem("authToken", data.token);
-            localStorage.setItem("isLoggedIn", "true");
-            
-            const payload = JSON.parse(atob(data.token.split('.')[1]));
-            localStorage.setItem("userData", JSON.stringify({
-                username: payload.username,
-                email: payload.email
-            }));
-
-            checkLoginState();
-            showPage('home');
-            return true;
-        } else {
-            console.log("User not authenticated via OAuth:", data.error);
-            localStorage.setItem("isLoggedIn", "false");
-            localStorage.removeItem("authToken");
-            localStorage.removeItem("userData");
-            checkLoginState();
-            showPage('login');
-            return false;
+// Update the OAuth login function to ensure redirect to homepage
+function checkOAuthLogin() {
+    console.log("Checking OAuth login status...");
+    
+    // Get the authorization code from URL if present
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    
+    if (!code) {
+        console.log("No OAuth code found in URL");
+        return Promise.resolve();
+    }
+    
+    console.log("OAuth code found, exchanging for token...");
+    
+    // Clear the URL parameters without reloading the page
+    window.history.replaceState({}, document.title, window.location.pathname);
+    
+    // Exchange the code for a token
+    return fetch('/api/auth/get-token/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        credentials: 'include',
+        body: JSON.stringify({ code: code }),
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.text().then(text => {
+                console.error('Token endpoint error:', response.status, text);
+                throw new Error('Authentication failed: ' + response.status);
+            });
         }
-    } catch (error) {
-        console.error("Error checking OAuth login:", error);
-        localStorage.setItem("isLoggedIn", "false");
-        localStorage.removeItem("authToken");
-        localStorage.removeItem("userData");
+        return response.json();
+    })
+    .then(data => {
+        console.log("Token received successfully:", data);
+        
+        // Store all the necessary authentication data
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('authToken', data.auth_token);
+        localStorage.setItem('userData', JSON.stringify(data.user));
+        localStorage.setItem('isLoggedIn', 'true');
+        
+        // Update login state and UI immediately
         checkLoginState();
+        
+        // Use setTimeout to ensure the navigation happens after state is updated
+        setTimeout(() => {
+            // Force navigation to home page
+            console.log("Redirecting to home page after successful OAuth login");
+            window.location.href = '/';  // Use direct navigation instead of showPage
+        }, 100);
+        
+        return true;
+    })
+    .catch(error => {
+        console.error("OAuth Login Error:", error);
         showPage('login');
         return false;
-    }
+    });
 }
-
-// Update window.onload
-window.onload = async function() {
-    console.log('Window loaded, checking auth state...');
-    if (window.location.pathname === '/home') {
-        await checkOAuthLogin();
-    } else {
-        checkLoginState();
-    }
-};
 
 async function loadProfileData() {
     try {

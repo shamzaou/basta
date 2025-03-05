@@ -179,8 +179,8 @@ SESSION_SAVE_EVERY_REQUEST = True
 CORS_ALLOW_ALL_ORIGINS = True  # For development only
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8000",
-    "https://localhost:8000",
+    "http://localhost:443",
+    "https://localhost:443",
 ]
 CORS_ALLOW_METHODS = [
     'GET',
@@ -204,8 +204,8 @@ CSRF_COOKIE_SECURE = False
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:8000",
-    "https://localhost:8000",
+    "http://localhost:443",
+    "https://localhost:443",
 ]
 CSRF_USE_SESSIONS = False
 CSRF_COOKIE_NAME = 'csrftoken'
@@ -233,5 +233,37 @@ JWT_SETTINGS = {
     'REDIRECT_URI': config('REDIRECT_URI', default='https://localhost:8000/profile')
 }
 
+OAUTH2_PROVIDER = {
+    'SCOPES': {
+        'read': 'Read scope',
+        'write': 'Write scope',
+    },
+    'ACCESS_TOKEN_EXPIRE_SECONDS': 3600,
+    'REFRESH_TOKEN_EXPIRE_SECONDS': 86400,
+}
+
+# Update JWT settings
+JWT_SETTINGS.update({
+    'STATE_TTL': 600,  # 10 minutes in seconds
+    'OAUTH_AUTHORIZATION_URL': 'https://api.intra.42.fr/oauth/authorize',
+    'OAUTH_TOKEN_URL': 'https://api.intra.42.fr/oauth/token',
+})
+
+# Ensure CORS settings include the OAuth redirect URI
+CORS_ALLOWED_ORIGINS.extend([
+    'https://localhost:443',
+    'http://localhost:443',
+])
+
+CSRF_TRUSTED_ORIGINS.extend([
+    'https://localhost:443',
+    'http://localhost:443',
+])
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# 42 OAuth Settings 
+FORTYTWO_CLIENT_ID = config('FORTYTWO_CLIENT_ID', default='u-s4t2ud-c027f46e7ffb944f9483c4359967dc984c0b904c0cc3b9f628b05ba7c0c67cfc')
+FORTYTWO_CLIENT_SECRET = config('FORTYTWO_CLIENT_SECRET', default='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')
+FORTYTWO_REDIRECT_URI = config('FORTYTWO_REDIRECT_URI', default='https://localhost:443/home')
