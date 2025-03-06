@@ -23,7 +23,7 @@ from rest_framework.decorators import api_view
 import json
 import jwt
 import datetime
-from .models import User
+from .models import User, MatchHistory
 
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated
@@ -45,12 +45,61 @@ def profile_view(request):
     if request.method == 'GET':
         try:
             user = request.user
+            
+            # Get user's match history (most recent 5 matches)
+            match_history = MatchHistory.objects.filter(user=user).order_by('-date_played')[:5]
+            
+            # Calculate statistics
+            total_matches = MatchHistory.objects.filter(user=user).count()
+            wins = MatchHistory.objects.filter(user=user, result='WIN').count()
+            win_rate = int((wins / total_matches) * 100) if total_matches > 0 else 0
+            
+            # Find best score from wins
+            best_score = "0-0"
+            if wins > 0:
+                best_score_matches = MatchHistory.objects.filter(user=user, result='WIN')
+                if best_score_matches.exists():
+                    # Find match with biggest score difference
+                    best_match = None
+                    biggest_diff = -1
+                    for match in best_score_matches:
+                        scores = match.score.split('-')
+                        if len(scores) == 2:
+                            try:
+                                user_score = int(scores[0])
+                                opp_score = int(scores[1])
+                                diff = user_score - opp_score
+                                if diff > biggest_diff:
+                                    biggest_diff = diff
+                                    best_match = match
+                            except ValueError:
+                                continue
+                    
+                    if best_match:
+                        best_score = best_match.score
+            
+            # Format match history for response
+            matches = []
+            for match in match_history:
+                matches.append({
+                    'opponent': match.opponent,
+                    'score': match.score,
+                    'result': match.result,
+                    'date': match.date_played.strftime('%d %b %Y'),
+                })
+                
             return Response({
                 'username': user.username,
                 'email': user.email,
                 'display_name': user.display_name if hasattr(user, 'display_name') else user.username,
                 'avatar': user.profile_picture.url if user.profile_picture else None,
-                'date_joined': user.date_joined.strftime('%B %Y')
+                'date_joined': user.date_joined.strftime('%B %Y'),
+                'stats': {
+                    'games_played': total_matches,
+                    'win_rate': f"{win_rate}%",
+                    'best_score': best_score
+                },
+                'match_history': matches
             })
         except Exception as e:
             print(f"Profile view error: {str(e)}")
@@ -716,4 +765,71 @@ def user_settings_view(request):
                 'avatar': user.profile_picture.url if user.profile_picture else None,
             }
         })
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def match_history_view(request):
+    """Get user's match history"""
+    user = request.user
+    matches = MatchHistory.objects.filter(user=user).order_by('-date_played')[:10]  # Limit to 10 most recent
+    
+    match_data = []
+    for match in matches:
+        match_data.append({
+            'id': match.id,
+            'game_type': match.game_type,
+            'opponent': match.opponent,
+            'result': match.result,
+            'score': match.score,
+            'date': match.date_played.strftime('%B %d, %Y')
+        })
+    
+    return Response({
+        'match_history': match_data
+    })
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def save_match_view(request):
+    """Save a new match result"""
+    user = request.user
+    data = request.data
+    
+    try:
+        # Validate required fields
+        required_fields = ['game_type', 'opponent', 'result', 'score']
+        for field in required_fields:
+            if field not in data:
+                return Response({
+                    'status': 'error',
+                    'message': f'Missing required field: {field}'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate result is one of the allowed choices
+        if data['result'] not in [choice[0] for choice in MatchHistory.RESULT_CHOICES]:
+            return Response({
+                'status': 'error',
+                'message': f'Invalid result: {data["result"]}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Create match history record
+        match = MatchHistory.objects.create(
+            user=user,
+            game_type=data['game_type'],
+            opponent=data['opponent'],
+            result=data['result'],
+            score=data['score']
+        )
+        
+        return Response({
+            'status': 'success',
+            'match_id': match.id
+        })
+    
+    except Exception as e:
+        print(f"Error saving match: {str(e)}")
+        return Response({
+            'status': 'error',
+            'message': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

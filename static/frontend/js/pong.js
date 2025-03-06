@@ -777,6 +777,41 @@ class PongGame {
 
     async finishMatch() {
         if (!this.state.matchId) {
+            // Regular game (not in tournament) - Store match history
+            try {
+                const currentUser = document.getElementById('player1-name').textContent;
+                const opponent = document.getElementById('player2-name').textContent || 'AI';
+                const userScore = this.state.score.player1;
+                const opponentScore = this.state.score.player2;
+                const scoreString = `${userScore}-${opponentScore}`;
+                
+                // Determine result
+                let result = 'DRAW';
+                if (userScore > opponentScore) {
+                    result = 'WIN';
+                } else if (opponentScore > userScore) {
+                    result = 'LOSS';
+                }
+                
+                // Send result to backend
+                await fetch('/userapp/save-match/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Token ${localStorage.getItem('auth_token')}` || '',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        game_type: 'PONG',
+                        opponent: opponent,
+                        result: result,
+                        score: scoreString
+                    })
+                });
+            } catch (error) {
+                console.error('Failed to save match history:', error);
+            }
+            
             // Show restart button for normal game
             const gameControls = document.getElementById('game-controls');
             const restartButton = document.getElementById('restart-button');

@@ -828,6 +828,45 @@ async function loadProfileData() {
             if (joinedElement) {
                 joinedElement.textContent = data.date_joined;
             }
+
+            // Update stats 
+            document.querySelector('.stat-card:nth-child(1) .stat-value').textContent = data.stats.games_played;
+            document.querySelector('.stat-card:nth-child(2) .stat-value').textContent = data.stats.win_rate;
+            document.querySelector('.stat-card:nth-child(3) .stat-value').textContent = data.stats.best_score;
+            
+            // Update match history
+            const matchHistoryContainer = document.querySelector('.match-history');
+            // Clear existing match cards except the title
+            const title = matchHistoryContainer.querySelector('h2');
+            matchHistoryContainer.innerHTML = '';
+            matchHistoryContainer.appendChild(title);
+            
+            if (data.match_history && data.match_history.length > 0) {
+                data.match_history.forEach(match => {
+                    const matchCard = document.createElement('div');
+                    matchCard.className = 'match-card';
+                    
+                    const opponent = document.createElement('span');
+                    opponent.textContent = `vs. ${match.opponent}`;
+                    
+                    const score = document.createElement('span');
+                    score.textContent = match.score;
+                    
+                    const result = document.createElement('span');
+                    result.className = `match-result ${match.result === 'WIN' ? 'win' : 'loss'}`;
+                    result.textContent = match.result;
+                    
+                    matchCard.appendChild(opponent);
+                    matchCard.appendChild(score);
+                    matchCard.appendChild(result);
+                    
+                    matchHistoryContainer.appendChild(matchCard);
+                });
+            } else {
+                const noMatches = document.createElement('p');
+                noMatches.textContent = 'No matches played yet.';
+                matchHistoryContainer.appendChild(noMatches);
+            }
         } else {
             if (response.status === 401) {
                 console.log('Token expired or invalid, redirecting to login');

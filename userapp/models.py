@@ -35,3 +35,29 @@ class User(AbstractUser):
     def get_display_name(self):
         """Return display_name if set, otherwise return username"""
         return self.display_name if self.display_name else self.username
+
+class MatchHistory(models.Model):
+    GAME_CHOICES = (
+        ('PONG', 'Pong'),
+        ('TICTACTOE', 'TicTacToe'),
+    )
+    
+    RESULT_CHOICES = (
+        ('WIN', 'Win'),
+        ('LOSS', 'Loss'),
+        ('DRAW', 'Draw'),
+    )
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='matches')
+    game_type = models.CharField(max_length=10, choices=GAME_CHOICES)
+    opponent = models.CharField(max_length=150)
+    result = models.CharField(max_length=4, choices=RESULT_CHOICES)
+    score = models.CharField(max_length=10)  # Format: "user_score-opponent_score"
+    date_played = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-date_played']
+        verbose_name_plural = 'Match Histories'
+    
+    def __str__(self):
+        return f"{self.user.username} vs {self.opponent} - {self.result}"
