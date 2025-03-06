@@ -1,11 +1,11 @@
+/* static/frontend/scc/styles.scc */
+
 /* Add this at the top of your CSS file */
 .page {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
-
-/* Reset any potential conflicting styles */
 .page.active {
     display: block !important;
     opacity: 1 !important;
@@ -1206,4 +1206,24 @@ body.is-logged-out .logged-out {
 .mode-button:hover {
     background: rgba(0, 204, 255, 0.1);
     box-shadow: 0 0 20px #00ccff;
+}
+
+
+/* Стили для турниров */
+#tournament .sub-section {
+    margin-top: 20px;
+}
+#tournament form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+#tournament input, #tournament textarea, #tournament button {
+    padding: 10px;
+    font-size: 16px;
+}
+/* Дополнительно стили для textarea: */
+#tournament textarea {
+    width: 100%;
+    min-height: 50px;
 }

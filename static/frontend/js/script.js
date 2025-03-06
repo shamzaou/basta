@@ -1,42 +1,44 @@
+// static/frontend/js/script.js
+
 // Page navigation
 // Track current page for navigation
+// scripts.js
+
+// Page navigation
 let currentPage = 'home';
 
 function showPage(pageId, pushState = true) {
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     
-    // Handle page access permissions
+    // Перенаправление при необходимости
     if (isLoggedIn && ['login', 'register'].includes(pageId)) {
-        console.log('Redirecting to home: logged-in user attempting to access auth page');
         pageId = 'home';
     } else if (!isLoggedIn && ['profile', 'settings'].includes(pageId)) {
-        console.log('Redirecting to login: non-logged-in user attempting to access protected page');
         pageId = 'login';
     }
 
-    // Check if this is an OAuth redirect
+    // Проверка OAuth
     if (pageId === 'home' && window.location.pathname === '/home') {
-        checkOAuthLogin(); // This will handle setting the login state
+        checkOAuthLogin();
     }
 
-    // Validate page exists
-    const targetPage = document.getElementById(pageId);
+    // Проверяем, существует ли вообще такой div
+    let targetPage = document.getElementById(pageId);
     if (!targetPage) {
         console.error(`Page ${pageId} not found`);
-        pageId = 'home'; // Fallback to home page if target doesn't exist
+        pageId = 'home';
         targetPage = document.getElementById(pageId);
     }
 
-    // Only push state if we're actually changing pages and pushState is true
+    // Работаем с history
     if (pushState && pageId !== currentPage) {
         const newUrl = pageId === 'home' ? '/' : `/${pageId}`;
         history.pushState({ pageId }, '', newUrl);
     }
 
-    // Store current page
     currentPage = pageId;
 
-    // Update active page in navigation
+    // Обновляем активную ссылку
     document.querySelectorAll('.nav-links a').forEach(link => {
         link.classList.remove('active');
         if (link.getAttribute('href') === `/${pageId}` || (pageId === 'home' && link.getAttribute('href') === '/')) {
@@ -44,87 +46,61 @@ function showPage(pageId, pushState = true) {
         }
     });
 
-    // Hide all pages
+    // Скрываем все страницы
     document.querySelectorAll('.page').forEach(page => {
         page.classList.remove('active');
         page.style.display = 'none';
     });
 
-    // Show target page
+    // Показываем нужную
     targetPage.classList.add('active');
     targetPage.style.display = 'block';
 
+    // Загрузка профиля и т.д.
     if (pageId === 'profile') {
         loadProfileData();
     }
-
-    // Clean up any existing game
-    if (window.currentGame) {
-        window.currentGame.cleanup();
-        window.currentGame = null;
-    }
-
     if (pageId === 'settings') {
         loadProfileData();
         loadSettingsData();
     }
 
-    // Handle game initializations
-    initializeGameIfNeeded(pageId);
-}
+    // Остановка/очистка предыдущей игры, если была
+    if (window.currentGame) {
+        window.currentGame.cleanup();
+        window.currentGame = null;
+    }
 
-// Separate function for game initialization
-function initializeGameIfNeeded(pageId) {
-    if (pageId === 'game') {
-        console.log('Starting game initialization...');
-        const gameContainer = document.querySelector('.game-container');
-        if (gameContainer) {
-            // Clear container and ensure it's visible
-            gameContainer.innerHTML = '';
-            gameContainer.style.display = 'block';
-            
-            // Initialize game without specifying mode to show selection first
-            PongGame.initializeGame(gameContainer);
-        } else {
-            console.error('Game container not found');
-        }
-    } else if (pageId === 'tictactoe') {
-        const gameContainer = document.querySelector('.tictactoe-container');
-        if (gameContainer) {
-            window.currentGame = new window.TicTacToeGame(gameContainer);
-        }
+    // Дополнительная инициализация (например, Pong)
+    initializeGameIfNeeded(pageId);
+
+    // Если это турнирная «страница», покажем первый подблок
+    if (pageId === 'tournament') {
+        showTournamentSubSection('create-tournament');
     }
 }
 
-// Handle browser back/forward navigation
 window.addEventListener('popstate', (event) => {
     if (!event.state) {
-        // If no state exists, create one based on current URL
         const path = window.location.pathname;
         const pageId = path.substring(1) || 'home';
         history.replaceState({ pageId }, '', path);
         showPage(pageId, false);
         return;
     }
-
     showPage(event.state.pageId, false);
 });
 
-// Initialize history state on page load
 window.addEventListener('load', () => {
     const path = window.location.pathname;
     const initialPage = path.substring(1) || 'home';
-    
-    // Set initial history state if it doesn't exist
     if (!history.state) {
         history.replaceState({ pageId: initialPage }, '', path);
     }
-    
     showPage(initialPage, false);
-    checkLoginState(); // Ensure login state is checked after page is shown
+    checkLoginState();
 });
 
-// Add click handler for navigation links to prevent default behavior
 document.addEventListener('click', (event) => {
     const link = event.target.closest('a');
     if (link && link.getAttribute('href')?.startsWith('/')) {
@@ -134,19 +110,11 @@ document.addEventListener('click', (event) => {
     }
 });
 
-// Check login state and update UI accordingly
 function checkLoginState() {
-    console.log('Checking login state...');
-    
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    console.log('isLoggedIn:', isLoggedIn);
-    
     document.body.classList.remove('is-logged-in', 'is-logged-out');
     document.body.classList.add(isLoggedIn ? 'is-logged-in' : 'is-logged-out');
     
-    console.log('Body classes after update:', document.body.classList.toString());
-    
-    // Get all nav links
     const loggedInNav = document.querySelector('.nav-links.logged-in');
     const loggedOutNav = document.querySelector('.nav-links.logged-out');
     
@@ -154,7 +122,6 @@ function checkLoginState() {
     if (loggedOutNav) loggedOutNav.style.display = isLoggedIn ? 'none' : 'flex';
 }
 
-// Helper function to get CSRF token
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -172,6 +139,165 @@ function getCookie(name) {
     }
     return cookieValue;
 }
+
+// Инициализация игр (Pong / TicTacToe)
+function initializeGameIfNeeded(pageId) {
+    if (pageId === 'game') {
+        const gameContainer = document.querySelector('.game-container');
+        if (gameContainer) {
+            gameContainer.innerHTML = '';
+            gameContainer.style.display = 'block';
+            PongGame.initializeGame(gameContainer);
+        } else {
+            console.error('Game container not found');
+        }
+    } else if (pageId === 'tictactoe') {
+        const gameContainer = document.querySelector('.tictactoe-container');
+        if (gameContainer) {
+            window.currentGame = new window.TicTacToeGame(gameContainer);
+        }
+    }
+}
+
+// Пример использования "TOURNAMENT" кнопки
+// Убираем старый href="/tournaments/create/" и делаем SPA
+// В index.html теперь будет <a href="#" onclick="showPage('tournament')">Tournament</a> или подобное
+
+// Функция для показа под-секций в блоке "tournament"
+function showTournamentSubSection(subSection) {
+    document.querySelectorAll('#tournament .sub-section').forEach(section => {
+        section.style.display = 'none';
+    });
+    const target = document.getElementById(subSection);
+    if (target) {
+        target.style.display = 'block';
+    }
+}
+
+// ---------- Логика создания турнира ----------
+document.addEventListener('DOMContentLoaded', () => {
+    const tournamentButton = document.getElementById('tournament-button');
+    if (tournamentButton) {
+        tournamentButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            if (!isLoggedIn) {
+                alert('Please log in to access this feature');
+                showPage('login');
+                return;
+            }
+            showPage('tournament');
+        });
+    }
+    // Ищем форму создания турнира
+    // Находим форму
+    const createForm = document.getElementById('create-tournament-form');
+    if (createForm) {
+        createForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Проверяем, авторизован ли пользователь
+            const authToken = localStorage.getItem('authToken');
+            if (!authToken) {
+                alert('Please log in to create a tournament');
+                showPage('login');
+                return;
+            }
+
+            // Берём значение поля "participants_count"
+            const formData = new FormData(e.target);
+            const participantsCount = formData.get('participants_count');  // <-- "participants_count"
+
+            try {
+                // Берём CSRF
+                const csrftoken = getCookie('csrftoken');
+
+                // Делаем запрос
+                const response = await fetch('/tournaments/api/tournaments/create/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken,
+                        'Authorization': `Token ${authToken}`
+                    },
+                    // Отправляем именно { participants_count: ... }
+                    body: JSON.stringify({ participants_count: Number(participantsCount) })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    alert('Tournament created! ID=' + result.tournament_id);
+                    window.currentTournamentId = result.tournament_id;
+                    showTournamentSubSection('add-players');
+                } else {
+                    alert(result.error || 'Failed to create tournament');
+                }
+            } catch (error) {
+                console.error('Error while creating tournament:', error);
+                alert('Error while creating tournament');
+            }
+        });
+    }
+
+    // Ищем форму добавления игроков
+    const addPlayersForm = document.getElementById('add-players-form');
+    if (addPlayersForm) {
+        addPlayersForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            // Предположим, пользователь вводит ники через запятую
+            // Или вы сделали несколько <input name="nickname[]"> - решайте сами
+            const formData = new FormData(e.target);
+            const rawNicknames = formData.get('nicknames'); 
+            // Например, "Alice,Bob,Charlie"
+            const arr = rawNicknames.split(',').map(s => s.trim()).filter(x => x);
+
+            if (!window.currentTournamentId) {
+                alert('No tournament ID. Create a tournament first!');
+                return;
+            }
+            try {
+                const csrftoken = getCookie('csrftoken');
+                const response = await fetch(`/tournaments/api/tournaments/${window.currentTournamentId}/add_players/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({ nicknames: arr })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert('Players added successfully!');
+                    // Переходим к обзору
+                    showTournamentSubSection('view-tournament');
+                    loadTournamentData(window.currentTournamentId);
+                } else {
+                    alert(result.error || 'Failed to add players');
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Error while adding players');
+            }
+        });
+    }
+});
+
+// Загрузка данных турнира
+async function loadTournamentData(tournamentId) {
+    try {
+        const response = await fetch(`/tournaments/api/tournaments/${tournamentId}/`);
+        const data = await response.json();
+        const displayDiv = document.getElementById('tournament-data');
+        if (displayDiv) {
+            displayDiv.innerText = JSON.stringify(data, null, 2);
+        }
+    } catch (error) {
+        console.error('Error loading tournament data:', error);
+    }
+}
+
+//================================================================================
+
 
 // Handle login
 async function handleLogin(event) {
@@ -614,23 +740,11 @@ document.addEventListener('DOMContentLoaded', () => {
         loginWith42Button.addEventListener('click', initiate42OAuth);
     }
 
-    // // Add tournament button handler
-    // const tournamentButton = document.getElementById('tournament-button');
-    // if (tournamentButton) {
-    //     tournamentButton.addEventListener('click', (e) => {
-    //         e.preventDefault();
-    //         if (localStorage.getItem('isLoggedIn') === 'true') {
-    //             showPage('tournament');
-    //         } else {
-    //             alert('Please log in to create or join tournaments');
-    //             showPage('login');
-    //         }
-    //     });
-    // }
     // Tournament button handling
     // Add auth check for game buttons
     const playNowButton = document.getElementById('play-now-button');
-    const tournamentButton = document.querySelector('a[href="/tournaments/create/"]');
+    // const tournamentButton = document.querySelector('a[href="/tournaments/create/"]');
+    // const tournamentButton = document.getElementById('tournament-button');
 
     function checkAuthAndRedirect(e, destination) {
         e.preventDefault();
@@ -654,9 +768,9 @@ document.addEventListener('DOMContentLoaded', () => {
         playNowButton.onclick = (e) => checkAuthAndRedirect(e, 'game');
     }
 
-    if (tournamentButton) {
-        tournamentButton.onclick = (e) => checkAuthAndRedirect(e, 'tournament');
-    }
+    // if (tournamentButton) {
+    //     tournamentButton.onclick = (e) => checkAuthAndRedirect(e, 'tournament');
+    // }
     // Add tournament form handler
     const tournamentForm = document.getElementById('tournament-form');
     if (tournamentForm) {
@@ -877,7 +991,7 @@ async function handleTournamentCreation(event) {
     const playerCount = document.getElementById('player-count').value;
 
     try {
-        const response = await fetch('/api/tournaments/create/', {
+        const response = await fetch('/tournaments/api/tournaments/create/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -903,6 +1017,58 @@ async function handleTournamentCreation(event) {
         console.error('Error creating tournament:', error);
         alert('Failed to create tournament. Please try again.');
     }
+}
+
+
+
+
+// Функция для показа подсекций турнира
+function showTournamentSubSection(subSection) {
+    document.querySelectorAll('#tournament .sub-section').forEach(section => {
+        section.style.display = 'none';
+    });
+    document.getElementById(subSection).style.display = 'block';
+}
+
+// // Обработчик для создания турнира
+// document.getElementById('create-tournament-form').addEventListener('submit', async (e) => {
+//     e.preventDefault();
+//     const formData = new FormData(e.target);
+//     const data = Object.fromEntries(formData);
+//     const response = await fetch('/tournaments/api/tournaments/create/', {
+//         method: 'POST',
+//         headers: { 'Content-Type': 'application/json' },
+//         body: JSON.stringify(data)
+//     });
+//     const result = await response.json();
+//     if (result.status === 'success') {
+//         showTournamentSubSection('add-players');
+//     }
+// });
+
+// Обработчик для добавления игроков
+document.getElementById('add-players-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData);
+    const tournamentId = 1; // Замени на реальный ID из ответа сервера
+    const response = await fetch(`/tournaments/api/tournaments/${tournamentId}/add_players/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    const result = await response.json();
+    if (result.status === 'success') {
+        showTournamentSubSection('view-tournament');
+        loadTournamentData(tournamentId);
+    }
+});
+
+// Функция для загрузки данных турнира
+async function loadTournamentData(tournamentId) {
+    const response = await fetch(`/tournaments/api/tournaments/${tournamentId}/`);
+    const data = await response.json();
+    document.getElementById('tournament-data').innerText = JSON.stringify(data);
 }
 
 

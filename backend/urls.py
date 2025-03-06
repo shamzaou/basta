@@ -10,5 +10,10 @@ urlpatterns = [
     path('api/auth/', include('userapp.urls')),
     path('tournaments/', include('tournaments.urls')),
     # Keep your catch-all route at the end
-    re_path(r'^.*$', index, name='index'),
+    
+    # (WRONG!) Redirect all requsests from backend and frontend to the index.html
+    # re_path(r'^.*$', index, name='index'),
+
+    # (CORRECT!) Redirect only request related to frontend that not contain a '/api' in url
+    re_path(r'^(?!.*api)', index, name='index'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

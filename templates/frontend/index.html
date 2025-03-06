@@ -1,3 +1,5 @@
+{% comment %} templates/frontend/index.html {% endcomment %}
+
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
@@ -5,10 +7,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ft_transcendence</title>
-    <!-- Add Bootstrap CSS -->
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Подключаем финальный styles.css -->
     <link rel="stylesheet" href="{% static 'frontend/css/styles.css' %}">
 </head>
 <body>
@@ -66,11 +68,14 @@
                 <div class="text-center">
                     <div class="btn-group" role="group" aria-label="Button group">
                         <a href="#" class="btn cta-button" id="play-now-button">PLAY NOW</a>
-                        <a href="/tournaments/create/" class="btn cta-button">TOURNAMENT</a>
+                        <!-- ВАЖНО: вместо /tournaments/create/ делаем SPA-переход -->
+                        <a href="#" class="btn cta-button" id="tournament-button">TOURNAMENT</a>
                     </div>
                 </div>
             </div>
         </div>
+
+{% comment %} ============================================================================== {% endcomment %}
 
         <!-- Profile Page -->
         <div id="profile" class="page">
@@ -291,6 +296,37 @@
                 </div>
             </div>
         </div>
+
+
+        <!-- Tournament Page -->
+        <div id="tournament" class="page">
+            <div class="container">
+                <h1>Tournament</h1>
+                <!-- Подсекции: create, add-players, view -->
+                
+                <div id="create-tournament" class="sub-section">
+                    <form id="create-tournament-form">
+                        <label for="participants_count">Number of participants (3-8):</label>
+                        <input type="number" name="participants_count" id="participants_count" min="3" max="8" required>
+                        <button type="submit">Create</button>
+                    </form>
+                </div>
+
+                <div id="add-players" class="sub-section" style="display: none;">
+                    <p>Enter all nicknames at once, separated by commas:</p>
+                    <form id="add-players-form">
+                        <textarea name="nicknames" rows="3" placeholder="Alice,Bob,Charlie"></textarea>
+                        <button type="submit">Add All Players</button>
+                    </form>
+                </div>
+
+                <div id="view-tournament" class="sub-section" style="display: none;">
+                    <h2>Tournament Details</h2>
+                    <pre id="tournament-data" style="background:#222;color:#fff;padding:10px;"></pre>
+                </div>
+            </div>
+        </div>
+
     </main>
 
     <!-- Move OTP Modal outside of any page, directly under main -->
@@ -305,16 +341,17 @@
         </div>
     </div>
 
+    <!-- Подключаем ваш scripts.js + three.js + PongGame / TicTacToeGame -->
     <script src="{% static 'frontend/js/script.js' %}"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script type="module">
         import PongGame from '{% static "frontend/js/pong.js" %}';
         import TicTacToeGame from '{% static "frontend/js/tictactoe.js" %}';
-        window.PongGame = PongGame; // Make them available globally
+        window.PongGame = PongGame;
         window.TicTacToeGame = TicTacToeGame;
     </script>
-    
-    <!-- Bootstrap JS and dependencies -->
+
+    <!-- Bootstrap JS -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>

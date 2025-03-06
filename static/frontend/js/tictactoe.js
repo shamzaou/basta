@@ -1,3 +1,5 @@
+// static/frontend/js/tictactoe.js
+
 class TicTacToeGame {
     constructor(container) {
         this.container = container;
