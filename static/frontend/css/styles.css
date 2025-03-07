@@ -580,7 +580,6 @@ nav {
     padding: 1em;
     border-radius: 4px;
     margin-top: 1em;
-    font-size: 0.9em;
 }
 
 .danger-zone {
@@ -1698,6 +1697,39 @@ body.is-logged-out .logged-out {
     
     .privacy-section p, 
     .privacy-list li {
+        font-size: 0.85em;
+    }
+}
+
+/* Legal Disclaimer Styles */
+.disclaimer-container {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: var(--border-radius);
+    padding: 1.5em;
+    border-left: 3px solid var(--secondary-color);
+    margin-top: 1em;
+}
+
+.disclaimer-content p {
+    text-align: left;
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.95em;
+    line-height: 1.6;
+    margin-bottom: 1em;
+    max-width: none;
+}
+
+.disclaimer-content p:last-child {
+    margin-bottom: 0;
+}
+
+/* Responsive styling for disclaimer */
+@media (max-width: 768px) {
+    .disclaimer-container {
+        padding: 1em;
+    }
+    
+    .disclaimer-content p {
         font-size: 0.85em;
     }
 }
