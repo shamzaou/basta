@@ -78,6 +78,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'userapp.middleware.UserActivityMiddleware',
 ]
 
 ROOT_URLCONF = 'backend.urls'
@@ -286,3 +287,9 @@ if DEBUG:
     
     # Additional URL patterns for development
     STATICFILES_URLS = staticfiles_urlpatterns()
+
+# Add GDPR settings
+# GDPR User Deletion Settings
+INACTIVE_USER_DELETE_MONTHS = 6  # Delete after 6 months of inactivity
+INACTIVE_USER_WARNING_MONTHS = 5  # Warn after 5 months of inactivity
+LAST_ACTIVITY_UPDATE_WINDOW = 15  # Only update last_activity after 15 minutes (in minutes)

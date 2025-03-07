@@ -1,6 +1,7 @@
 # userapp/models.py
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils import timezone
 
 class User(AbstractUser):
     display_name = models.CharField(max_length=150, blank=True, null=True)
@@ -9,6 +10,10 @@ class User(AbstractUser):
     is_42_user = models.BooleanField(default=False)
     intra_id = models.CharField(max_length=50, null=True, blank=True)
     two_factor_enabled = models.BooleanField(default=False)
+    
+    # Add GDPR compliance fields
+    last_activity = models.DateTimeField(default=timezone.now)
+    last_warned_date = models.DateTimeField(null=True, blank=True)
     
     # Override username to ensure it's unique
     username = models.CharField(max_length=150, unique=True)
@@ -52,6 +57,11 @@ class User(AbstractUser):
             self.friends.remove(friend)
             return True
         return False
+
+    def update_last_activity(self):
+        """Update the last_activity timestamp"""
+        self.last_activity = timezone.now()
+        self.save(update_fields=['last_activity'])
 
 class MatchHistory(models.Model):
     GAME_CHOICES = (
