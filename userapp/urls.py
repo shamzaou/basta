@@ -30,5 +30,7 @@ urlpatterns = [
     path('save-match/', views.save_match_view, name='save-match'),
     path('match/create/', views.create_match, name='create-match'),
     path('match/save', views.save_match_view, name='save-match'),
+
+	path('delete-account/', views.delete_account, name='delete-account'),
 ]
 

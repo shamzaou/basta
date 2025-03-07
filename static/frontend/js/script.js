@@ -611,14 +611,51 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Delete account confirmation
-    const deleteAccountBtn = document.getElementById('delete-account');
-    if (deleteAccountBtn) {
-        deleteAccountBtn.addEventListener('click', () => {
-            if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-                alert('Account deletion initiated...');
-            }
-        });
-    }
+    // const deleteAccountBtn = document.getElementById('delete-account');
+    // if (deleteAccountBtn) {
+    //     deleteAccountBtn.addEventListener('click', () => {
+    //         if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+    //             alert('Account deletion initiated...');
+    //         }
+    //     });
+    // }
+
+	async function deleteAccount() {
+		if (!confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+			return;
+		}
+	
+		try {
+			const response = await fetch('/api/auth/delete-account/', {
+				method: 'DELETE',
+				headers: {
+					'Content-Type': 'application/json',
+					'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+					'X-CSRFToken': getCookie('csrftoken')
+				}
+			});
+	
+			if (response.ok) {
+				// Clear local storage
+				localStorage.removeItem('authToken');
+				localStorage.removeItem('userData');
+				localStorage.removeItem('isLoggedIn');
+				
+				// Redirect to login page
+				window.location.href = '/login';
+				alert('Your account has been deleted successfully.');
+			} else {
+				const data = await response.json();
+				throw new Error(data.message || 'Failed to delete account');
+			}
+		} catch (error) {
+			console.error('Error deleting account:', error);
+			alert('Failed to delete account: ' + error.message);
+		}
+	}
+	
+	// Add event listener to delete button
+	document.getElementById('delete-account').addEventListener('click', deleteAccount);
 
     // OTP verification button
     const verifyOTPButton = document.getElementById('verify-otp');
