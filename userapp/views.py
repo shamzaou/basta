@@ -781,3 +781,14 @@ def create_match(request):
     except Exception as e:
         print(f"🔥 ERROR in create_match(): {str(e)}")  # Print error message
         return Response({'error': str(e)}, status=500)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_account(request):
+    try:
+        user = request.user
+        user.delete()
+        return Response({'status': 'success', 'message': 'Account deleted successfully'})
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=400)
