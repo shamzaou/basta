@@ -534,6 +534,13 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Settings saved successfully!');
         });
     }
+
+	// download data button
+	const downloadButton = document.getElementById('download-data');
+    if (downloadButton) {
+        downloadButton.addEventListener('click', downloadUserData);
+    }
+	
     
     // Edit buttons in settings
     document.querySelectorAll('.edit-btn').forEach(button => {
@@ -1113,5 +1120,54 @@ function scheduleTokenRefresh() {
     }
 }
 
+async function downloadUserData() {
+    try {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            throw new Error('Not authenticated. Please login.');
+        }
+
+		// Log token for debugging
+        console.log('Using token:', token);
+
+        const response = await fetch('/api/auth/download-data/', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
 
 
+		console.log('Response status:', response.status);
+        console.log('Response headers:', [...response.headers.entries()]);
+        const responseText = await response.text();
+        console.log('Response body:', responseText);
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch user data: ${response.status}`);
+        }
+
+        // Parse the response text as JSON
+        const data = JSON.parse(responseText);
+        
+        // Create and download file
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `user_data.json`;
+        
+        document.body.appendChild(a);
+        a.click();
+        
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+    } catch (error) {
+        console.error('Error downloading user data:', error);
+        alert('Failed to download user data: ' + error.message);
+    }
+}

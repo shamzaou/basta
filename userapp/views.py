@@ -792,3 +792,64 @@ def delete_account(request):
         return Response({'status': 'success', 'message': 'Account deleted successfully'})
     except Exception as e:
         return Response({'status': 'error', 'message': str(e)}, status=400)
+
+# @authentication_classes([TokenAuthentication])  # Use only TokenAuthentication
+
+@csrf_exempt
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def download_user_data(request):
+	#download all user data json format
+    try:
+        user = request.user
+        if not user.is_authenticated:
+            return Response({'error': 'Authentication required'}, status=401)
+        
+        # Get match history
+        matches = MatchHistory.objects.filter(user=user).order_by('-date_played')
+        match_history = [{
+            'game_type': match.game_type,
+            'opponent': match.opponent,
+            'result': match.result,
+            'score': match.score,
+            'date_played': match.date_played.strftime('%Y-%m-%d %H:%M:%S')
+        } for match in matches]
+
+        # Calculate statistics
+        total_matches = len(matches)
+        wins = sum(1 for match in matches if match.result == 'WIN')
+        losses = sum(1 for match in matches if match.result == 'LOSS')
+        draws = sum(1 for match in matches if match.result == 'DRAW')
+        win_rate = (wins / total_matches * 100) if total_matches > 0 else 0
+
+        user_data = {
+            'profile': {
+                'username': user.username,
+                'email': user.email,
+                'display_name': user.display_name if user.display_name else user.username,
+                'date_joined': user.date_joined.strftime('%Y-%m-%d %H:%M:%S'),
+                'is_42_user': user.is_42_user,
+                'two_factor_enabled': user.two_factor_enabled
+            },
+            'statistics': {
+                'total_matches': total_matches,
+                'wins': wins,
+                'losses': losses,
+                'draws': draws,
+                'win_rate': f"{win_rate:.1f}%"
+            },
+            'match_history': match_history,
+            'preferences': {
+                'two_factor_auth': user.two_factor_enabled
+            }
+        }
+
+        # Set response headers for file download
+        response = Response(user_data)
+        response['Content-Disposition'] = f'attachment; filename="{user.username}_data.json"'
+        response['Content-Type'] = 'application/json'
+        return response
+
+    except Exception as e:
+        print(f"Error in download_user_data: {str(e)}")
+        return Response({'error': str(e)}, status=400)

@@ -32,5 +32,7 @@ urlpatterns = [
     path('match/save', views.save_match_view, name='save-match'),
 
 	path('delete-account/', views.delete_account, name='delete-account'),
+
+	path('download-data/', views.download_user_data, name='download-user-data'),
 ]
 
