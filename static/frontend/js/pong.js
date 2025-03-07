@@ -665,6 +665,9 @@ class PongGame {
             tournamentId: window.tournamentId
         };
 
+        // Флаг для предотвращения повторных вызовов finishMatch
+        this.isFinishing = false;
+
         // Initialize game components
         this.renderer = new GameRenderer(canvasContainer);
         this.physics = new GamePhysics(GAME_CONFIG);
@@ -755,7 +758,8 @@ class PongGame {
         if (!this.state.matchId) return;
 
         try {
-            await fetch(`/api/game/match/${this.state.matchId}/state`, {
+            // await fetch(`/tournaments/api/game/match/${this.state.matchId}/state`, {
+            await fetch(`/tournaments/api/tournaments/match/${this.state.matchId}/state/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -775,21 +779,20 @@ class PongGame {
         }
     }
 
+    // 
+    
     async finishMatch() {
+        // Проверяем, не завершается ли матч уже
+        if (this.isFinishing) return;
+        this.isFinishing = true;
+
         if (!this.state.matchId) {
-            // Show restart button for normal game
-            const gameControls = document.getElementById('game-controls');
-            const restartButton = document.getElementById('restart-button');
-            if (gameControls && restartButton) {
-                restartButton.textContent = 'Restart Game';
-                restartButton.onclick = () => this.restartGame();
-                gameControls.style.display = 'block';
-            }
+            this.showRestartButton();
             return;
         }
 
         try {
-            const response = await fetch(`/tournaments/match/${this.state.matchId}/finish/`, {
+            const response = await fetch(`/tournaments/api/tournaments/${this.state.matchId}/finish/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -802,20 +805,39 @@ class PongGame {
                 })
             });
 
-            if (response.ok) {
-                // Show next game button for tournament
-                const gameControls = document.getElementById('game-controls');
-                const restartButton = document.getElementById('restart-button');
-                if (gameControls && restartButton) {
-                    restartButton.textContent = 'Next Game';
-                    restartButton.onclick = () => {
-                        window.location.href = `/tournaments/${this.state.tournamentId}/`;
-                    };
-                    gameControls.style.display = 'block';
-                }
+            if (!response.ok) {
+                throw new Error('Failed to finish match');
+            }
+
+            const data = await response.json();
+            if (data.success && this.state.gameStatus === 'finished') {
+                this.showNextGameButton();
             }
         } catch (error) {
-            console.error('Failed to finish match:', error);
+            console.error('Error finishing match:', error);
+        }
+
+        // Назначаем обработчик кнопки возврата (исправляем обращение к restartButton)
+        const restartButton = document.getElementById('restart-button');
+        if (restartButton) {
+            restartButton.onclick = () => {
+                window.location.href = this.state.tournamentId ? 
+                    `/tournaments/${this.state.tournamentId}/` : '/tournaments/';
+            };
+        }
+
+    }
+
+    showNextGameButton() {
+        const gameControls = document.getElementById('game-controls');
+        const restartButton = document.getElementById('restart-button');
+        if (gameControls && restartButton) {
+            gameControls.style.display = 'block';
+            restartButton.textContent = 'NEXT GAME';
+            restartButton.onclick = () => {
+                window.location.href = this.state.tournamentId ? 
+                    `/tournaments/${this.state.tournamentId}/` : '/tournaments/';
+            };
         }
     }
 

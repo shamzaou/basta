@@ -30,4 +30,4 @@ EXPOSE 8000
 
 # Set entrypoint
 ENTRYPOINT ["/app/scripts/init_db.sh"]
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["python", "manage.py", "runserver--traceback", "0.0.0.0:8000"]

@@ -6,6 +6,9 @@
 
 // Page navigation
 let currentPage = 'home';
+// Tournament-specific variables
+let currentTournamentId = null; // Хранит ID текущего турнира
+let participantCount = 0;       // Хранит количество участников
 
 function showPage(pageId, pushState = true) {
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
@@ -65,20 +68,27 @@ function showPage(pageId, pushState = true) {
         loadSettingsData();
     }
 
-    // Остановка/очистка предыдущей игры, если была
-    if (window.currentGame) {
+    // Очищаем существующий экземпляр игры, если переходим не на страницу 'game'
+    if (window.currentGame && pageId !== 'game') {
         window.currentGame.cleanup();
         window.currentGame = null;
     }
 
-    // Дополнительная инициализация (например, Pong)
+    // Дополнительная инициализация (например, Pong или TicTacToe)
     initializeGameIfNeeded(pageId);
 
     // Если это турнирная «страница», покажем первый подблок
     if (pageId === 'tournament') {
-        showTournamentSubSection('create-tournament');
+        if (window.currentTournamentId) {
+            showTournamentSubsection('view-tournament');
+            loadTournamentData(window.currentTournamentId);
+        } else {
+            showTournamentSubsection('create-tournament');
+        }
     }
 }
+
+window.showPage = showPage;
 
 window.addEventListener('popstate', (event) => {
     if (!event.state) {
@@ -142,12 +152,21 @@ function getCookie(name) {
 
 // Инициализация игр (Pong / TicTacToe)
 function initializeGameIfNeeded(pageId) {
+    // Очищаем существующий экземпляр игры, если он есть
+    if (window.currentGame) {
+        window.currentGame.cleanup();
+        window.currentGame = null;
+    }
+
     if (pageId === 'game') {
         const gameContainer = document.querySelector('.game-container');
         if (gameContainer) {
             gameContainer.innerHTML = '';
             gameContainer.style.display = 'block';
-            PongGame.initializeGame(gameContainer);
+            // Инициализируем игру: для турнира используем режим 'pvp' и matchId,
+            // для обычной игры — без параметров
+            const mode = window.currentMatchId ? 'pvp' : null;
+            PongGame.initializeGame(gameContainer, mode);
         } else {
             console.error('Game container not found');
         }
@@ -159,12 +178,9 @@ function initializeGameIfNeeded(pageId) {
     }
 }
 
-// Пример использования "TOURNAMENT" кнопки
-// Убираем старый href="/tournaments/create/" и делаем SPA
-// В index.html теперь будет <a href="#" onclick="showPage('tournament')">Tournament</a> или подобное
-
+// // Show tournament subsection
 // Функция для показа под-секций в блоке "tournament"
-function showTournamentSubSection(subSection) {
+function showTournamentSubsection(subSection) {
     document.querySelectorAll('#tournament .sub-section').forEach(section => {
         section.style.display = 'none';
     });
@@ -173,114 +189,6 @@ function showTournamentSubSection(subSection) {
         target.style.display = 'block';
     }
 }
-
-// ---------- Логика создания турнира ----------
-document.addEventListener('DOMContentLoaded', () => {
-    const tournamentButton = document.getElementById('tournament-button');
-    if (tournamentButton) {
-        tournamentButton.addEventListener('click', (e) => {
-            e.preventDefault();
-            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-            if (!isLoggedIn) {
-                alert('Please log in to access this feature');
-                showPage('login');
-                return;
-            }
-            showPage('tournament');
-        });
-    }
-    // Ищем форму создания турнира
-    // Находим форму
-    const createForm = document.getElementById('create-tournament-form');
-    if (createForm) {
-        createForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            // Проверяем, авторизован ли пользователь
-            const authToken = localStorage.getItem('authToken');
-            if (!authToken) {
-                alert('Please log in to create a tournament');
-                showPage('login');
-                return;
-            }
-
-            // Берём значение поля "participants_count"
-            const formData = new FormData(e.target);
-            const participantsCount = formData.get('participants_count');  // <-- "participants_count"
-
-            try {
-                // Берём CSRF
-                const csrftoken = getCookie('csrftoken');
-
-                // Делаем запрос
-                const response = await fetch('/tournaments/api/tournaments/create/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken,
-                        'Authorization': `Token ${authToken}`
-                    },
-                    // Отправляем именно { participants_count: ... }
-                    body: JSON.stringify({ participants_count: Number(participantsCount) })
-                });
-
-                const result = await response.json();
-                if (result.success) {
-                    alert('Tournament created! ID=' + result.tournament_id);
-                    window.currentTournamentId = result.tournament_id;
-                    showTournamentSubSection('add-players');
-                } else {
-                    alert(result.error || 'Failed to create tournament');
-                }
-            } catch (error) {
-                console.error('Error while creating tournament:', error);
-                alert('Error while creating tournament');
-            }
-        });
-    }
-
-    // Ищем форму добавления игроков
-    const addPlayersForm = document.getElementById('add-players-form');
-    if (addPlayersForm) {
-        addPlayersForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            // Предположим, пользователь вводит ники через запятую
-            // Или вы сделали несколько <input name="nickname[]"> - решайте сами
-            const formData = new FormData(e.target);
-            const rawNicknames = formData.get('nicknames'); 
-            // Например, "Alice,Bob,Charlie"
-            const arr = rawNicknames.split(',').map(s => s.trim()).filter(x => x);
-
-            if (!window.currentTournamentId) {
-                alert('No tournament ID. Create a tournament first!');
-                return;
-            }
-            try {
-                const csrftoken = getCookie('csrftoken');
-                const response = await fetch(`/tournaments/api/tournaments/${window.currentTournamentId}/add_players/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    },
-                    body: JSON.stringify({ nicknames: arr })
-                });
-                const result = await response.json();
-                if (result.success) {
-                    alert('Players added successfully!');
-                    // Переходим к обзору
-                    showTournamentSubSection('view-tournament');
-                    loadTournamentData(window.currentTournamentId);
-                } else {
-                    alert(result.error || 'Failed to add players');
-                }
-            } catch (error) {
-                console.error(error);
-                alert('Error while adding players');
-            }
-        });
-    }
-});
 
 // Загрузка данных турнира
 async function loadTournamentData(tournamentId) {
@@ -500,59 +408,72 @@ async function handleRegister(event) {
     }
 }
 
-// Add function to start tournament match
 function startTournamentMatch(matchId) {
-    const csrftoken = getCookie('csrftoken');
-    
-    fetch(`/tournaments/match/${matchId}/start/`, {
+    const authToken = localStorage.getItem('authToken');
+    fetch(`/tournaments/api/tournaments/match/${matchId}/start/`, {
         method: 'POST',
         headers: {
-            'X-CSRFToken': csrftoken,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Authorization': `Token ${authToken}`,
+            'Content-Type': 'application/json'
         },
         credentials: 'include'
     })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Store match info
             window.currentMatchId = matchId;
             window.currentMatchPlayers = {
                 player1: data.player1,
                 player2: data.player2
             };
-            window.tournamentId = data.tournament_id;
+            window.tournamentId = data.tournament_id || currentTournamentId;
             
-            // Show game page and hide tournament view
-            document.querySelectorAll('.section').forEach(section => {
-                section.style.display = 'none';
-            });
-            
-            const gameContainer = document.getElementById('game');
-            if (gameContainer) {
-                gameContainer.style.display = 'block';
-                const pongContainer = gameContainer.querySelector('.game-container');
-                PongGame.initializeGame(pongContainer, 'pvp');
-            }
+            // Переходим на страницу игры, инициализация произойдёт через initializeGameIfNeeded
+            showPage('game');
         } else {
             alert(data.message || 'Failed to start match');
         }
     })
     .catch(error => {
         console.error('Error starting match:', error);
-        alert('Failed to start match. Please try again.');
+        alert('Failed to start match');
     });
 }
 
+// Finish match (called from Pong game after completion)
+window.finishTournamentMatch = async function(scorePlayer1, scorePlayer2) {
+    const authToken = localStorage.getItem('authToken');
+    try {
+        const response = await fetch(`/tournaments/api/tournaments/${window.currentMatchId}/finish/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Token ${authToken}`,
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                score_player1: scorePlayer1,
+                score_player2: scorePlayer2
+            })
+        });
+
+        if (response.ok) {
+            showPage('tournament');
+            showTournamentSubsection('view-tournament');
+            loadTournamentData();
+        } else {
+            alert('Failed to finish match');
+        }
+    } catch (error) {
+        console.error('Error finishing match:', error);
+        alert('Failed to finish match');
+    }
+};
+
+
 // Main initialization
 document.addEventListener('DOMContentLoaded', () => {
-
     console.log('DOM loaded, setting up event listeners');
     
     const registerForm = document.getElementById('registerForm');
@@ -563,10 +484,6 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Register form not found');
     }
 
-    // Force initial logout state
-    // localStorage.removeItem('isLoggedIn');
-    // localStorage.removeItem('userData');
-    
     // Check login state
     checkLoginState();
     
@@ -646,9 +563,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const newValue = input.value;
                 const authToken = localStorage.getItem('authToken');
                 
-                console.log('Sending update for:', fieldType);  // Debug log
-                console.log('New value:', newValue);  // Debug log
-                console.log('Auth token:', authToken);  // Debug log
+                console.log('Sending update for:', fieldType);
+                console.log('New value:', newValue);
+                console.log('Auth token:', authToken);
                 
                 try {
                     const response = await fetch('/api/auth/profile/', {
@@ -664,11 +581,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
 
                     const data = await response.json();
-                    console.log('Server response:', data);  // Debug log
+                    console.log('Server response:', data);
                     
                     if (response.ok) {
                         display.textContent = newValue;
-                        // Update userData in localStorage
                         const userData = JSON.parse(localStorage.getItem('userData') || '{}');
                         userData[fieldType] = newValue;
                         localStorage.setItem('userData', JSON.stringify(userData));
@@ -741,40 +657,52 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Tournament button handling
-    // Add auth check for game buttons
     const playNowButton = document.getElementById('play-now-button');
-    // const tournamentButton = document.querySelector('a[href="/tournaments/create/"]');
-    // const tournamentButton = document.getElementById('tournament-button');
-
     function checkAuthAndRedirect(e, destination) {
         e.preventDefault();
         const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-        
         if (!isLoggedIn) {
             alert('Please log in to access this feature');
             showPage('login');
             return;
         }
-
         if (destination === 'game') {
             showPage('game');
         } else if (destination === 'tournament') {
-            window.location.href = '/tournaments/create/';
+            showPage('tournament');
+            showTournamentSubsection('create-tournament'); // Добавляем переключение на создание
         }
     }
 
-    // Add handlers for game buttons
     if (playNowButton) {
         playNowButton.onclick = (e) => checkAuthAndRedirect(e, 'game');
     }
 
-    // if (tournamentButton) {
-    //     tournamentButton.onclick = (e) => checkAuthAndRedirect(e, 'tournament');
-    // }
-    // Add tournament form handler
-    const tournamentForm = document.getElementById('tournament-form');
-    if (tournamentForm) {
-        tournamentForm.addEventListener('submit', handleTournamentCreation);
+    // Перенос и обновление tournamentButton
+    const tournamentButton = document.getElementById('tournament-button');
+    if (tournamentButton) {
+        tournamentButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (localStorage.getItem('isLoggedIn') === 'true') {
+                showPage('tournament');
+                showTournamentSubsection('create-tournament');
+            } else {
+                alert('Please log in to create or join tournaments');
+                showPage('login');
+            }
+        });
+    }
+
+    // Перенос и обновление create-tournament-form (используем handleTournamentCreation)
+    const createTournamentForm = document.getElementById('create-tournament-form');
+    if (createTournamentForm) {
+        createTournamentForm.addEventListener('submit', handleTournamentCreation);
+    }
+
+    // Перенос и обновление add-players-form (используем handleAddPlayers)
+    const addPlayersForm = document.getElementById('add-players-form');
+    if (addPlayersForm) {
+        addPlayersForm.addEventListener('submit', handleAddPlayers);
     }
 });
 
@@ -976,42 +904,42 @@ async function loadSettingsData() {
     }
 }
 
-// Add this function to handle tournament creation
 async function handleTournamentCreation(event) {
     event.preventDefault();
 
     const authToken = localStorage.getItem('authToken');
+    console.log('Creat tournament - Auth Token:', authToken); // Добавляем логирование
     if (!authToken) {
         alert('Please log in to create a tournament');
         showPage('login');
         return;
     }
 
-    const tournamentName = document.getElementById('tournament-name').value;
-    const playerCount = document.getElementById('player-count').value;
+    const participantsCount = document.getElementById('participants_count').value;
+    if (participantsCount < 3 || participantsCount > 8) {
+        alert('Number of participants must be between 3 and 8');
+        return;
+    }
 
     try {
-        const response = await fetch('/tournaments/api/tournaments/create/', {
+        const response = await fetch('/tournaments/api/tournaments/create/', { // Исправленный URL
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Token ${authToken}`,
                 'X-CSRFToken': getCookie('csrftoken')
             },
-            body: JSON.stringify({
-                name: tournamentName,
-                player_count: parseInt(playerCount)
-            })
+            body: JSON.stringify({ participants_count: parseInt(participantsCount) })
         });
 
         const data = await response.json();
-
         if (response.ok) {
-            alert('Tournament created successfully!');
-            // You can add additional logic here to show the tournament details
-            // or redirect to a tournament view page
+            currentTournamentId = data.tournament_id;
+            participantCount = parseInt(participantsCount, 10);
+            generatePlayerInputs(participantCount);
+            showTournamentSubsection('add-players');
         } else {
-            alert(data.message || 'Failed to create tournament');
+            alert(data.error || 'Failed to create tournament');
         }
     } catch (error) {
         console.error('Error creating tournament:', error);
@@ -1019,56 +947,179 @@ async function handleTournamentCreation(event) {
     }
 }
 
+// Generate input fields for players
+function generatePlayerInputs(count) {
+    const playerInputsDiv = document.getElementById('player-inputs');
+    playerInputsDiv.innerHTML = '';
 
+    for (let i = 0; i < count; i++) {
+        const inputGroup = document.createElement('div');
+        inputGroup.classList.add('input-group');
 
+        const label = document.createElement('label');
+        label.textContent = `Player ${i + 1}:`;
+        label.setAttribute('for', `player-${i}`);
 
-// Функция для показа подсекций турнира
-function showTournamentSubSection(subSection) {
-    document.querySelectorAll('#tournament .sub-section').forEach(section => {
-        section.style.display = 'none';
-    });
-    document.getElementById(subSection).style.display = 'block';
-}
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.id = `player-${i}`;
+        input.name = `player-${i}`;
+        input.required = true;
 
-// // Обработчик для создания турнира
-// document.getElementById('create-tournament-form').addEventListener('submit', async (e) => {
-//     e.preventDefault();
-//     const formData = new FormData(e.target);
-//     const data = Object.fromEntries(formData);
-//     const response = await fetch('/tournaments/api/tournaments/create/', {
-//         method: 'POST',
-//         headers: { 'Content-Type': 'application/json' },
-//         body: JSON.stringify(data)
-//     });
-//     const result = await response.json();
-//     if (result.status === 'success') {
-//         showTournamentSubSection('add-players');
-//     }
-// });
-
-// Обработчик для добавления игроков
-document.getElementById('add-players-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const data = Object.fromEntries(formData);
-    const tournamentId = 1; // Замени на реальный ID из ответа сервера
-    const response = await fetch(`/tournaments/api/tournaments/${tournamentId}/add_players/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-    });
-    const result = await response.json();
-    if (result.status === 'success') {
-        showTournamentSubSection('view-tournament');
-        loadTournamentData(tournamentId);
+        inputGroup.appendChild(label);
+        inputGroup.appendChild(input);
+        playerInputsDiv.appendChild(inputGroup);
     }
-});
-
-// Функция для загрузки данных турнира
-async function loadTournamentData(tournamentId) {
-    const response = await fetch(`/tournaments/api/tournaments/${tournamentId}/`);
-    const data = await response.json();
-    document.getElementById('tournament-data').innerText = JSON.stringify(data);
 }
 
+// Handle adding players
+async function handleAddPlayers(event) {
+    event.preventDefault();
+
+    const authToken = localStorage.getItem('authToken');
+    console.log('Add Players - Auth Token:', authToken);
+    const csrftoken = getCookie('csrftoken');
+    console.log('Add Players - CSRF Token:', csrftoken); 
+    
+    // Изменяем селектор, чтобы выбирать только поля в #player-inputs
+    const playerInputs = document.querySelectorAll('#player-inputs input');
+    const nicknames = Array.from(playerInputs).map(input => input.value.trim());
+    
+    // Добавляем отладочные сообщения
+    console.log('Player inputs count:', playerInputs.length);
+    console.log('Expected participant count:', participantCount);
+    console.log('Nicknames:', nicknames);
+
+    if (nicknames.length !== participantCount) {
+        console.log('problipaem with particntCount');
+        document.getElementById('add-players-error').textContent = 'Please fill in all player fields';
+        return;
+    }
+
+    const uniqueNicknames = new Set(nicknames);
+    if (uniqueNicknames.size !== nicknames.length) {
+        document.getElementById('add-players-error').textContent = 'Duplicate nicknames detected';
+        return;
+    }
+
+    try {
+        const response = await fetch(`/tournaments/api/tournaments/${currentTournamentId}/add_players/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Token ${authToken}`,
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ nicknames })
+        });
+
+        console.log('Response status:', response.status);
+        
+        // Клонируем ответ для логирования
+        const responseClone = response.clone();
+        const responseText = await responseClone.text();
+        console.log('Response text:', responseText);
+        
+        // Пробуем распарсить оригинальный ответ как JSON
+        try {
+            const data = await response.json();
+            
+            if (response.ok) {
+                console.log("Before showing tournament subsection");
+                showTournamentSubsection('view-tournament');
+                console.log("After showing tournament subsection");
+                await loadTournamentData();
+            } else {
+                document.getElementById('add-players-error').textContent = data.error || 'Failed to add players';
+            }
+        } catch (jsonError) {
+            console.error('Error parsing JSON response:', jsonError);
+            document.getElementById('add-players-error').textContent = 'Сервер вернул некорректный ответ. Попробуйте еще раз.';
+        }
+    } catch (error) {
+        console.error('Error adding players:', error);
+        document.getElementById('add-players-error').textContent = 'Failed to add players. Please try again.';
+    }
+}
+
+// Load and display tournament data
+async function loadTournamentData() {
+    const authToken = localStorage.getItem('authToken');
+    try {
+        const response = await fetch(`/tournaments/api/tournaments/${currentTournamentId}/`, {
+            headers: {
+                'Authorization': `Token ${authToken}`
+            }
+        });
+        const data = await response.json();
+
+        // Update tournament status
+        document.getElementById('tournament-status').textContent = `Tournament (${data.tournament.status})`;
+
+        // Render players list
+        const playersList = document.getElementById('players-list');
+        playersList.innerHTML = '';
+        data.players.forEach(player => {
+            const li = document.createElement('li');
+            li.classList.add('player-item');
+            li.innerHTML = `<span>${player.nickname}</span><span>Score: ${player.score}</span>`;
+            playersList.appendChild(li);
+        });
+
+        // Render regular matches
+        const regularTableBody = document.querySelector('#regular-matches-table tbody');
+        regularTableBody.innerHTML = '';
+        const regularMatches = data.matches.filter(m => !m.is_additional);
+        regularMatches.forEach(match => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${data.players.find(p => p.id === match.player1).nickname}</td>
+                <td>${data.players.find(p => p.id === match.player2).nickname}</td>
+                <td>${match.is_complete ? `${match.score_player1}-${match.score_player2}` : '-'}</td>
+                <td>${match.winner ? data.players.find(p => p.id === match.winner).nickname : '-'}</td>
+                <td>
+                    ${match.is_complete 
+                        ? '<span class="status-finished">Finished</span>' 
+                        : `<button onclick="startTournamentMatch(${match.id})">Start Match</button>`}
+                </td>
+            `;
+            regularTableBody.appendChild(tr);
+        });
+
+        // Render additional matches if they exist
+        const additionalMatches = data.matches.filter(m => m.is_additional);
+        if (additionalMatches.length > 0) {
+            document.getElementById('additional-matches').style.display = 'block';
+            const additionalTableBody = document.querySelector('#additional-matches-table tbody');
+            additionalTableBody.innerHTML = '';
+            additionalMatches.forEach(match => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${data.players.find(p => p.id === match.player1).nickname}</td>
+                    <td>${data.players.find(p => p.id === match.player2).nickname}</td>
+                    <td>${match.is_complete ? `${match.score_player1}-${match.score_player2}` : '-'}</td>
+                    <td>${match.winner ? data.players.find(p => p.id === match.winner).nickname : '-'}</td>
+                    <td>
+                        ${match.is_complete 
+                            ? '<span class="status-finished">Finished</span>' 
+                            : `<button onclick="startTournamentMatch(${match.id})">Start Match</button>`}
+                    </td>
+                `;
+                additionalTableBody.appendChild(tr);
+            });
+        }
+
+        // Check for winners
+        if (data.tournament.status === 'Complete' && data.tournament.winner_ids.length > 0) {
+            const winnerSection = document.getElementById('winner-section');
+            const winnerText = document.getElementById('winner-text');
+            const winners = data.tournament.winner_ids.map(id => 
+                data.players.find(p => p.id === id).nickname).join(' and ');
+            winnerText.textContent = `Winner${data.tournament.winner_ids.length > 1 ? 's' : ''}: ${winners}`;
+            winnerSection.style.display = 'flex';
+        }
+    } catch (error) {
+        console.error('Error loading tournament:', error);
+    }
+}
 

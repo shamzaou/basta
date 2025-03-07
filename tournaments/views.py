@@ -2,7 +2,7 @@
 
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
-from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.csrf import csrf_protect, csrf_exempt
 from django.shortcuts import get_object_or_404
 import json
 from itertools import combinations
@@ -26,6 +26,7 @@ def create_tournament(request):
     При ошибке -> { "success": false, "error": "...", status=400 }
     """
     try:
+        print("Request received at create_tournament")
         data = json.loads(request.body)
         participants_count = int(data['participants_count'])
         if 3 <= participants_count <= 8:
@@ -35,6 +36,7 @@ def create_tournament(request):
     except (KeyError, ValueError, json.JSONDecodeError):
         return JsonResponse({'success': False, 'error': 'Invalid data'}, status=400)
 
+# @csrf_exempt
 @require_POST
 def add_players(request, tournament_id):
     """
@@ -165,6 +167,11 @@ def finish_match(request, match_id):
     """
     try:
         match = Match.objects.get(id=match_id)
+        
+        # Проверяем, не завершён ли матч уже
+        if match.is_complete:
+            return JsonResponse({'success': False, 'message': 'Match is already completed'}, status=400)
+        
         data = json.loads(request.body)
         match.score_player1 = data['score_player1']
         match.score_player2 = data['score_player2']
@@ -182,3 +189,14 @@ def finish_match(request, match_id):
         return JsonResponse({'success': True})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@require_POST
+def update_match_state(request, match_id):
+    match = get_object_or_404(Match, id=match_id)
+    try:
+        data = json.loads(request.body)
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
