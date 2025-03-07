@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from decouple import config
 from pathlib import Path
 import os
+from datetime import timedelta
 AUTH_USER_MODEL = 'userapp.User'
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -53,10 +54,19 @@ INSTALLED_APPS = [
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.TokenAuthentication',  # Add this line
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.BasicAuthentication',
     ),
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
 MIDDLEWARE = [
@@ -218,11 +228,6 @@ EMAIL_HOST_USER = "transcendance.2fa@gmail.com"
 EMAIL_HOST_PASSWORD = "poba ejtv oemo afsj"
 DEFAULT_FROM_EMAIL = "2FA <transcendance.2fa@gmail.com>"
 
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
-}
 
 JWT_SETTINGS = {
     'JWT_SECRET_KEY': config('JWT_SECRET_KEY', default='your-secret-key-here'),
@@ -230,7 +235,7 @@ JWT_SETTINGS = {
     'JWT_ALGORITHM': 'HS256',
     'CLIENT_ID': config('CLIENT_ID', default='u-s4t2ud-132fa5622bce53a46a8bed31d7e99019853b85977cc5fece17d95b9ee8cdff22'),
     'CLIENT_SECRET': config('CLIENT_SECRET', default='your-client-secret'),
-    'REDIRECT_URI': config('REDIRECT_URI', default='https://localhost:8000/profile')
+    'REDIRECT_URI': config('REDIRECT_URI', default='https://localhost:443/profile')
 }
 
 OAUTH2_PROVIDER = {

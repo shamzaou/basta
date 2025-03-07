@@ -7,6 +7,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
 from decouple import config
 
 from rest_framework.authtoken.models import Token  # Add this import
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from django.core.mail import send_mail
 from django.conf import settings
@@ -33,6 +34,8 @@ from django.core.files.storage import default_storage
 import base64
 from django.core.files.base import ContentFile
 from rest_framework.authentication import SessionAuthentication, TokenAuthentication
+import uuid
+
 
 logger = logging.getLogger(__name__)
 
@@ -206,69 +209,56 @@ def update_profile(request):
 def login_view(request):
     try:
         data = json.loads(request.body)
-
         email = data.get("email")
         password = data.get("password")
-        
-        print(f"Login attempt for email: {email}")  # Debug log
-        
+
         if not email or not password:
             return JsonResponse({"status": "error", "message": "Email and password are required."}, status=400)
 
         user = authenticate(username=email, password=password)
-        
+
         if not user:
             return JsonResponse({"status": "error", "message": "Invalid email or password."}, status=400)
 
-        # Check if user exists and credentials are valid
-        if user:
-            # First verify if 2FA is enabled for this user
-            if user.two_factor_enabled:
-                # Generate and send OTP only after successful password verification
-                otp = str(random.randint(100000, 999999))
-                cache_key = f"otp_{user.id}"
-                cache.set(cache_key, otp, timeout=300)  # 5 minutes
+        if user.two_factor_enabled:
+            # Handle 2FA before issuing tokens
+            otp = str(random.randint(100000, 999999))
+            cache_key = f"otp_{user.id}"
+            cache.set(cache_key, otp, timeout=300)
 
-                try:
-                    # Send OTP email
-                    send_mail(
-                        "Your Login OTP",
-                        f"Your OTP for login is: {otp}\nValid for 5 minutes.",
-                        settings.DEFAULT_FROM_EMAIL,
-                        [user.email],
-                        fail_silently=False,
-                    )
-                    print(f"OTP sent to {user.email}: {otp}")  # Debug log
-                except Exception as e:
-                    print(f"Failed to send OTP email: {str(e)}")
-                    return JsonResponse({"status": "error", "message": "Failed to send OTP"}, status=500)
+            send_mail(
+                "Your Login OTP",
+                f"Your OTP for login is: {otp}\nValid for 5 minutes.",
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+                fail_silently=False,
+            )
 
-                # Return success but indicate 2FA is required
-                return JsonResponse({
-                    "status": "success",
-                    "requires_2fa": True,
-                    "message": "Please check your email for OTP"
-                })
-            else:
-                # No 2FA required, proceed with normal login
-                login(request, user)
-                Token.objects.filter(user=user).delete()
-                token = Token.objects.create(user=user)
-                
-                return JsonResponse({
-                    "status": "success",
-                    "requires_2fa": False,
-                    "token": token.key,
-                    "user": {
-                        "id": user.id,
-                        "email": user.email,
-                        "username": user.username,
-                        "profile_picture": user.profile_picture.url if user.profile_picture else None,
-                    }
-                })
-    
+            return JsonResponse({
+                "status": "success",
+                "requires_2fa": True,
+                "message": "Please check your email for OTP"
+            })
+
+        # Normal login (no 2FA)
+        login(request, user)
+
+        # Generate JWT tokens
+        refresh = RefreshToken.for_user(user)
+        return JsonResponse({
+            "status": "success",
+            "requires_2fa": False,
+            "access_token": str(refresh.access_token),
+            "refresh_token": str(refresh),
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "username": user.username,
+                "profile_picture": user.profile_picture.url if user.profile_picture else None,
+            }
+        })
+
     except Exception as e:
-        print(f"Login error: {str(e)}")  # Debug log
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
 
 @require_POST
@@ -479,7 +469,6 @@ def redirect_uri(request):
 def oauth_callback(request):
     error = request.GET.get('error')
     if error:
-        print(f"OAuth Error: {error} - {request.GET.get('error_description')}")
         return redirect("https://localhost:443/login")
 
     code = request.GET.get("code")
@@ -487,29 +476,25 @@ def oauth_callback(request):
         return JsonResponse({"error": "Authorization code not provided"}, status=400)
 
     try:
-        # Exchange code for access token
         token_url = "https://api.intra.42.fr/oauth/token"
         payload = {
             "grant_type": "authorization_code",
             "code": code,
             "redirect_uri": "https://localhost:443/home",
-            "client_id": settings.JWT_SETTINGS["CLIENT_ID"],
-            "client_secret": settings.JWT_SETTINGS["CLIENT_SECRET"],
+            "client_id": settings.FORTYTWO_CLIENT_ID,
+            "client_secret": settings.FORTYTWO_CLIENT_SECRET,
         }
         
         response = requests.post(token_url, data=payload)
-        
         if response.status_code != 200:
-            print("Token exchange failed:", response.text)
             return redirect("https://localhost:443/login")
 
         access_token = response.json().get("access_token")
-        
-        # Fetch user info from 42 API
+
         user_info_url = "https://api.intra.42.fr/v2/me"
         headers = {"Authorization": f"Bearer {access_token}"}
         user_info_response = requests.get(user_info_url, headers=headers)
-        
+
         if user_info_response.status_code != 200:
             return redirect("https://localhost:443/login")
 
@@ -517,76 +502,38 @@ def oauth_callback(request):
         username = user_info.get("login")
         email = user_info.get("email")
 
-        # Create or update user
         user, created = User.objects.get_or_create(
             email=email,
-            defaults={
-                'username': username,
-                'is_42_user': True,
-                'intra_id': user_info.get('id')
-            }
+            defaults={'username': username, 'is_42_user': True, 'intra_id': user_info.get('id')}
         )
 
-        # Log the user in
         login(request, user)
 
-        # Create auth token
-        Token.objects.filter(user=user).delete()
-        token = Token.objects.create(user=user)
+        # Generate JWT tokens
+        refresh = RefreshToken.for_user(user)
 
-        # Create JWT token
-        payload = {
-            "user_id": str(user.id),
-            "email": email,
-            "username": username,
-            "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=1),
-            "iat": datetime.datetime.utcnow(),
-        }
-        jwt_token = jwt.encode(
-            payload,
-            settings.JWT_SETTINGS["JWT_SECRET_KEY"],
-            algorithm=settings.JWT_SETTINGS["JWT_ALGORITHM"]
-        )
-
-        # Create response with all necessary data
         response = redirect("https://localhost:443/home")
         response.set_cookie(
-            'sessionid',
-            request.session.session_key,
-            max_age=86400,
-            httponly=True,
-            samesite='Lax',
-            secure=True
-        )
-        
-        response.set_cookie(
             'jwt_token',
-            jwt_token,
+            str(refresh.access_token),
             max_age=86400,
             httponly=True,
             samesite='Lax',
             secure=True
         )
-
         response.set_cookie(
-            'auth_token',
-            token.key,
-            max_age=86400,
+            'refresh_token',
+            str(refresh),
+            max_age=604800,
             httponly=True,
             samesite='Lax',
             secure=True
         )
-
-        # Set session data
-        request.session['is_authenticated'] = True
-        request.session['user_id'] = user.id
-        request.session.modified = True
 
         return response
-        
+
     except Exception as e:
-        print("OAuth callback error:", str(e))
-        return redirect("https://localhost:443/login")
+        return JsonResponse({'error': str(e)}, status=500)
 
 @csrf_exempt
 @require_POST
@@ -596,14 +543,14 @@ def get_token(request):
         body_unicode = request.body.decode('utf-8')
         body_data = json.loads(body_unicode)
         code = body_data.get('code')
-        
+
         if not code:
             return JsonResponse({'error': 'Authorization code is required'}, status=400)
-        
+
         # Debugging: Print settings values to verify they're loaded
         print(f"FORTYTWO_CLIENT_ID: {settings.FORTYTWO_CLIENT_ID}")
         print(f"FORTYTWO_REDIRECT_URI: {settings.FORTYTWO_REDIRECT_URI}")
-            
+
         # Exchange code for access token with 42 API
         token_url = 'https://api.intra.42.fr/oauth/token'
         token_data = {
@@ -613,113 +560,95 @@ def get_token(request):
             'code': code,
             'redirect_uri': settings.FORTYTWO_REDIRECT_URI
         }
-        
+
         token_response = requests.post(token_url, data=token_data)
-        
+
         if token_response.status_code != 200:
             error_message = f"Token request failed with status {token_response.status_code}: {token_response.text}"
             print(error_message)
             return JsonResponse({'error': error_message}, status=401)
-            
+
         token_json = token_response.json()
         access_token = token_json.get('access_token')
-        
+
         # Get user info from 42 API
         user_url = 'https://api.intra.42.fr/v2/me'
         headers = {'Authorization': f'Bearer {access_token}'}
         user_response = requests.get(user_url, headers=headers)
-        
+
         if user_response.status_code != 200:
             error_message = f"User data request failed with status {user_response.status_code}: {user_response.text}"
             print(error_message)
             return JsonResponse({'error': error_message}, status=401)
-            
+
         user_data = user_response.json()
         fortytwo_id = user_data.get('id')
         email = user_data.get('email')
         username = user_data.get('login')
-        
+
         print(f"User data received: ID={fortytwo_id}, username={username}, email={email}")
-        
+
         # Get or create user
         User = get_user_model()
-        try:
-            user = User.objects.get(username=username)
-            print(f"Found existing user: {user.username}")
-        except User.DoesNotExist:
-            print(f"Creating new user with username: {username}")
-            user = User.objects.create_user(
-                username=username,
-                email=email,
-            )
-            # Store the 42 ID with the user
-            user.is_42_user = True
+        user, created = User.objects.get_or_create(
+            email=email,
+            defaults={'username': username, 'is_42_user': True, 'intra_id': fortytwo_id}
+        )
+
+        # Ensure intra_id is saved for new users
+        if created:
             user.intra_id = fortytwo_id
             user.save()
-        
-        # Log the user in explicitly
+
+        # Log the user in
         login(request, user)
-        
-        # Generate JWT token
-        payload = {
-            'user_id': user.id,
-            'username': user.username,
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)
-        }
-        
-        jwt_token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
-        
-        # Create a DRF token for API access
-        Token.objects.filter(user=user).delete()
-        token = Token.objects.create(user=user)
-        
+
+        # Generate JWT tokens using Simple JWT
+        refresh = RefreshToken.for_user(user)
+
         # Return tokens and user data
         return JsonResponse({
-            'token': jwt_token,
-            'auth_token': token.key,
-            'user': {
-                'id': user.id,
-                'username': user.username,
-                'email': user.email,
-                'profile_picture': user.profile_picture.url if user.profile_picture else None,
+            "status": "success",
+            "access_token": str(refresh.access_token),  # Use this in frontend requests
+            "refresh_token": str(refresh),  # Store this to refresh access tokens
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "profile_picture": user.profile_picture.url if user.profile_picture else None,
             }
         })
-    
+
     except Exception as e:
         print(f"Error in get_token: {str(e)}")
         return JsonResponse({'error': f'Authentication failed: {str(e)}'}, status=500)
+
 
 @api_view(['POST'])
 def verify_otp_view(request):
     username = request.data.get('username')
     otp = request.data.get('otp')
 
-    # Debugging: Log incoming data
-    logger.debug(f"Received username: {username}")
-    logger.debug(f"Received OTP: {otp}")
-
     if not username or not otp:
-        return Response({"error": "Username and OTP are required."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": "Username and OTP are required."}, status=400)
 
     try:
         user = User.objects.get(username=username)
         cache_key = f"otp_{user.id}"
         cached_otp = cache.get(cache_key)
 
-        # Debugging: Log cached OTP
-        logger.debug(f"Cached OTP for user {user.username}: {cached_otp}")
-
         if cached_otp == otp:
-            token = jwt.encode(
-                {"username": user.username, "exp": datetime.datetime.utcnow() + datetime.timedelta(days=1)},
-                settings.SECRET_KEY,
-                algorithm="HS256"
-            )
-            return Response({"message": "OTP verified successfully.", "token": token}, status=status.HTTP_200_OK)
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                "message": "OTP verified successfully.",
+                "access_token": str(refresh.access_token),
+                "refresh_token": str(refresh)
+            }, status=200)
         else:
-            return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Invalid OTP."}, status=400)
+
     except User.DoesNotExist:
-        return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"error": "User not found."}, status=404)
 
 @api_view(['GET', 'PUT'])
 @permission_classes([IsAuthenticated])
@@ -788,31 +717,31 @@ def match_history_view(request):
         'match_history': match_data
     })
 
+@csrf_exempt
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def save_match_view(request):
     """Save a new match result"""
+    print("Authorization Header:", request.headers.get('Authorization'))  # Debugging line
+
     user = request.user
     data = request.data
-    
+
+    # Log incoming data
+    print("Received data:", json.dumps(data, indent=4))
+
     try:
         # Validate required fields
         required_fields = ['game_type', 'opponent', 'result', 'score']
         for field in required_fields:
             if field not in data:
+                print(f"Missing field: {field}")
                 return Response({
                     'status': 'error',
                     'message': f'Missing required field: {field}'
                 }, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Validate result is one of the allowed choices
-        if data['result'] not in [choice[0] for choice in MatchHistory.RESULT_CHOICES]:
-            return Response({
-                'status': 'error',
-                'message': f'Invalid result: {data["result"]}'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Create match history record
+
+        # Save the match
         match = MatchHistory.objects.create(
             user=user,
             game_type=data['game_type'],
@@ -820,16 +749,35 @@ def save_match_view(request):
             result=data['result'],
             score=data['score']
         )
-        
-        return Response({
-            'status': 'success',
-            'match_id': match.id
-        })
-    
+
+        print(f"Match {match.id} saved successfully!")
+        return Response({'status': 'success', 'match_id': match.id})
+
     except Exception as e:
         print(f"Error saving match: {str(e)}")
-        return Response({
-            'status': 'error',
-            'message': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_match(request):
+    """
+    Initializes a new Tic-Tac-Toe match and returns a match_id.
+    """
+    try:
+        print("🚀 Received request to create match")  # Check if request reaches here
+        print("Headers:", request.headers)  # Check what headers are received
+        print("User:", request.user)  # Check if Django recognizes the user
+        print("Request Data:", request.data)  # Print incoming request data
+
+        if not request.user.is_authenticated:
+            return Response({'error': 'User not authenticated'}, status=401)
+
+        match_id = str(uuid.uuid4())  # Generate a unique match ID
+        print(f"✅ Match Created: {match_id} for {request.user}")  # Confirm match creation
+
+        return Response({'match_id': match_id, 'opponent': 'AI'}, status=201)
+
+    except Exception as e:
+        print(f"🔥 ERROR in create_match(): {str(e)}")  # Print error message
+        return Response({'error': str(e)}, status=500)

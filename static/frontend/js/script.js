@@ -198,6 +198,8 @@ async function handleLogin(event) {
     
     try {
         const email = document.getElementById('login-username').value;  // Store email
+        const password = document.getElementById('password').value;
+        
         const response = await fetch('/api/auth/login/', {
             method: 'POST',
             headers: {
@@ -205,10 +207,7 @@ async function handleLogin(event) {
                 'X-CSRFToken': getCookie('csrftoken')
             },
             credentials: 'include',
-            body: JSON.stringify({
-                email: email,
-                password: document.getElementById('password').value
-            })
+            body: JSON.stringify({ email, password })
         });
 
         const data = await response.json();
@@ -222,8 +221,7 @@ async function handleLogin(event) {
                 alert(data.message);
                 
                 // Show OTP modal
-                const modal = document.getElementById('otp-modal');
-                modal.style.display = 'block';
+                document.getElementById('otp-modal').style.display = 'block';
                 document.getElementById('otp-input').focus();
                 
                 // Clear password field for security
@@ -232,7 +230,8 @@ async function handleLogin(event) {
                 // Normal login flow (no 2FA)
                 localStorage.setItem('isLoggedIn', 'true');
                 localStorage.setItem('userData', JSON.stringify(data.user));
-                localStorage.setItem('authToken', data.token);
+                localStorage.setItem('authToken', data.access_token);
+                localStorage.setItem('refreshToken', data.refresh_token);  // ✅ Store refresh token
                 checkLoginState();
                 showPage('home');
             }
@@ -245,6 +244,7 @@ async function handleLogin(event) {
         alert('Login failed. Please try again.');
     }
 }
+
 
 // Handle OTP verification
 async function handleOTPVerification(event) {
@@ -268,25 +268,25 @@ async function handleOTPVerification(event) {
                 'X-CSRFToken': getCookie('csrftoken')
             },
             credentials: 'include',
-            body: JSON.stringify({ 
-                email: email,
-                otp: otp 
-            })
+            body: JSON.stringify({ email, otp })
         });
 
         const data = await response.json();
         console.log('OTP verification response:', data);
 
-        if (data.status === 'success') {
+        if (response.ok && data.status === 'success') {
             // Clear temporary storage
             localStorage.removeItem('temp_email');
+            
             // Hide OTP modal
             document.getElementById('otp-modal').style.display = 'none';
             
-            // Complete login
+            // Complete login process
             localStorage.setItem('isLoggedIn', 'true');
             localStorage.setItem('userData', JSON.stringify(data.user));
-            localStorage.setItem('authToken', data.token);
+            localStorage.setItem('authToken', data.access_token);
+            localStorage.setItem('refreshToken', data.refresh_token);  // ✅ Store refresh token
+
             checkLoginState();
             showPage('home');
         } else {
@@ -298,32 +298,41 @@ async function handleOTPVerification(event) {
     }
 }
 
+
 async function handleLogout() {
     try {
         const authToken = localStorage.getItem('authToken');
-        const response = await fetch('/api/auth/logout/', {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken'),
-                'Authorization': `Token ${authToken}`
-            }
-        });
 
-        // Clear all auth data regardless of response
+        if (authToken) {
+            const response = await fetch('/api/auth/logout/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Authorization': `Bearer ${authToken}`
+                },
+                credentials: 'include'
+            });
+
+            if (!response.ok) {
+                console.warn('Logout request failed:', await response.text());
+            }
+        }
+
         localStorage.removeItem('isLoggedIn');
         localStorage.removeItem('userData');
         localStorage.removeItem('authToken');
-        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
 
         checkLoginState();
-        showPage('home');
-        
+        showPage('login');
+
         alert('You have been logged out.');
     } catch (error) {
         console.error('Logout error:', error);
         alert('Logout failed. Please try again.');
     }
 }
+
 
 // Handle registration
 async function handleRegister(event) {
@@ -547,7 +556,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const response = await fetch('/api/auth/profile/', {
                         method: 'PUT',
                         headers: {
-                            'Authorization': `Token ${authToken}`,
+                            'Authorization': `Bearer ${authToken}`,
                             'Content-Type': 'application/json',
                             'X-CSRFToken': getCookie('csrftoken')
                         },
@@ -726,74 +735,79 @@ async function initiate42OAuth() {
 }
 
 // Update the OAuth login function to ensure redirect to homepage
-function checkOAuthLogin() {
+async function checkOAuthLogin() {
     console.log("Checking OAuth login status...");
-    
+
     // Get the authorization code from URL if present
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
-    
+
     if (!code) {
         console.log("No OAuth code found in URL");
         return Promise.resolve();
     }
-    
+
     console.log("OAuth code found, exchanging for token...");
-    
+
     // Clear the URL parameters without reloading the page
     window.history.replaceState({}, document.title, window.location.pathname);
-    
-    // Exchange the code for a token
-    return fetch('/api/auth/get-token/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        credentials: 'include',
-        body: JSON.stringify({ code: code }),
-    })
-    .then(response => {
+
+    try {
+        const response = await fetch('/api/auth/get-token/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            credentials: 'include',
+            body: JSON.stringify({ code: code }),
+        });
+
         if (!response.ok) {
-            return response.text().then(text => {
-                console.error('Token endpoint error:', response.status, text);
-                throw new Error('Authentication failed: ' + response.status);
-            });
+            const errorText = await response.text();
+            console.error('Token endpoint error:', response.status, errorText);
+            throw new Error('Authentication failed: ' + response.status);
         }
-        return response.json();
-    })
-    .then(data => {
+
+        const data = await response.json();
         console.log("Token received successfully:", data);
-        
-        // Store all the necessary authentication data
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('authToken', data.auth_token);
+
+        if (data.access_token) {
+            localStorage.setItem('authToken', data.access_token);
+        } else {
+            console.warn("No access token found in response!");
+        }
+
+        if (data.refresh_token) {
+            localStorage.setItem('refreshToken', data.refresh_token);
+        } else {
+            console.warn("No refresh token found in response!");
+        }
+
         localStorage.setItem('userData', JSON.stringify(data.user));
         localStorage.setItem('isLoggedIn', 'true');
-        
-        // Update login state and UI immediately
+
+        scheduleTokenRefresh();
+
         checkLoginState();
-        
-        // Use setTimeout to ensure the navigation happens after state is updated
+
+        // ✅ Redirect after a short delay to ensure UI update
         setTimeout(() => {
-            // Force navigation to home page
             console.log("Redirecting to home page after successful OAuth login");
             window.location.href = '/';  // Use direct navigation instead of showPage
         }, 100);
-        
+
         return true;
-    })
-    .catch(error => {
+    } catch (error) {
         console.error("OAuth Login Error:", error);
         showPage('login');
         return false;
-    });
+    }
 }
 
 async function loadProfileData() {
     try {
         const authToken = localStorage.getItem('authToken');
-        console.log('Attempting to load profile with token:', authToken); // Debug log
         
         if (!authToken) {
             console.error('No auth token found');
@@ -804,7 +818,7 @@ async function loadProfileData() {
         const response = await fetch('/api/auth/profile/', {
             method: 'GET',
             headers: {
-                'Authorization': `Token ${authToken}`,
+                'Authorization': `Bearer ${authToken}`,
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCookie('csrftoken')
             }
@@ -893,7 +907,7 @@ async function loadSettingsData() {
         const response = await fetch('/api/auth/profile/', {
             method: 'GET',
             headers: {
-                'Authorization': `Token ${authToken}`,
+                'Authorization': `Bearer ${authToken}`,
                 'Content-Type': 'application/json'
             }
         });
@@ -965,7 +979,7 @@ async function handleTournamentCreation(event) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Token ${authToken}`,
+                'Authorization': `Bearer ${authToken}`,
                 'X-CSRFToken': getCookie('csrftoken')
             },
             body: JSON.stringify({
@@ -988,5 +1002,79 @@ async function handleTournamentCreation(event) {
         alert('Failed to create tournament. Please try again.');
     }
 }
+
+async function getAccessToken() {
+    let token = localStorage.getItem("authToken");
+
+    if (!token) return null;
+
+    try {
+        // Decode JWT to check expiry
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const isExpired = payload.exp * 1000 < Date.now();
+
+        if (isExpired) {
+            console.log("Access token expired, refreshing...");
+            return await refreshAccessToken();
+        }
+
+        return token;
+    } catch (error) {
+        console.error("Invalid token format:", error);
+        return null;
+    }
+}
+
+async function refreshAccessToken() {
+    const refreshToken = localStorage.getItem("refreshToken");
+
+    if (!refreshToken) {
+        console.error("No refresh token available, user needs to log in again.");
+        return null;
+    }
+
+    try {
+        const response = await fetch('/api/token/refresh/', {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ refresh: refreshToken })
+        });
+
+        if (!response.ok) {
+            throw new Error("Failed to refresh token");
+        }
+
+        const data = await response.json();
+        console.log("Token refreshed successfully:", data);
+
+        localStorage.setItem("authToken", data.access);
+
+        return data.access;
+    } catch (error) {
+        console.error("Failed to refresh token:", error);
+        logout();  // Log the user out if refresh fails
+        return null;
+    }
+}
+
+function scheduleTokenRefresh() {
+    let token = localStorage.getItem("authToken");
+
+    if (!token) return;
+
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const expiresInMs = (payload.exp * 1000) - Date.now();
+        const refreshTime = expiresInMs - 60000; // Refresh 1 min before expiry
+
+        if (refreshTime > 0) {
+            console.log(`Scheduling token refresh in ${refreshTime / 1000} seconds`);
+            setTimeout(refreshAccessToken, refreshTime);
+        }
+    } catch (error) {
+        console.error("Error scheduling token refresh:", error);
+    }
+}
+
 
 
