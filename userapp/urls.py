@@ -40,3 +40,8 @@ urlpatterns = [
     path('debug-avatar/<int:user_id>/', views.debug_avatar_path, name='debug-avatar-path'),
 ]
 
+# Add this to your urlpatterns list
+urlpatterns += [
+    path('export-data/', views.export_user_data, name='export-user-data'),
+]
+

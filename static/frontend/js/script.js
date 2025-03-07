@@ -807,6 +807,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (tournamentForm) {
         tournamentForm.addEventListener('submit', handleTournamentCreation);
     }
+
+    // Add event listener for the download data button
+    const downloadDataBtn = document.getElementById('download-data');
+    if (downloadDataBtn) {
+        downloadDataBtn.addEventListener('click', handleDownloadUserData);
+    }
 });
 
 async function initiate42OAuth() {
@@ -1332,6 +1338,119 @@ function clearAvatarCache() {
             avatar.src = url.pathname + '?t=' + new Date().getTime();
         }
     });
+}
+
+// Enhance the handleDownloadUserData function to include the avatar as Base64
+async function handleDownloadUserData() {
+    try {
+        const authToken = localStorage.getItem('authToken');
+        if (!authToken) {
+            alert('You must be logged in to download your data.');
+            return;
+        }
+
+        // Show loading indicator
+        const downloadBtn = document.getElementById('download-data');
+        const originalText = downloadBtn.textContent;
+        downloadBtn.textContent = 'Preparing data...';
+        downloadBtn.disabled = true;
+
+        // Fetch complete user data including avatar from our export endpoint
+        const response = await fetch('/api/auth/export-data/', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch user data');
+        }
+
+        const userData = await response.json();
+        
+        // Fetch avatar as Base64 if the user has one
+        if (userData.profile && userData.profile.avatar_url) {
+            try {
+                // Get user ID from the data
+                const userId = userData.user_information.id;
+                
+                // Get avatar directly from our avatar endpoint to ensure we get the actual file
+                const avatarResponse = await fetch(`/api/auth/avatar/${userId}/`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                if (avatarResponse.ok) {
+                    // Convert the image to a blob
+                    const blob = await avatarResponse.blob();
+                    
+                    // Convert blob to base64
+                    const base64data = await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.readAsDataURL(blob);
+                    });
+                    
+                    // Add the base64 avatar to the user data
+                    userData.profile.avatar_base64 = base64data;
+                    console.log("Avatar successfully embedded as Base64");
+                }
+            } catch (avatarError) {
+                console.error('Error fetching avatar:', avatarError);
+                // Continue without avatar if there's an error
+                userData.profile.avatar_base64_error = "Failed to retrieve avatar";
+            }
+        }
+
+        // Add additional metadata
+        userData.export_metadata = {
+            export_date: new Date().toISOString(),
+            export_format_version: '1.1',
+            export_type: 'user_data_with_avatar',
+            exported_by: userData.user_information.username
+        };
+
+        // Convert to JSON string with nice formatting
+        const jsonData = JSON.stringify(userData, null, 2);
+
+        // Create blob and download
+        const blob = new Blob([jsonData], { type: 'application/json' });
+        const url = window.URL.createObjectURL(blob);
+        
+        // Create hidden download link and trigger it
+        const a = document.createElement('a');
+        const filename = `user_data_${userData.user_information.username}_${new Date().toISOString().split('T')[0]}.json`;
+        
+        a.style.display = 'none';
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        
+        // Clean up
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        // Reset button
+        downloadBtn.textContent = originalText;
+        downloadBtn.disabled = false;
+        
+        alert('Your data has been downloaded successfully.');
+        
+    } catch (error) {
+        console.error('Error downloading user data:', error);
+        
+        // Reset button
+        const downloadBtn = document.getElementById('download-data');
+        downloadBtn.textContent = 'Download My Data';
+        downloadBtn.disabled = false;
+        
+        alert('Failed to download user data: ' + error.message);
+    }
 }
 
 

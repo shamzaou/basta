@@ -864,3 +864,65 @@ def debug_avatar_path(request, user_id):
         return Response({"error": "User not found"}, status=404)
     except Exception as e:
         return Response({"error": str(e)}, status=500)
+
+# Add the user data export view
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def export_user_data(request):
+    """Export all user data in a structured format"""
+    try:
+        user = request.user
+        
+        # Get user's match history
+        match_history = MatchHistory.objects.filter(user=user).order_by('-date_played')
+        
+        # Calculate statistics
+        total_matches = match_history.count()
+        wins = match_history.filter(result='WIN').count()
+        losses = match_history.filter(result='LOSS').count()
+        draws = match_history.filter(result='DRAW').count()
+        win_rate = int((wins / total_matches) * 100) if total_matches > 0 else 0
+        
+        # Format match history for response
+        matches = []
+        for match in match_history:
+            matches.append({
+                'id': match.id,
+                'game_type': match.game_type,
+                'opponent': match.opponent,
+                'score': match.score,
+                'result': match.result,
+                'date_played': match.date_played.isoformat(),
+            })
+        
+        # Build comprehensive user data
+        user_data = {
+            'user_information': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'display_name': user.display_name if hasattr(user, 'display_name') else user.username,
+                'date_joined': user.date_joined.isoformat(),
+                'last_login': user.last_login.isoformat() if user.last_login else None,
+                'is_42_user': user.is_42_user if hasattr(user, 'is_42_user') else False,
+            },
+            'profile': {
+                'avatar_url': user.profile_picture.url if user.profile_picture else None,
+            },
+            'statistics': {
+                'games_played': total_matches,
+                'wins': wins,
+                'losses': losses,
+                'draws': draws,
+                'win_rate': f"{win_rate}%",
+            },
+            'match_history': matches,
+            'export_date': datetime.datetime.now().isoformat(),
+        }
+        
+        return Response(user_data)
+        
+    except Exception as e:
+        return Response({
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
