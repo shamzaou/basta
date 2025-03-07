@@ -193,10 +193,11 @@ class TicTacToeGame {
     
             // Get player names safely
             const player1Element = document.getElementById('player1-name');
-            const player2Element = document.getElementById('player2-name');
-    
+            
+            // Set default player names
             const currentUser = player1Element ? player1Element.textContent : "Player 1";
-            const opponent = player2Element ? player2Element.textContent : "Player 2";
+            // Always use "Player 2" for opponent in TicTacToe since there's no AI
+            const opponent = "Player 2";
     
             let userScore = 0;
             let opponentScore = 0;
@@ -215,7 +216,6 @@ class TicTacToeGame {
     
             const tokenFM = localStorage.getItem('authToken');
             
-            // Fix the URL to use relative path instead of hardcoded domain
             // Send result to backend
             const response = await fetch('/api/auth/save-match/', {
                 method: 'POST',
