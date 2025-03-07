@@ -213,8 +213,9 @@ class TicTacToeGame {
     
             const tokenFM = localStorage.getItem('authToken');
             
+            // Fix the URL to use relative path instead of hardcoded domain
             // Send result to backend
-            const response = await fetch('https://127.0.0.1:443/api/auth/save-match/', {
+            const response = await fetch('/api/auth/save-match/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

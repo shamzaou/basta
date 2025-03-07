@@ -809,8 +809,9 @@ class PongGame {
     
             const tokenFM = localStorage.getItem('authToken');
             
+            // Fix the URL to use relative path instead of hardcoded domain
             // Send result to backend
-            const response = await fetch('https://127.0.0.1:443/api/auth/save-match/', {
+            const response = await fetch('/api/auth/save-match/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -835,6 +836,16 @@ class PongGame {
         } catch (error) {
             console.error('Failed to save Pong match:', error);
         }
+
+        // Show restart button for normal game
+        const gameControls = document.getElementById('game-controls');
+        const restartButton = document.getElementById('restart-button');
+        if (gameControls && restartButton) {
+            restartButton.textContent = 'Restart Game';
+            restartButton.onclick = () => this.restartGame();
+            gameControls.style.display = 'block';
+        }
+        return;
     }
     
 
