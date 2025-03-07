@@ -1435,3 +1435,252 @@ body.is-logged-out .logged-out {
         margin: 0 auto;
     }
 }
+
+/* About Page Styles */
+.about-container {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: var(--border-radius);
+    padding: 2em;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.about-section {
+    margin-bottom: 3em;
+    padding-bottom: 2em;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.about-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.about-section p {
+    text-align: left;
+    font-family: 'Roboto', sans-serif;
+    font-size: 1em;
+    line-height: 1.6;
+    margin-bottom: 1.5em;
+}
+
+.team-grid {
+    display: flex;  /* Change from grid to flex */
+    flex-wrap: nowrap; /* Prevent wrapping */
+    justify-content: space-between; /* Space evenly between members */
+    gap: 1em; /* Reduce gap to fit in one line */
+    margin-top: 2em;
+    overflow-x: auto; /* Add horizontal scroll for smaller screens */
+    padding-bottom: 1em; /* Add padding for scrollbar */
+    padding-top: 8px; /* Add padding to the top to prevent border disappearance on hover */
+}
+
+.team-member {
+    flex: 0 0 auto; /* Fixed width, no grow/shrink */
+    width: 220px; /* Set fixed width for each member */
+    background-color: rgba(0, 255, 0, 0.05);
+    border: 2px solid var(--primary-color);
+    border-radius: var(--border-radius);
+    padding: 1.5em;
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    margin-top: 5px; /* Add margin to the top of each card */
+}
+
+.team-member:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 255, 0, 0.2);
+}
+
+.team-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--primary-color);
+    margin-bottom: 1em;
+}
+
+.team-member h3 {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 1.2em;
+    margin-bottom: 0.5em;
+}
+
+.team-member p {
+    margin-bottom: 1em;
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.9em;
+    color: var(--text-color);
+    opacity: 0.8;
+    text-align: center;
+}
+
+.social-links {
+    display: flex;
+    justify-content: center;
+    gap: 1em;
+    margin-top: 1em;
+}
+
+.social-links a {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: color 0.3s ease;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.7em;
+}
+
+.social-links a:hover {
+    color: var(--secondary-color);
+}
+
+.tech-stack {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1.5em;
+    margin-top: 2em;
+}
+
+.tech-item {
+    display: flex;
+    align-items: center;
+    padding: 1em;
+    background-color: rgba(0, 255, 0, 0.05);
+    border: 2px solid var(--primary-color);
+    border-radius: var(--border-radius);
+    transition: transform 0.3s ease;
+}
+
+.tech-item:hover {
+    transform: translateY(-5px);
+}
+
+.tech-icon {
+    font-size: 1.5em;
+    margin-right: 0.5em;
+}
+
+.tech-name {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.8em;
+}
+
+.features-list {
+    list-style: none;
+    padding: 0;
+    margin: 2em 0;
+}
+
+.features-list li {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1em;
+    font-family: 'Roboto', sans-serif;
+    font-size: 1em;
+    line-height: 1.4;
+}
+
+.feature-check {
+    color: var(--primary-color);
+    margin-right: 1em;
+    font-weight: bold;
+    font-size: 1.2em;
+}
+
+/* Responsive styles for About page */
+@media (max-width: 768px) {
+    .team-grid {
+        padding-bottom: 1.5em; /* More space for the scrollbar */
+        /* Keep the nowrap to force horizontal scroll */
+    }
+    
+    .team-member {
+        width: 180px; /* Slightly smaller on mobile */
+    }
+    
+    .about-section p {
+        font-size: 0.9em;
+    }
+    
+    .tech-name {
+        font-size: 0.7em;
+    }
+}
+
+/* Privacy Policy Styles */
+.privacy-section {
+    margin-bottom: 2em;
+    padding-left: 1em;
+    border-left: 3px solid var(--primary-color);
+}
+
+.privacy-section:last-child {
+    margin-bottom: 0;
+}
+
+.privacy-section h3 {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 1em;
+    color: var(--primary-color);
+    margin-bottom: 1em;
+}
+
+.privacy-section p {
+    text-align: left;
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.9em;
+    line-height: 1.6;
+    margin-bottom: 1em;
+    max-width: none;
+}
+
+.privacy-list {
+    list-style: none;
+    padding-left: 1.5em;
+    margin-bottom: 1.5em;
+}
+
+.privacy-list li {
+    position: relative;
+    padding-left: 1em;
+    margin-bottom: 0.8em;
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.9em;
+    line-height: 1.5;
+}
+
+.privacy-list li::before {
+    content: "•";
+    position: absolute;
+    left: 0;
+    color: var(--primary-color);
+}
+
+.privacy-section a {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.privacy-section a:hover {
+    color: var(--secondary-color);
+    text-decoration: underline;
+}
+
+/* Responsive styling for privacy policy */
+@media (max-width: 768px) {
+    .privacy-section {
+        padding-left: 0.8em;
+    }
+    
+    .privacy-section h3 {
+        font-size: 0.9em;
+    }
+    
+    .privacy-section p, 
+    .privacy-list li {
+        font-size: 0.85em;
+    }
+}
