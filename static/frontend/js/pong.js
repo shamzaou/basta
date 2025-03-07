@@ -776,98 +776,67 @@ class PongGame {
     }
 
     async finishMatch() {
-        if (!this.state.matchId) {
-            // Regular game (not in tournament) - Store match history
-            try {
-                const currentUser = document.getElementById('player1-name').textContent;
-                const opponent = document.getElementById('player2-name').textContent || 'AI';
-                const userScore = this.state.score.player1;
-                const opponentScore = this.state.score.player2;
-                const scoreString = `${userScore}-${opponentScore}`;
-                
-                // Determine result
-                let result = 'DRAW';
-                if (userScore > opponentScore) {
-                    result = 'WIN';
-                } else if (opponentScore > userScore) {
-                    result = 'LOSS';
-                }
-
-                const tokenFM = localStorage.getItem('authToken');
-                // Send result to backend
-                const response = await fetch('https://127.0.0.1:443/api/auth/save-match/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${tokenFM}`,
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
-                    body: JSON.stringify({
-                        game_type: 'PONG',
-                        opponent: opponent,
-                        result: result,
-                        score: scoreString
-                    })
-                });
-                
-                const responseText = await response.text();  // Capture response as text
-                console.log("Response from backend:", responseText);
-                
-                if (!response.ok) {
-                    console.error("Failed to save match history:", responseText);
-                    throw new Error(responseText);
-                }
-            } catch (error) {
-                console.log("I am NOT sending data to backend");
-                console.error('Failed to save match history:', error);
-            }
-            
-            console.log("I am posting, sending data to backend2");
-            // Show restart button for normal game
-            const gameControls = document.getElementById('game-controls');
-            const restartButton = document.getElementById('restart-button');
-            if (gameControls && restartButton) {
-                restartButton.textContent = 'Restart Game';
-                restartButton.onclick = () => this.restartGame();
-                gameControls.style.display = 'block';
-            }
-            return;
-        }
-    
         try {
-            const response = await fetch(`/tournaments/match/${this.state.matchId}/finish/`, {
+            console.log("I am in finish Match");
+    
+            // Get player names safely
+            const player1Element = document.getElementById('player1-name');
+            const player2Element = document.getElementById('player2-name');
+    
+            const currentUser = player1Element ? player1Element.textContent : "Player 1";
+    
+            // Determine if it's PvP or AI mode and set a default opponent name
+            let opponent;
+            if (this.gameMode === 'ai') {
+                opponent = "AI";
+            } else {
+                opponent = player2Element && player2Element.textContent.trim() !== "" 
+                    ? player2Element.textContent 
+                    : "Player 2";  // Default name when player2 is missing or empty
+            }
+    
+            const userScore = this.state.score.player1 || 0;
+            const opponentScore = this.state.score.player2 || 0;
+            const scoreString = `${userScore}-${opponentScore}`;
+    
+            // Determine result
+            let result = 'DRAW';
+            if (userScore > opponentScore) {
+                result = 'WIN';
+            } else if (opponentScore > userScore) {
+                result = 'LOSS';
+            }
+    
+            const tokenFM = localStorage.getItem('authToken');
+            
+            // Send result to backend
+            const response = await fetch('https://127.0.0.1:443/api/auth/save-match/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Token ${localStorage.getItem('authToken')}`,
+                    'Authorization': `Bearer ${tokenFM}`,
                     'X-CSRFToken': getCookie('csrftoken')
                 },
                 body: JSON.stringify({
-                    score_player1: this.state.score.player1,
-                    score_player2: this.state.score.player2,
-                    winner: this.state.winner
+                    game_type: 'PONG',
+                    opponent: opponent,
+                    result: result,
+                    score: scoreString
                 })
             });
     
-            if (response.ok) {
-                // Show next game button for tournament
-                const gameControls = document.getElementById('game-controls');
-                const restartButton = document.getElementById('restart-button');
-                if (gameControls && restartButton) {
-                    restartButton.textContent = 'Next Game';
-                    restartButton.onclick = () => {
-                        window.location.href = `/tournaments/${this.state.tournamentId}/`;
-                    };
-                    gameControls.style.display = 'block';
-                }
-            } else {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to finish match');
+            const responseText = await response.text();  // Capture response as text
+            console.log("Response from backend:", responseText);
+    
+            if (!response.ok) {
+                console.error("Failed to save match history:", responseText);
+                throw new Error(responseText);
             }
         } catch (error) {
-            console.error('Failed to finish match:', error);
+            console.error('Failed to save Pong match:', error);
         }
     }
+    
 
     restartGame() {
         // Reset game state

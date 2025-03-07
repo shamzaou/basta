@@ -28,5 +28,7 @@ urlpatterns = [
     # New match history endpoints
     path('match-history/', views.match_history_view, name='match-history'),
     path('save-match/', views.save_match_view, name='save-match'),
+    path('match/create/', views.create_match, name='create-match'),
+    path('match/save', views.save_match_view, name='save-match'),
 ]
 
