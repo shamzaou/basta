@@ -79,11 +79,15 @@
                 <div class="profile-page-container">
                     <div class="profile-container">
                         <div class="profile-header">
-                            <img id="profile-avatar" src="{% static 'frontend/assets/man.png' %}" alt="Profile Avatar" class="profile-avatar">
-                            <div class="profile-info">
-                                <h2 id="profile-username">Loading...</h2>
-                                <p>Joined: <span id="profile-joined">Loading...</span></p>
+                            <div class="profile-header-left">
+                                <img id="profile-avatar" src="{% static 'frontend/assets/man.png' %}" alt="Profile Avatar" class="profile-avatar">
+                                <div class="profile-info">
+                                    <h2 id="profile-username">Loading...</h2>
+                                    <p>Joined: <span id="profile-joined">Loading...</span></p>
+                                </div>
                             </div>
+                            <!-- Pie chart positioned as a sibling element to profile-header-left -->
+                            <div id="winrate-chart" class="winrate-chart-container"></div>
                         </div>
 
                         <div class="stats-grid">

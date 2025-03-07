@@ -985,6 +985,18 @@ async function loadProfileData() {
             document.querySelector('.stat-card:nth-child(2) .stat-value').textContent = data.stats.win_rate;
             document.querySelector('.stat-card:nth-child(3) .stat-value').textContent = data.stats.best_score;
             
+            // Create win rate pie chart
+            if (data.stats) {
+                // Extract numerical win rate and total games
+                const gamesPlayed = parseInt(data.stats.games_played) || 0;
+                const winRateStr = data.stats.win_rate || "0%";
+                const winRate = parseInt(winRateStr) || 0;
+                const wins = Math.round((winRate / 100) * gamesPlayed);
+                
+                // Create the pie chart
+                createWinratePieChart(wins, gamesPlayed);
+            }
+            
             // Update match history
             const matchHistoryContainer = document.querySelector('.match-history');
             // Clear existing match cards except the title
@@ -1743,6 +1755,118 @@ async function removeFriend(userId) {
         console.error('Error removing friend:', error);
         alert('Failed to remove friend. Please try again.');
     }
+}
+
+// Add this function to the script.js file to create the winrate pie chart
+function createWinratePieChart(wins, total) {
+    const container = document.getElementById('winrate-chart');
+    if (!container) return;
+    
+    // Clear any existing chart
+    container.innerHTML = '';
+    
+    // Calculate percentages
+    const winPercent = total > 0 ? Math.round((wins / total) * 100) : 0;
+    const lossPercent = 100 - winPercent;
+    
+    // Create SVG
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', '150');
+    svg.setAttribute('height', '150');
+    svg.setAttribute('viewBox', '0 0 100 100');
+    
+    // Calculate the circle segments
+    const radius = 45; // Slightly smaller to fit in container with border
+    const centerX = 50;
+    const centerY = 50;
+    
+    // Create pie slices
+    if (total === 0) {
+        // If no games, show empty gray circle
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', centerX);
+        circle.setAttribute('cy', centerY);
+        circle.setAttribute('r', radius);
+        circle.setAttribute('fill', '#444');
+        svg.appendChild(circle);
+    } else {
+        // Win slice (green)
+        if (winPercent > 0) {
+            const winSlice = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            const winAngle = winPercent * 3.6; // 3.6 degrees per percentage point
+            
+            // Calculate path for arc
+            const winRad = (winAngle - 90) * Math.PI / 180;
+            const x1 = centerX;
+            const y1 = centerY - radius;
+            const x2 = centerX + radius * Math.cos(winRad);
+            const y2 = centerY + radius * Math.sin(winRad);
+            
+            // Create path
+            const winPath = `M${centerX},${centerY} L${x1},${y1} A${radius},${radius} 0 ${winAngle > 180 ? 1 : 0},1 ${x2},${y2} Z`;
+            winSlice.setAttribute('d', winPath);
+            winSlice.setAttribute('fill', '#00ff00');
+            svg.appendChild(winSlice);
+        }
+        
+        // Loss slice (red)
+        if (lossPercent > 0) {
+            const lossSlice = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            const lossStartAngle = winPercent * 3.6 - 90;
+            const lossEndAngle = 270; // End at -90 degrees (back to top)
+            
+            // Calculate path for arc
+            const startRad = lossStartAngle * Math.PI / 180;
+            const endRad = lossEndAngle * Math.PI / 180;
+            const x1 = centerX + radius * Math.cos(startRad);
+            const y1 = centerY + radius * Math.sin(startRad);
+            const x2 = centerX;
+            const y2 = centerY - radius;
+            
+            // Create path
+            const lossPath = `M${centerX},${centerY} L${x1},${y1} A${radius},${radius} 0 ${lossPercent > 50 ? 1 : 0},1 ${x2},${y2} Z`;
+            lossSlice.setAttribute('d', lossPath);
+            lossSlice.setAttribute('fill', '#ff4444');
+            svg.appendChild(lossSlice);
+        }
+    }
+    
+    // Add heading text above the percentage
+    const heading = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    heading.setAttribute('x', '50');
+    heading.setAttribute('y', '38');
+    heading.setAttribute('text-anchor', 'middle');
+    heading.setAttribute('dominant-baseline', 'middle');
+    heading.setAttribute('font-family', 'Press Start 2P, cursive');
+    heading.setAttribute('font-size', '6');
+    heading.setAttribute('fill', '#000');
+    heading.textContent = 'WIN RATE';
+    
+    // Add percentage text in the center (made larger)
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', '50');
+    text.setAttribute('y', '55');
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('dominant-baseline', 'middle');
+    text.setAttribute('font-family', 'Press Start 2P, cursive');
+    text.setAttribute('font-size', '14');
+    text.setAttribute('fill', '#000');
+    text.textContent = `${winPercent}%`;
+    
+    // Add games count text
+    const gamesText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    gamesText.setAttribute('x', '50');
+    gamesText.setAttribute('y', '70');
+    gamesText.setAttribute('text-anchor', 'middle');
+    gamesText.setAttribute('font-family', 'Press Start 2P, cursive');
+    gamesText.setAttribute('font-size', '5');
+    gamesText.setAttribute('fill', '#000');
+    gamesText.textContent = `${total} GAMES`;
+    
+    svg.appendChild(heading);
+    svg.appendChild(text);
+    svg.appendChild(gamesText);
+    container.appendChild(svg);
 }
 
 
