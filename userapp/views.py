@@ -926,3 +926,120 @@ def export_user_data(request):
         return Response({
             'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_all_users(request):
+    """Get list of all users except the current user"""
+    try:
+        # Exclude current user and maybe some system users
+        users = User.objects.exclude(id=request.user.id).exclude(is_superuser=True)
+        
+        # Check which users are friends with the current user
+        user_friends_ids = request.user.friends.values_list('id', flat=True)
+        
+        users_data = []
+        for user in users:
+            users_data.append({
+                'id': user.id,
+                'username': user.username,
+                'display_name': user.display_name if hasattr(user, 'display_name') else user.username,
+                'avatar': user.profile_picture.url if user.profile_picture else None,
+                'is_friend': user.id in user_friends_ids
+            })
+        
+        return Response({
+            'users': users_data
+        })
+    except Exception as e:
+        return Response({
+            'status': 'error',
+            'message': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_friends(request):
+    """Get list of user's friends"""
+    try:
+        friends = request.user.friends.all()
+        friends_data = []
+        
+        for friend in friends:
+            friends_data.append({
+                'id': friend.id,
+                'username': friend.username,
+                'display_name': friend.display_name if hasattr(friend, 'display_name') else friend.username,
+                'avatar': friend.profile_picture.url if friend.profile_picture else None
+            })
+        
+        return Response({
+            'friends': friends_data
+        })
+    except Exception as e:
+        return Response({
+            'status': 'error',
+            'message': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_friend(request, user_id):
+    """Add a user as friend"""
+    try:
+        friend = User.objects.get(id=user_id)
+        user = request.user
+        
+        result = user.add_friend(friend)
+        
+        if result:
+            return Response({
+                'status': 'success',
+                'message': f'Added {friend.username} as friend'
+            })
+        else:
+            return Response({
+                'status': 'error',
+                'message': 'Could not add friend'
+            }, status=status.HTTP_400_BAD_REQUEST)
+    except User.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'User not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({
+            'status': 'error',
+            'message': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def remove_friend(request, user_id):
+    """Remove a user from friends"""
+    try:
+        friend = User.objects.get(id=user_id)
+        user = request.user
+        
+        result = user.remove_friend(friend)
+        
+        if result:
+            return Response({
+                'status': 'success',
+                'message': f'Removed {friend.username} from friends'
+            })
+        else:
+            return Response({
+                'status': 'error',
+                'message': 'Could not remove friend'
+            }, status=status.HTTP_400_BAD_REQUEST)
+    except User.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'User not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({
+            'status': 'error',
+            'message': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

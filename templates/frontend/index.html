@@ -76,46 +76,81 @@
         <div id="profile" class="page">
             <div class="container">
                 <h1>Player Profile</h1>
-                <div class="profile-container">
-                    <div class="profile-header">
-                        <img id="profile-avatar" src="{% static 'frontend/assets/man.png' %}" alt="Profile Avatar" class="profile-avatar">
-                        <div class="profile-info">
-                            <h2 id="profile-username">Loading...</h2>
-                            <p>Joined: <span id="profile-joined">Loading...</span></p>
+                <div class="profile-page-container">
+                    <div class="profile-container">
+                        <div class="profile-header">
+                            <img id="profile-avatar" src="{% static 'frontend/assets/man.png' %}" alt="Profile Avatar" class="profile-avatar">
+                            <div class="profile-info">
+                                <h2 id="profile-username">Loading...</h2>
+                                <p>Joined: <span id="profile-joined">Loading...</span></p>
+                            </div>
+                        </div>
+
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <h3>Games Played</h3>
+                                <div class="stat-value">156</div>
+                            </div>
+                            <div class="stat-card">
+                                <h3>Win Rate</h3>
+                                <div class="stat-value">68%</div>
+                            </div>
+                            <div class="stat-card">
+                                <h3>Best Score</h3>
+                                <div class="stat-value">11-0</div>
+                            </div>
+                        </div>
+
+                        <div class="match-history">
+                            <h2>Recent Matches</h2>
+                            <div class="match-card">
+                                <span>vs. Player2</span>
+                                <span>11-9</span>
+                                <span class="match-result win">WIN</span>
+                            </div>
+                            <div class="match-card">
+                                <span>vs. Player3</span>
+                                <span>7-11</span>
+                                <span class="match-result loss">LOSS</span>
+                            </div>
+                            <div class="match-card">
+                                <span>vs. Player4</span>
+                                <span>11-5</span>
+                                <span class="match-result win">WIN</span>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <h3>Games Played</h3>
-                            <div class="stat-value">156</div>
+                    <!-- Add friends panel -->
+                    <div class="friends-panel">
+                        <div class="friends-header">
+                            <h2>Friends</h2>
+                            <div class="tabs">
+                                <button class="tab-btn active" data-tab="my-friends">My Friends</button>
+                                <button class="tab-btn" data-tab="all-users">Find Users</button>
+                            </div>
                         </div>
-                        <div class="stat-card">
-                            <h3>Win Rate</h3>
-                            <div class="stat-value">68%</div>
-                        </div>
-                        <div class="stat-card">
-                            <h3>Best Score</h3>
-                            <div class="stat-value">11-0</div>
-                        </div>
-                    </div>
-
-                    <div class="match-history">
-                        <h2>Recent Matches</h2>
-                        <div class="match-card">
-                            <span>vs. Player2</span>
-                            <span>11-9</span>
-                            <span class="match-result win">WIN</span>
-                        </div>
-                        <div class="match-card">
-                            <span>vs. Player3</span>
-                            <span>7-11</span>
-                            <span class="match-result loss">LOSS</span>
-                        </div>
-                        <div class="match-card">
-                            <span>vs. Player4</span>
-                            <span>11-5</span>
-                            <span class="match-result win">WIN</span>
+                        
+                        <div class="friends-list-container">
+                            <div class="tab-content active" id="my-friends">
+                                <div class="friends-search">
+                                    <input type="text" placeholder="Search friends..." id="friends-search-input">
+                                </div>
+                                <div class="friends-list" id="friends-list">
+                                    <!-- Friend items will be inserted dynamically -->
+                                    <div class="loading-indicator">Loading your friends...</div>
+                                </div>
+                            </div>
+                            
+                            <div class="tab-content" id="all-users">
+                                <div class="friends-search">
+                                    <input type="text" placeholder="Find users..." id="users-search-input">
+                                </div>
+                                <div class="friends-list" id="users-list">
+                                    <!-- User items will be inserted dynamically -->
+                                    <div class="loading-indicator">Loading users...</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

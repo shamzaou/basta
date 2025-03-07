@@ -1207,3 +1207,188 @@ body.is-logged-out .logged-out {
     background: rgba(0, 204, 255, 0.1);
     box-shadow: 0 0 20px #00ccff;
 }
+
+/* Friends Panel Styles */
+.profile-page-container {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 2em;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.friends-panel {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: var(--border-radius);
+    padding: 1.5em;
+    max-height: 700px;
+    display: flex;
+    flex-direction: column;
+}
+
+.friends-header {
+    margin-bottom: 1em;
+}
+
+.friends-header h2 {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 1.2em;
+    color: var(--primary-color);
+    margin-bottom: 1em;
+}
+
+.tabs {
+    display: flex;
+    gap: 0.5em;
+    margin-bottom: 1em;
+}
+
+.tab-btn {
+    background-color: transparent;
+    border: 2px solid var(--primary-color);
+    color: var(--text-color);
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.7em;
+    padding: 0.8em 1em;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    flex: 1;
+}
+
+.tab-btn:hover {
+    background-color: rgba(0, 255, 0, 0.1);
+}
+
+.tab-btn.active {
+    background-color: var(--primary-color);
+    color: var(--background-color);
+}
+
+.friends-search {
+    margin-bottom: 1em;
+}
+
+.friends-search input {
+    width: 100%;
+    padding: 0.8em;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 2px solid var(--primary-color);
+    border-radius: 4px;
+    color: var(--text-color);
+    font-family: 'Roboto', sans-serif;
+}
+
+.friends-search input:focus {
+    outline: none;
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+.friends-list-container {
+    flex: 1;
+    overflow: hidden;
+}
+
+.tab-content {
+    display: none;
+    height: 100%;
+}
+
+.tab-content.active {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.friends-list {
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Update friend-item styles to compensate for lack of avatar */
+.friend-item {
+    display: flex;
+    align-items: center;
+    padding: 0.8em;
+    border-radius: 4px;
+    margin-bottom: 0.5em;
+    background-color: rgba(255, 255, 255, 0.05);
+    transition: background-color 0.3s ease;
+    justify-content: space-between; /* Better spacing without avatar */
+}
+
+/* Remove the friend-avatar class as it's no longer needed */
+/* .friend-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--primary-color);
+    margin-right: 1em;
+} */
+
+/* Update friend-info to take more space */
+.friend-info {
+    flex: 1;
+    padding-left: 0.5em; /* Add a bit of padding since we removed the avatar */
+}
+
+.friend-name {
+    font-weight: bold;
+    color: var(--text-color);
+}
+
+.friend-username {
+    font-size: 0.8em;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.friend-action {
+    padding: 0.5em 1em;
+    background-color: transparent;
+    border: 2px solid var(--primary-color);
+    color: var(--primary-color);
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.7em;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.friend-action:hover {
+    background-color: var(--primary-color);
+    color: var(--background-color);
+}
+
+.friend-action.remove {
+    border-color: var(--danger-color);
+    color: var (--danger-color);
+}
+
+.friend-action.remove:hover {
+    background-color: var(--danger-color);
+    color: var(--text-color);
+}
+
+.loading-indicator {
+    text-align: center;
+    padding: 1em;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 2em;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* Media query for responsive design */
+@media (max-width: 920px) {
+    .profile-page-container {
+        grid-template-columns: 1fr;
+    }
+
+    .friends-panel {
+        max-height: none;
+    }
+}

@@ -26,6 +26,9 @@ class User(AbstractUser):
         help_text='Specific permissions for this user.'
     )
     
+    # Add a many-to-many relationship for friends
+    friends = models.ManyToManyField('self', symmetrical=False, related_name='friend_of')
+    
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
 
@@ -35,6 +38,20 @@ class User(AbstractUser):
     def get_display_name(self):
         """Return display_name if set, otherwise return username"""
         return self.display_name if self.display_name else self.username
+
+    def add_friend(self, friend):
+        """Add a user as friend"""
+        if friend != self and friend not in self.friends.all():
+            self.friends.add(friend)
+            return True
+        return False
+    
+    def remove_friend(self, friend):
+        """Remove a user from friends"""
+        if friend in self.friends.all():
+            self.friends.remove(friend)
+            return True
+        return False
 
 class MatchHistory(models.Model):
     GAME_CHOICES = (

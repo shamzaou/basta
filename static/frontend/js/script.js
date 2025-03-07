@@ -1028,6 +1028,13 @@ async function loadProfileData() {
                 // Update all avatar instances
                 updateNavAvatar();
             }
+
+            // After updating match history, load the friends data
+            await loadFriendsList();
+            await loadAllUsers();
+            
+            // Set up tab switching in the friends panel
+            setupFriendsTabs();
         } else {
             if (response.status === 401) {
                 console.log('Token expired or invalid, redirecting to login');
@@ -1450,6 +1457,291 @@ async function handleDownloadUserData() {
         downloadBtn.disabled = false;
         
         alert('Failed to download user data: ' + error.message);
+    }
+}
+
+// Add these functions to handle friends functionality
+function setupFriendsTabs() {
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            // Update active tab button
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            
+            // Show corresponding tab content
+            const tabName = button.dataset.tab;
+            tabContents.forEach(tab => {
+                tab.classList.remove('active');
+                if (tab.id === tabName) {
+                    tab.classList.add('active');
+                }
+            });
+        });
+    });
+    
+    // Setup search functionality
+    const friendsSearchInput = document.getElementById('friends-search-input');
+    const usersSearchInput = document.getElementById('users-search-input');
+    
+    if (friendsSearchInput) {
+        friendsSearchInput.addEventListener('input', (e) => {
+            filterFriendsList(e.target.value.toLowerCase());
+        });
+    }
+    
+    if (usersSearchInput) {
+        usersSearchInput.addEventListener('input', (e) => {
+            filterUsersList(e.target.value.toLowerCase());
+        });
+    }
+}
+
+function filterFriendsList(query) {
+    const friendItems = document.querySelectorAll('#friends-list .friend-item');
+    
+    friendItems.forEach(item => {
+        const name = item.querySelector('.friend-name').textContent.toLowerCase();
+        const username = item.querySelector('.friend-username').textContent.toLowerCase();
+        
+        if (name.includes(query) || username.includes(query)) {
+            item.style.display = 'flex';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+}
+
+function filterUsersList(query) {
+    const userItems = document.querySelectorAll('#users-list .friend-item');
+    
+    userItems.forEach(item => {
+        const name = item.querySelector('.friend-name').textContent.toLowerCase();
+        const username = item.querySelector('.friend-username').textContent.toLowerCase();
+        
+        if (name.includes(query) || username.includes(query)) {
+            item.style.display = 'flex';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+}
+
+async function loadFriendsList() {
+    try {
+        const authToken = localStorage.getItem('authToken');
+        if (!authToken) return;
+        
+        const friendsList = document.getElementById('friends-list');
+        if (!friendsList) return;
+        
+        // Show loading indicator
+        friendsList.innerHTML = '<div class="loading-indicator">Loading your friends...</div>';
+        
+        const response = await fetch('/api/auth/friends/', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const friends = data.friends;
+            
+            if (friends.length === 0) {
+                friendsList.innerHTML = '<div class="empty-state">You haven\'t added any friends yet.</div>';
+                return;
+            }
+            
+            // Clear friends list
+            friendsList.innerHTML = '';
+            
+            // Add each friend to the list
+            friends.forEach(friend => {
+                const friendItem = createFriendItem(friend, true);
+                friendsList.appendChild(friendItem);
+            });
+        } else {
+            friendsList.innerHTML = '<div class="empty-state">Failed to load friends.</div>';
+        }
+    } catch (error) {
+        console.error('Error loading friends list:', error);
+        const friendsList = document.getElementById('friends-list');
+        if (friendsList) {
+            friendsList.innerHTML = '<div class="empty-state">Failed to load friends.</div>';
+        }
+    }
+}
+
+async function loadAllUsers() {
+    try {
+        const authToken = localStorage.getItem('authToken');
+        if (!authToken) return;
+        
+        const usersList = document.getElementById('users-list');
+        if (!usersList) return;
+        
+        // Show loading indicator
+        usersList.innerHTML = '<div class="loading-indicator">Loading users...</div>';
+        
+        const response = await fetch('/api/auth/users/', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const users = data.users;
+            
+            if (users.length === 0) {
+                usersList.innerHTML = '<div class="empty-state">No users found.</div>';
+                return;
+            }
+            
+            // Clear users list
+            usersList.innerHTML = '';
+            
+            // Add each user to the list
+            users.forEach(user => {
+                const userItem = createFriendItem(user, user.is_friend);
+                usersList.appendChild(userItem);
+            });
+        } else {
+            usersList.innerHTML = '<div class="empty-state">Failed to load users.</div>';
+        }
+    } catch (error) {
+        console.error('Error loading users list:', error);
+        const usersList = document.getElementById('users-list');
+        if (usersList) {
+            usersList.innerHTML = '<div class="empty-state">Failed to load users.</div>';
+        }
+    }
+}
+
+// Update the createFriendItem function to remove the avatar
+function createFriendItem(user, isFriend) {
+    const item = document.createElement('div');
+    item.className = 'friend-item';
+    item.dataset.userId = user.id;
+    
+    // Remove avatar creation and insertion code
+    
+    const info = document.createElement('div');
+    info.className = 'friend-info';
+    
+    const name = document.createElement('div');
+    name.className = 'friend-name';
+    name.textContent = user.display_name || user.username;
+    
+    const username = document.createElement('div');
+    username.className = 'friend-username';
+    username.textContent = `@${user.username}`;
+    
+    info.appendChild(name);
+    info.appendChild(username);
+    
+    const button = document.createElement('button');
+    button.className = isFriend ? 'friend-action remove' : 'friend-action';
+    button.textContent = isFriend ? 'Remove' : 'Add';
+    button.onclick = () => isFriend ? removeFriend(user.id) : addFriend(user.id);
+    
+    // Only append info and button (no avatar)
+    item.appendChild(info);
+    item.appendChild(button);
+    
+    return item;
+}
+
+async function addFriend(userId) {
+    try {
+        const authToken = localStorage.getItem('authToken');
+        if (!authToken) {
+            alert('You must be logged in to add friends.');
+            return;
+        }
+        
+        const response = await fetch(`/api/auth/friends/add/${userId}/`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+        
+        if (response.ok) {
+            // Update UI to show user is now a friend
+            const userItems = document.querySelectorAll(`.friend-item[data-user-id="${userId}"]`);
+            
+            userItems.forEach(item => {
+                const button = item.querySelector('.friend-action');
+                button.className = 'friend-action remove';
+                button.textContent = 'Remove';
+                button.onclick = () => removeFriend(userId);
+            });
+            
+            // Refresh friends list
+            loadFriendsList();
+            
+            // Optional: show success message
+            // alert('Friend added successfully!');
+        } else {
+            const data = await response.json();
+            alert(data.message || 'Failed to add friend.');
+        }
+    } catch (error) {
+        console.error('Error adding friend:', error);
+        alert('Failed to add friend. Please try again.');
+    }
+}
+
+async function removeFriend(userId) {
+    try {
+        const authToken = localStorage.getItem('authToken');
+        if (!authToken) {
+            alert('You must be logged in to remove friends.');
+            return;
+        }
+        
+        const response = await fetch(`/api/auth/friends/remove/${userId}/`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+        
+        if (response.ok) {
+            // Update UI to show user is no longer a friend
+            const userItems = document.querySelectorAll(`.friend-item[data-user-id="${userId}"]`);
+            
+            userItems.forEach(item => {
+                const button = item.querySelector('.friend-action');
+                button.className = 'friend-action';
+                button.textContent = 'Add';
+                button.onclick = () => addFriend(userId);
+            });
+            
+            // Refresh friends list
+            loadFriendsList();
+            
+            // Optional: show success message
+            // alert('Friend removed successfully!');
+        } else {
+            const data = await response.json();
+            alert(data.message || 'Failed to remove friend.');
+        }
+    } catch (error) {
+        console.error('Error removing friend:', error);
+        alert('Failed to remove friend. Please try again.');
     }
 }
 
