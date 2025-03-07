@@ -35,6 +35,7 @@ import base64
 from django.core.files.base import ContentFile
 from rest_framework.authentication import SessionAuthentication, TokenAuthentication
 import uuid
+import re
 
 import os
 from django.http import HttpResponse, FileResponse
@@ -296,16 +297,17 @@ def verify_otp(request):
             # Login the user
             login(request, user)
             
-            # Create auth token
-            Token.objects.filter(user=user).delete()
-            token = Token.objects.create(user=user)
+            # Generate JWT Token
+            refresh = RefreshToken.for_user(user)
+            access_token = str(refresh.access_token)
 
             # Clear the OTP
             cache.delete(cache_key)
 
             return JsonResponse({
                 "status": "success",
-                "token": token.key,
+                "access_token": access_token,
+                "refresh_token": str(refresh),
                 "user": {
                     "id": user.id,
                     "email": user.email,
@@ -335,41 +337,76 @@ def verify_otp(request):
 def register_view(request):
     if request.method == 'GET':
         return JsonResponse({'status': 'ok'})  # Just for CSRF cookie
-        
+
     if request.method == 'POST':
         try:
             print("Received registration request")
             print("Headers:", request.headers)
             data = json.loads(request.body)
             print("Request data:", {**data, 'password1': '[HIDDEN]', 'password2': '[HIDDEN]'})
-            
+
             email = data.get('email')
             password1 = data.get('password1')
             password2 = data.get('password2')
             username = data.get('username')
             enable_2fa = data.get('enable_2fa', False)
-            
+
             print(f"Registration attempt - Data received: {data}")
-        
-            # Validate all required fields
+
             missing_fields = []
             if not email: missing_fields.append('email')
             if not password1: missing_fields.append('password')
             if not password2: missing_fields.append('password confirmation')
             if not username: missing_fields.append('username')
-            
+
             if missing_fields:
                 return JsonResponse({
                     'status': 'error',
                     'message': f'Missing required fields: {", ".join(missing_fields)}'
                 }, status=400)
-            
+
             if password1 != password2:
                 return JsonResponse({
                     'status': 'error',
                     'message': 'Passwords do not match'
                 }, status=400)
-                
+
+            if len(password1) < 5:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Password must be at least 5 characters long'
+                }, status=400)
+
+            if not re.search(r'[A-Za-z]', password1):
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Password must contain at least one letter'
+                }, status=400)
+
+            if not re.search(r'\d', password1):
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Password must contain at least one number'
+                }, status=400)
+
+            if not re.search(r'[@#$%^&+=!]', password1):
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Password must contain at least one special character (@#$%^&+=!)'
+                }, status=400)
+
+            if User.objects.filter(username=username).exists():
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Username already taken. Please choose a different one.'
+                }, status=400)
+
+            if User.objects.filter(email=email).exists():
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Email is already registered. Try logging in or using a different email.'
+                }, status=400)
+
             try:
                 user = User.objects.create_user(
                     username=username,
@@ -379,29 +416,28 @@ def register_view(request):
                 )
                 user.save()
                 print(f"User created successfully with ID: {user.id}")
-                
-                # Now try to log in
+
                 login(request, user)
-                request.session.save() # this is for the refresh login problem
+                request.session.save()  # Fix for session refresh issue
                 print("User logged in successfully")
-                
+
                 return JsonResponse({
                     'status': 'success',
                     'message': 'Registration successful',
                     'user': {
                         'username': user.username,
                         'email': user.email,
-                        'two_factor_enabled': user.two_factor_enabled
+                        'two_factor_enabled': enable_2fa
                     }
                 })
-                
+
             except Exception as user_error:
                 print(f"Error creating user: {str(user_error)}")
                 return JsonResponse({
                     'status': 'error',
                     'message': f'User creation failed: {str(user_error)}'
                 }, status=500)
-                
+
         except json.JSONDecodeError as e:
             print(f"JSON Decode Error: {str(e)}")
             return JsonResponse({

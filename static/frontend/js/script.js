@@ -244,7 +244,7 @@ async function handleLogin(event) {
                 localStorage.setItem('isLoggedIn', 'true');
                 localStorage.setItem('userData', JSON.stringify(data.user));
                 localStorage.setItem('authToken', data.access_token);
-                localStorage.setItem('refreshToken', data.refresh_token);  // ✅ Store refresh token
+                localStorage.setItem('refreshToken', data.refresh_token);
                 checkLoginState();
                 showPage('home');
             }
@@ -257,7 +257,6 @@ async function handleLogin(event) {
         alert('Login failed. Please try again.');
     }
 }
-
 
 // Handle OTP verification
 async function handleOTPVerification(event) {
@@ -294,11 +293,11 @@ async function handleOTPVerification(event) {
             // Hide OTP modal
             document.getElementById('otp-modal').style.display = 'none';
             
-            // Complete login process
+            // Store tokens
             localStorage.setItem('isLoggedIn', 'true');
             localStorage.setItem('userData', JSON.stringify(data.user));
-            localStorage.setItem('authToken', data.access_token);
-            localStorage.setItem('refreshToken', data.refresh_token);  // ✅ Store refresh token
+            localStorage.setItem('authToken', data.access_token);  // 🔹 Using access_token
+            localStorage.setItem('refreshToken', data.refresh_token);
 
             checkLoginState();
             showPage('home');

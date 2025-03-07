@@ -194,7 +194,7 @@ class TicTacToeGame {
             const player2Element = document.getElementById('player2-name');
     
             const currentUser = player1Element ? player1Element.textContent : "Player 1";
-            const opponent = player2Element ? player2Element.textContent : "AI";
+            const opponent = "Player 2 (TicTacToe)";
     
             let userScore = 0;
             let opponentScore = 0;
