@@ -505,9 +505,10 @@ class GameRenderer {
 
 // Input handler class
 class InputHandler {
-    constructor(paddle1, paddle2) {
+    constructor(paddle1, paddle2, gameMode) {
         this.paddle1 = paddle1;
         this.paddle2 = paddle2;
+        this.gameMode = gameMode;
         this.keys = new Set();
         
         // Bind the handlers to maintain context
@@ -520,12 +521,18 @@ class InputHandler {
     }
 
     handleKeyDown(e) {
-        this.keys.add(e.key.toLowerCase());  // Convert to lowercase for consistency
-        
-        // Prevent default for game controls
+        // Prevent default for game controls regardless of game mode
         if (['w', 's', 'arrowup', 'arrowdown', ' '].includes(e.key.toLowerCase())) {
             e.preventDefault();
         }
+        
+        // Only add key to active keys if it's allowed in current game mode
+        if (this.gameMode === 'ai' && (e.key.toLowerCase() === 'arrowup' || e.key.toLowerCase() === 'arrowdown')) {
+            // Don't add AI paddle controls to active keys
+            return;
+        }
+        
+        this.keys.add(e.key.toLowerCase());  // Convert to lowercase for consistency
     }
 
     handleKeyUp(e) {
@@ -544,11 +551,26 @@ class InputHandler {
         }
 
         // Paddle 2 controls (Arrow keys) with tighter bounds
-        if (this.keys.has('arrowup') && this.paddle2.position.z > -2.1) {
-            this.paddle2.position.z -= paddleSpeed;
+        // Only apply if we're in PvP mode
+        if (this.gameMode !== 'ai') {
+            if (this.keys.has('arrowup') && this.paddle2.position.z > -2.1) {
+                this.paddle2.position.z -= paddleSpeed;
+            }
+            if (this.keys.has('arrowdown') && this.paddle2.position.z < 2.1) {
+                this.paddle2.position.z += paddleSpeed;
+            }
         }
-        if (this.keys.has('arrowdown') && this.paddle2.position.z < 2.1) {
-            this.paddle2.position.z += paddleSpeed;
+        // In AI mode, we explicitly do not process arrow keys
+    }
+
+    setGameMode(mode) {
+        // Update game mode if it changes during gameplay
+        this.gameMode = mode;
+        
+        // Clear any AI paddle keys that might be in the set
+        if (mode === 'ai') {
+            this.keys.delete('arrowup');
+            this.keys.delete('arrowdown');
         }
     }
 
@@ -668,7 +690,7 @@ class PongGame {
         // Initialize game components
         this.renderer = new GameRenderer(canvasContainer);
         this.physics = new GamePhysics(GAME_CONFIG);
-        this.inputHandler = new InputHandler(this.renderer.paddle1, this.renderer.paddle2);
+        this.inputHandler = new InputHandler(this.renderer.paddle1, this.renderer.paddle2, gameMode);
         this.ai = gameMode === 'ai' ? new PongAI(this.renderer.paddle2) : null;
         
         // Set initial ball velocity
