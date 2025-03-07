@@ -91,6 +91,7 @@ def profile_view(request):
                     'score': match.score,
                     'result': match.result,
                     'date': match.date_played.strftime('%d %b %Y'),
+                    'game_type': match.game_type  # Ensure game_type is included
                 })
                 
             return Response({

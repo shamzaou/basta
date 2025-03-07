@@ -1009,6 +1009,11 @@ async function loadProfileData() {
                     const matchCard = document.createElement('div');
                     matchCard.className = 'match-card';
                     
+                    // Add game type indicator
+                    const gameType = document.createElement('span');
+                    gameType.className = 'game-type';
+                    gameType.textContent = match.game_type || 'PONG'; // Default to PONG if not specified
+                    
                     const opponent = document.createElement('span');
                     opponent.textContent = `vs. ${match.opponent}`;
                     
@@ -1019,6 +1024,7 @@ async function loadProfileData() {
                     result.className = `match-result ${match.result === 'WIN' ? 'win' : 'loss'}`;
                     result.textContent = match.result;
                     
+                    matchCard.appendChild(gameType);
                     matchCard.appendChild(opponent);
                     matchCard.appendChild(score);
                     matchCard.appendChild(result);

@@ -369,14 +369,31 @@ nav {
     margin-top: 2em;
 }
 
+/* Style for game type indicator in match history */
+.match-card .game-type {
+    font-size: 0.8em;
+    font-weight: bold;
+    color: #00aaff;
+    background-color: rgba(0, 170, 255, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-right: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Adjust the match card to fit the new element */
 .match-card {
-    background-color: rgba(255, 255, 255, 0.05);
-    border-radius: var(--border-radius);
-    padding: 1em;
-    margin-bottom: 1em;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 10px 15px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+    margin-bottom: 10px;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.8em;
+    border-left: 3px solid #00ff00;
 }
 
 .match-result {

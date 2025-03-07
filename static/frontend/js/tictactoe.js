@@ -120,11 +120,13 @@ class TicTacToeGame {
     }
 
     updateStatusDisplay() {
-        this.statusDisplay.innerHTML = this.gameActive ? 
-            `It's ${this.currentPlayer}'s turn` : 
-            this.gameState.includes("") ? 
-                `Player ${this.currentPlayer} has won!` : 
-                `Game ended in a draw!`;
+        if (this.gameActive) {
+            this.statusDisplay.innerHTML = `It's ${this.currentPlayer}'s turn`;
+        } else if (this.state.winner) {
+            this.statusDisplay.innerHTML = `Player ${this.state.winner} has won!`;
+        } else {
+            this.statusDisplay.innerHTML = `Game ended in a draw!`;
+        }
     }
 
     async initializeMatch() {
@@ -194,7 +196,7 @@ class TicTacToeGame {
             const player2Element = document.getElementById('player2-name');
     
             const currentUser = player1Element ? player1Element.textContent : "Player 1";
-            const opponent = player2Element ? player2Element.textContent : "AI";
+            const opponent = player2Element ? player2Element.textContent : "Player 2";
     
             let userScore = 0;
             let opponentScore = 0;
@@ -260,6 +262,7 @@ class TicTacToeGame {
 
     checkResult() {
         let roundWon = false;
+        let winningLine = null;
 
         for (let i = 0; i < this.winningConditions.length; i++) {
             const [a, b, c] = this.winningConditions[i];
@@ -271,6 +274,7 @@ class TicTacToeGame {
             if (this.gameState[a] === this.gameState[b] && 
                 this.gameState[b] === this.gameState[c]) {
                 roundWon = true;
+                winningLine = [a, b, c];
                 break;
             }
         }
@@ -281,11 +285,13 @@ class TicTacToeGame {
             this.gameActive = false;
             this.finishMatch();
             this.updateStatusDisplay();
-            return;
+            return; // Exit the function here after a win is detected
         }
 
+        // Only check for a draw if there's no win
         if (!this.gameState.includes("")) {
             this.gameActive = false;
+            this.state.gameStatus = 'draw';
             this.finishMatch();
             this.updateStatusDisplay();
             return;
