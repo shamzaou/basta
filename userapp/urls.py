@@ -31,6 +31,12 @@ urlpatterns = [
     path('match/create/', views.create_match, name='create-match'),
     path('match/save', views.save_match_view, name='save-match'),
 
-	path('delete-account/', views.delete_account, name='delete-account'),
+    path('delete-account/', views.delete_account, name='delete-account'),
+
+    # Add direct avatar access
+    path('avatar/<int:user_id>/', views.get_avatar_image, name='get-avatar'),
+
+    # Add the debug endpoint
+    path('debug-avatar/<int:user_id>/', views.debug_avatar_path, name='debug-avatar-path'),
 ]
 

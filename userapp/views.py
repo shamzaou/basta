@@ -36,6 +36,8 @@ from django.core.files.base import ContentFile
 from rest_framework.authentication import SessionAuthentication, TokenAuthentication
 import uuid
 
+import os
+from django.http import HttpResponse, FileResponse
 
 logger = logging.getLogger(__name__)
 
@@ -250,7 +252,7 @@ def login_view(request):
             "requires_2fa": False,
             "access_token": str(refresh.access_token),
             "refresh_token": str(refresh),
-            "user": {
+            "user": {  # Make sure to include user ID
                 "id": user.id,
                 "email": user.email,
                 "username": user.username,
@@ -792,3 +794,73 @@ def delete_account(request):
         return Response({'status': 'success', 'message': 'Account deleted successfully'})
     except Exception as e:
         return Response({'status': 'error', 'message': str(e)}, status=400)
+
+# Clean up get_avatar_image view function by removing unnecessary debug logs
+@api_view(['GET'])
+def get_avatar_image(request, user_id):
+    """Serve user avatar directly"""
+    try:
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=404)
+        
+        if user.profile_picture:
+            # Get the actual file path
+            file_path = user.profile_picture.path
+            
+            # Check if file exists
+            if os.path.exists(file_path):
+                # Determine content type based on file extension
+                content_type = 'image/jpeg'  # Default
+                if file_path.lower().endswith('.png'):
+                    content_type = 'image/png'
+                elif file_path.lower().endswith('.gif'):
+                    content_type = 'image/gif'
+                
+                # Use Django's FileResponse for better performance
+                return FileResponse(open(file_path, 'rb'), content_type=content_type)
+        
+        # Return default avatar if no custom avatar or file not found
+        default_avatar_path = os.path.join(settings.BASE_DIR, 'static', 'frontend', 'assets', 'man.png')
+        
+        if os.path.exists(default_avatar_path):
+            return FileResponse(open(default_avatar_path, 'rb'), content_type='image/png')
+        else:
+            return Response({"error": "Avatar not found"}, status=404)
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return Response({"error": str(e)}, status=500)
+
+@api_view(['GET'])
+def debug_avatar_path(request, user_id):
+    """Debug helper to check avatar paths"""
+    try:
+        user = User.objects.get(id=user_id)
+        
+        response_data = {
+            "user_id": user_id,
+            "username": user.username,
+        }
+        
+        if user.profile_picture:
+            response_data.update({
+                "has_profile_picture": True,
+                "profile_picture_url": user.profile_picture.url,
+                "profile_picture_path": user.profile_picture.path,
+                "file_exists": os.path.exists(user.profile_picture.path)
+            })
+        else:
+            response_data["has_profile_picture"] = False
+            
+        # Check the MEDIA_ROOT and URL settings
+        response_data["media_root"] = settings.MEDIA_ROOT
+        response_data["media_url"] = settings.MEDIA_URL
+        
+        return Response(response_data)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=404)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)

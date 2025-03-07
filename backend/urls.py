@@ -11,4 +11,9 @@ urlpatterns = [
     path('tournaments/', include('tournaments.urls')),
     # Keep your catch-all route at the end
     re_path(r'^.*$', index, name='index'),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+]
+
+# This is crucial for serving media files in development
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

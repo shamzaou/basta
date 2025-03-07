@@ -272,3 +272,17 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 FORTYTWO_CLIENT_ID = config('FORTYTWO_CLIENT_ID', default='u-s4t2ud-c027f46e7ffb944f9483c4359967dc984c0b904c0cc3b9f628b05ba7c0c67cfc')
 FORTYTWO_CLIENT_SECRET = config('FORTYTWO_CLIENT_SECRET', default='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')
 FORTYTWO_REDIRECT_URI = config('FORTYTWO_REDIRECT_URI', default='https://localhost:443/home')
+
+# Add this at the bottom of settings.py to ensure media files are served in development
+if DEBUG:
+    STATICFILES_DIRS = [
+        os.path.join(BASE_DIR, 'static'),
+    ]
+    STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+    
+    # This is important for serving media files in development
+    from django.conf.urls.static import static
+    from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+    
+    # Additional URL patterns for development
+    STATICFILES_URLS = staticfiles_urlpatterns()

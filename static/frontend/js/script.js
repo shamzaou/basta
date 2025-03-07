@@ -141,6 +141,14 @@ window.addEventListener('load', () => {
     
     showPage(initialPage, false);
     checkLoginState(); // Ensure login state is checked after page is shown
+
+    // If user is logged in, fetch fresh profile data to update avatars
+    if (localStorage.getItem('isLoggedIn') === 'true') {
+        refreshUserData();
+    }
+
+    // Clear avatar cache on page load
+    clearAvatarCache();
 });
 
 // Add click handler for navigation links to prevent default behavior
@@ -171,6 +179,11 @@ function checkLoginState() {
     
     if (loggedInNav) loggedInNav.style.display = isLoggedIn ? 'flex' : 'none';
     if (loggedOutNav) loggedOutNav.style.display = isLoggedIn ? 'none' : 'flex';
+    
+    // Update nav avatar when logged in
+    if (isLoggedIn) {
+        updateNavAvatar();
+    }
 }
 
 // Helper function to get CSRF token
@@ -598,14 +611,81 @@ document.addEventListener('DOMContentLoaded', () => {
     // Avatar upload handling
     const avatarUpload = document.getElementById('avatar-upload');
     if (avatarUpload) {
-        avatarUpload.addEventListener('change', (event) => {
+        avatarUpload.addEventListener('change', async (event) => {
             const file = event.target.files[0];
             if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    document.querySelector('.current-avatar').src = e.target.result;
-                };
-                reader.readAsDataURL(file);
+                try {
+                    // First show preview
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        // Set preview image
+                        const imagePreview = document.querySelector('.current-avatar');
+                        imagePreview.src = e.target.result;
+                        
+                        // Now send to server
+                        const authToken = localStorage.getItem('authToken');
+                        if (!authToken) {
+                            throw new Error('Not authenticated');
+                        }
+                        
+                        const response = await fetch('/api/auth/profile/', {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': `Bearer ${authToken}`,
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCookie('csrftoken')
+                            },
+                            body: JSON.stringify({
+                                profile_picture: e.target.result
+                            })
+                        });
+                        
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.message || 'Failed to update avatar');
+                        }
+                        
+                        const data = await response.json();
+                        
+                        // Update the avatar in all places - check for both field names
+                        const avatarPath = data.profile_picture || data.avatar;
+                        
+                        if (avatarPath) {
+                            const fixedUrl = fixImageUrl(avatarPath);
+                            
+                            // Update nav avatar if it exists
+                            const navAvatar = document.querySelector('.nav-avatar');
+                            if (navAvatar) {
+                                navAvatar.src = fixedUrl + '?t=' + new Date().getTime(); // Force reload
+                            }
+                            
+                            // Update profile avatar if on that page
+                            const profileAvatar = document.getElementById('profile-avatar');
+                            if (profileAvatar) {
+                                profileAvatar.src = fixedUrl + '?t=' + new Date().getTime(); // Force reload
+                            }
+                            
+                            // Update settings avatar if on that page
+                            const settingsAvatar = document.querySelector('.current-avatar');
+                            if (settingsAvatar) {
+                                settingsAvatar.src = fixedUrl + '?t=' + new Date().getTime(); // Force reload
+                            }
+                            
+                            // Update localStorage data with new avatar path
+                            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+                            userData.profile_picture = avatarPath;
+                            localStorage.setItem('userData', JSON.stringify(userData));
+                            
+                            alert('Avatar updated successfully!');
+                        } else {
+                            console.warn('No avatar path in response:', data);
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                } catch (error) {
+                    console.error('Error updating avatar:', error);
+                    alert('Failed to update avatar: ' + error.message);
+                }
             }
         });
     }
@@ -842,6 +922,7 @@ async function checkOAuthLogin() {
     }
 }
 
+// Fix loadProfileData to check for both avatar and profile_picture
 async function loadProfileData() {
     try {
         const authToken = localStorage.getItem('authToken');
@@ -871,8 +952,21 @@ async function loadProfileData() {
             const joinedElement = document.getElementById('profile-joined');
             
             if (avatarElement) {
-                avatarElement.src = data.avatar || '/static/frontend/assets/man.png';
+                // Fix: Check for both profile_picture and avatar fields
+                const avatarUrl = data.profile_picture || data.avatar;
+                if (avatarUrl) {
+                    // Get base URL without timestamp
+                    const baseUrl = fixImageUrl(avatarUrl);
+                    // Add timestamp only if not already present
+                    const finalUrl = baseUrl.includes('?') ? baseUrl : baseUrl + '?t=' + new Date().getTime();
+                    avatarElement.src = finalUrl;
+                    console.log('Set avatar image source:', finalUrl);
+                } else {
+                    avatarElement.src = '/static/frontend/assets/man.png';
+                    console.log('Using default avatar image');
+                }
             }
+            
             if (usernameElement) {
                 usernameElement.textContent = data.username;
             }
@@ -918,6 +1012,16 @@ async function loadProfileData() {
                 noMatches.textContent = 'No matches played yet.';
                 matchHistoryContainer.appendChild(noMatches);
             }
+
+            // Update avatar in localStorage
+            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+            if (data.avatar || data.profile_picture) {
+                userData.profile_picture = data.profile_picture || data.avatar;
+                localStorage.setItem('userData', JSON.stringify(userData));
+                
+                // Update all avatar instances
+                updateNavAvatar();
+            }
         } else {
             if (response.status === 401) {
                 console.log('Token expired or invalid, redirecting to login');
@@ -933,6 +1037,7 @@ async function loadProfileData() {
     }
 }
 
+// Also fix loadSettingsData to check for both field names
 async function loadSettingsData() {
     try {
         const authToken = localStorage.getItem('authToken');
@@ -952,6 +1057,17 @@ async function loadSettingsData() {
         if (response.ok) {
             const data = await response.json();
             console.log('Settings data loaded:', data);
+            
+            // Update current avatar in settings
+            const currentAvatar = document.querySelector('.current-avatar');
+            if (currentAvatar) {
+                const avatarUrl = data.profile_picture || data.avatar;
+                if (avatarUrl) {
+                    const fixedUrl = fixImageUrl(avatarUrl);
+                    currentAvatar.src = fixedUrl + '?t=' + new Date().getTime(); // Force reload
+                    console.log('Updated settings avatar to:', fixedUrl);
+                }
+            }
             
             // Update username field in settings
             const usernameDisplay = document.querySelector('#settings-form .field-container .field-display');
@@ -994,6 +1110,73 @@ async function loadSettingsData() {
         }
     } catch (error) {
         console.error('Error loading settings:', error);
+    }
+}
+
+// Add this function to update the nav avatar from localStorage
+async function updateNavAvatar() {
+    const navAvatar = document.querySelector('.nav-avatar');
+    if (!navAvatar) return;
+    
+    try {
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        const avatarUrl = userData.profile_picture || userData.avatar;
+        
+        if (avatarUrl) {
+            // Get fixed URL without adding timestamp yet
+            const baseUrl = fixImageUrl(avatarUrl);
+            
+            // Make sure we don't add duplicate timestamps
+            const finalUrl = baseUrl.includes('?') ? baseUrl : baseUrl + '?t=' + new Date().getTime();
+            
+            navAvatar.src = finalUrl;
+        }
+    } catch (error) {
+        console.error('Error updating nav avatar:', error);
+    }
+}
+
+// Add a function to refresh user data
+async function refreshUserData() {
+    try {
+        const authToken = localStorage.getItem('authToken');
+        if (!authToken) return;
+        
+        const response = await fetch('/api/auth/profile/', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            
+            // Update avatar in localStorage
+            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+            
+            // Ensure we store user ID for avatar URLs
+            if (data.id) {
+                userData.id = data.id;
+            }
+            
+            if (data.avatar || data.profile_picture) {
+                userData.profile_picture = data.profile_picture || data.avatar;
+                localStorage.setItem('userData', JSON.stringify(userData));
+                
+                // Update UI immediately
+                updateNavAvatar();
+            }
+        } else if (response.status === 401) {
+            // Token expired, try to refresh it
+            const newToken = await refreshAccessToken();
+            if (newToken) {
+                refreshUserData(); // Try again with new token
+            }
+        }
+    } catch (error) {
+        console.error('Error refreshing user data:', error);
     }
 }
 
@@ -1051,7 +1234,6 @@ async function getAccessToken() {
         const isExpired = payload.exp * 1000 < Date.now();
 
         if (isExpired) {
-            console.log("Access token expired, refreshing...");
             return await refreshAccessToken();
         }
 
@@ -1082,7 +1264,6 @@ async function refreshAccessToken() {
         }
 
         const data = await response.json();
-        console.log("Token refreshed successfully:", data);
 
         localStorage.setItem("authToken", data.access);
 
@@ -1105,12 +1286,52 @@ function scheduleTokenRefresh() {
         const refreshTime = expiresInMs - 60000; // Refresh 1 min before expiry
 
         if (refreshTime > 0) {
-            console.log(`Scheduling token refresh in ${refreshTime / 1000} seconds`);
             setTimeout(refreshAccessToken, refreshTime);
         }
     } catch (error) {
         console.error("Error scheduling token refresh:", error);
     }
+}
+
+// Fix the duplicate timestamp in the URL
+function fixImageUrl(url) {
+    if (!url) return '/static/frontend/assets/man.png';
+    
+    // If it's a media/profile_pictures URL, use our direct avatar endpoint
+    if (url.includes('profile_pictures')) {
+        // Get user ID from localStorage
+        try {
+            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+            if (userData.id) {
+                // Use direct avatar endpoint with single timestamp
+                return `/api/auth/avatar/${userData.id}/?t=${new Date().getTime()}`;
+            }
+        } catch (e) {
+            console.error('Error parsing user data:', e);
+        }
+    }
+    
+    // If the URL doesn't start with http or https, it's a relative URL
+    if (!url.match(/^(http|https):\/\//)) {
+        // Make sure the URL starts with a single forward slash
+        if (!url.startsWith('/')) {
+            url = '/' + url;
+        }
+    }
+    
+    return url;
+}
+
+// Add function to manually clear avatar image cache
+function clearAvatarCache() {
+    const avatars = document.querySelectorAll('img.nav-avatar, img.profile-avatar, img.current-avatar');
+    
+    avatars.forEach(avatar => {
+        if (avatar.src && avatar.src !== '/static/frontend/assets/man.png') {
+            const url = new URL(avatar.src);
+            avatar.src = url.pathname + '?t=' + new Date().getTime();
+        }
+    });
 }
 
 
