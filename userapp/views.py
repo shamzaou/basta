@@ -255,10 +255,20 @@ def login_view(request):
                 Token.objects.filter(user=user).delete()
                 token = Token.objects.create(user=user)
                 
+                # Generate JWT token
+                payload = {
+                    'user_id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)
+                }
+                jwt_token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
+                
                 return JsonResponse({
                     "status": "success",
                     "requires_2fa": False,
-                    "token": token.key,
+                    "token": jwt_token,
+                    "auth_token": token.key,
                     "user": {
                         "id": user.id,
                         "email": user.email,
@@ -534,7 +544,7 @@ def oauth_callback(request):
         Token.objects.filter(user=user).delete()
         token = Token.objects.create(user=user)
 
-        # Create JWT token
+        # Generate JWT token
         payload = {
             "user_id": str(user.id),
             "email": email,
@@ -583,6 +593,10 @@ def oauth_callback(request):
         request.session.modified = True
 
         return response
+        
+    except Exception as e:
+        print("OAuth callback error:", str(e))
+        return redirect("https://localhost:443/login")
         
     except Exception as e:
         print("OAuth callback error:", str(e))
@@ -788,31 +802,37 @@ def match_history_view(request):
         'match_history': match_data
     })
 
+@csrf_exempt
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def save_match_view(request):
     """Save a new match result"""
     user = request.user
     data = request.data
-    
+
+    # Log incoming data
+    print("Received data:", json.dumps(data, indent=4))
+
     try:
         # Validate required fields
         required_fields = ['game_type', 'opponent', 'result', 'score']
         for field in required_fields:
             if field not in data:
+                print(f"Missing field: {field}")
                 return Response({
                     'status': 'error',
                     'message': f'Missing required field: {field}'
                 }, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Validate result is one of the allowed choices
+
+        # Validate result
         if data['result'] not in [choice[0] for choice in MatchHistory.RESULT_CHOICES]:
+            print(f"Invalid result value: {data['result']}")
             return Response({
                 'status': 'error',
                 'message': f'Invalid result: {data["result"]}'
             }, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Create match history record
+
+        # Save the match
         match = MatchHistory.objects.create(
             user=user,
             game_type=data['game_type'],
@@ -820,16 +840,11 @@ def save_match_view(request):
             result=data['result'],
             score=data['score']
         )
-        
-        return Response({
-            'status': 'success',
-            'match_id': match.id
-        })
-    
+
+        print(f"Match {match.id} saved successfully!")
+        return Response({'status': 'success', 'match_id': match.id})
+
     except Exception as e:
         print(f"Error saving match: {str(e)}")
-        return Response({
-            'status': 'error',
-            'message': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

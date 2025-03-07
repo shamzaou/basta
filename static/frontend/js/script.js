@@ -766,8 +766,11 @@ function checkOAuthLogin() {
         console.log("Token received successfully:", data);
         
         // Store all the necessary authentication data
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('authToken', data.auth_token);
+        if (data.token) {
+            localStorage.setItem('authToken', data.token);
+        } else if (data.auth_token) {
+            localStorage.setItem('authToken', data.auth_token);
+        }
         localStorage.setItem('userData', JSON.stringify(data.user));
         localStorage.setItem('isLoggedIn', 'true');
         
@@ -793,7 +796,6 @@ function checkOAuthLogin() {
 async function loadProfileData() {
     try {
         const authToken = localStorage.getItem('authToken');
-        console.log('Attempting to load profile with token:', authToken); // Debug log
         
         if (!authToken) {
             console.error('No auth token found');

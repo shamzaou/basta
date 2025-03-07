@@ -792,13 +792,14 @@ class PongGame {
                 } else if (opponentScore > userScore) {
                     result = 'LOSS';
                 }
-                
+
+                const tokenFM = localStorage.getItem('authToken');
                 // Send result to backend
-                await fetch('/userapp/save-match/', {
+                const response = await fetch('https://127.0.0.1:443/api/auth/save-match/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Token ${localStorage.getItem('auth_token')}` || '',
+                        'Authorization': `Bearer ${tokenFM}`,
                         'X-CSRFToken': getCookie('csrftoken')
                     },
                     body: JSON.stringify({
@@ -808,10 +809,20 @@ class PongGame {
                         score: scoreString
                     })
                 });
+                
+                const responseText = await response.text();  // Capture response as text
+                console.log("Response from backend:", responseText);
+                
+                if (!response.ok) {
+                    console.error("Failed to save match history:", responseText);
+                    throw new Error(responseText);
+                }
             } catch (error) {
+                console.log("I am NOT sending data to backend");
                 console.error('Failed to save match history:', error);
             }
             
+            console.log("I am posting, sending data to backend2");
             // Show restart button for normal game
             const gameControls = document.getElementById('game-controls');
             const restartButton = document.getElementById('restart-button');
@@ -822,12 +833,13 @@ class PongGame {
             }
             return;
         }
-
+    
         try {
             const response = await fetch(`/tournaments/match/${this.state.matchId}/finish/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Token ${localStorage.getItem('authToken')}`,
                     'X-CSRFToken': getCookie('csrftoken')
                 },
                 body: JSON.stringify({
@@ -836,7 +848,7 @@ class PongGame {
                     winner: this.state.winner
                 })
             });
-
+    
             if (response.ok) {
                 // Show next game button for tournament
                 const gameControls = document.getElementById('game-controls');
@@ -848,6 +860,9 @@ class PongGame {
                     };
                     gameControls.style.display = 'block';
                 }
+            } else {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to finish match');
             }
         } catch (error) {
             console.error('Failed to finish match:', error);
