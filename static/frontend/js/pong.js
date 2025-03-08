@@ -678,6 +678,16 @@ class PongAI {
 // Main Game Class
 class PongGame {
     constructor(canvasContainer, gameMode = 'pvp') {
+        // Reset tournament-related global variables when starting a normal game
+        if (!window.currentMatchId && !window.tournamentId) {
+            // Clear any tournament-related data for fresh normal games
+            window.currentMatchId = null;
+            window.tournamentId = null;
+            window.currentMatchPlayers = null;
+            window.lastMatchScore = null;
+            console.log('Starting fresh non-tournament game, cleared tournament data');
+        }
+        
         this.gameMode = gameMode;
         this.state = {
             score: { player1: 0, player2: 0 },
@@ -699,15 +709,8 @@ class PongGame {
         // Set initial ball velocity
         this.renderer.ball.position.copy(this.physics.resetBall());
 
-        // Update player names
-        if (window.currentMatchPlayers) {
-            const player1Name = document.getElementById('player1-name');
-            const player2Name = document.getElementById('player2-name');
-            if (player1Name && player2Name) {
-                player1Name.textContent = window.currentMatchPlayers.player1;
-                player2Name.textContent = window.currentMatchPlayers.player2;
-            }
-        }
+        // Update player names based on tournament data or set defaults
+        this.setupPlayerNames();
 
         // Create pause overlay
         this.createPauseOverlay();
@@ -718,6 +721,24 @@ class PongGame {
         // Start game loop
         this.lastTime = 0;
         this.animate(0);
+    }
+    
+    // New method to handle player names setup
+    setupPlayerNames() {
+        const player1Name = document.getElementById('player1-name');
+        const player2Name = document.getElementById('player2-name');
+        
+        if (player1Name && player2Name) {
+            if (window.currentMatchPlayers) {
+                // Use tournament player names if available
+                player1Name.textContent = window.currentMatchPlayers.player1;
+                player2Name.textContent = window.currentMatchPlayers.player2;
+            } else {
+                // Set default names for normal game
+                player1Name.textContent = this.gameMode === 'ai' ? "Player" : "Player 1";
+                player2Name.textContent = this.gameMode === 'ai' ? "AI" : "Player 2";
+            }
+        }
     }
 
     createPauseOverlay() {
@@ -1095,6 +1116,13 @@ class PongGame {
             overflow: hidden;
         `;
 
+        // Clear tournament data when explicitly starting a non-tournament game
+        if (!window.currentMatchId && !mode) {
+            window.currentMatchId = null;
+            window.tournamentId = null;
+            window.currentMatchPlayers = null;
+        }
+
         if (!mode && !window.currentMatchId) {
             // Create mode selection
             const modeSelection = document.createElement('div');
@@ -1127,6 +1155,11 @@ class PongGame {
 
     static startGame(container, mode) {
         try {
+            // Cleanup any existing game instance before creating a new one
+            if (window.currentGame) {
+                window.currentGame.cleanup();
+            }
+            
             window.currentGame = new PongGame(container, mode);
             console.log('Game initialized successfully with mode:', mode);
         } catch (error) {
