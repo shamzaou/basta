@@ -300,13 +300,14 @@ def verify_otp(request):
             # Create auth token
             Token.objects.filter(user=user).delete()
             token = Token.objects.create(user=user)
+            refresh = RefreshToken.for_user(user)
 
             # Clear the OTP
             cache.delete(cache_key)
 
             return JsonResponse({
                 "status": "success",
-                "token": token.key,
+                "access_token": str(refresh.access_token),
                 "user": {
                     "id": user.id,
                     "email": user.email,
