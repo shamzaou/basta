@@ -841,15 +841,28 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
         if (!isLoggedIn) {
-            alert('Please log in to access this feature');
             showPage('login');
             return;
         }
+        
         if (destination === 'game') {
+            // Clean up any existing game instance before showing the game page
+            if (window.currentGame && typeof window.currentGame.cleanup === 'function') {
+                console.log('Cleaning up existing game before starting new one');
+                window.currentGame.cleanup();
+                window.currentGame = null;
+            }
+            
+            // Clear any tournament related data for a fresh game start
+            window.currentMatchId = null;
+            window.tournamentId = null;
+            window.currentMatchPlayers = null;
+            window.lastMatchScore = null;
+            
+            // Now navigate to game page and let the page initialization handle creating a new game
             showPage('game');
         } else if (destination === 'tournament') {
             showPage('tournament');
-            showTournamentSubsection('create-tournament'); // Добавляем переключение на создание
         }
     }
 

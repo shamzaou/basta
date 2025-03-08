@@ -1178,7 +1178,7 @@ class PongGame {
             if (window.currentGame) {
                 window.currentGame.cleanup();
             }
-            
+
             window.currentGame = new PongGame(container, mode);
             console.log('Game initialized successfully with mode:', mode);
         } catch (error) {
