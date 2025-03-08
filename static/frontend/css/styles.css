@@ -1,11 +1,11 @@
+/* static/frontend/scc/styles.scc */
+
 /* Add this at the top of your CSS file */
 .page {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
-
-/* Reset any potential conflicting styles */
 .page.active {
     display: block !important;
     opacity: 1 !important;
@@ -21,6 +21,7 @@
     --background-color: #000000;
     --text-color: #ffffff;
     --danger-color: #ff4444;
+    --success-color: #00cc00; /* Добавлено для .status-finished и .winner-section */
     --border-radius: 8px;
     --transition-speed: 0.3s;
 }
@@ -1739,3 +1740,327 @@ body.is-logged-out .logged-out {
         font-size: 0.85em;
     }
 }
+
+/* ================================================================= */
+
+/* Добавляем в конец файла styles.css */
+
+/* Tournament Section Styles */
+
+/* Create Tournament Subsection */
+#tournament #create-tournament {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    font-family: 'Press Start 2P';
+    font-size: 22px;
+}
+
+#tournament #create-tournament .title {
+    font-size: 33px;
+    text-align: center;
+    color: var(--primary-color);
+    text-shadow: 3px 4px 0 var(--secondary-color);
+}
+
+#tournament #create-tournament form {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    flex-direction: column;
+    color: var(--text-color);
+}
+
+#tournament #create-tournament form > *:not(:last-child) {
+    margin-bottom: 10px;
+}
+
+#tournament #create-tournament input {
+    width: 70px;
+    height: 60px;
+    font-size: 39px;
+    border: 4px solid var(--primary-color);
+    box-shadow: 3px 4px 0 var(--secondary-color);
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
+
+#tournament #create-tournament button {
+    padding: 15px;
+    font-size: 24px;
+    border: 4px solid var(--primary-color);
+    color: var(--primary-color);
+    text-shadow: 1px 3px 0 var(--secondary-color);
+    background-color: var(--background-color);
+    box-shadow: inset 0 0 15px 0 var(--secondary-color);
+    cursor: pointer;
+}
+
+/* Add Players Subsection */
+/* В секции #tournament #add-players */
+#tournament #add-players {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Центрируем по горизонтали */
+    font-family: 'Press Start 2P';
+    font-size: 22px;
+    color: var(--text-color);
+    gap: 20px;
+    padding: 20px; /* Добавляем отступы для лучшего вида */
+}
+
+#tournament #add-players h1 {
+    font-size: 33px;
+    color: var(--primary-color);
+    text-shadow: 3px 4px 0 var(--secondary-color);
+    margin-bottom: 20px; /* Отступ под заголовком */
+}
+
+#tournament #add-players form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    align-items: center; /* Центрируем форму */
+    width: 100%;
+    max-width: 500px;
+}
+
+#tournament #add-players .input-group {
+    display: flex;
+    flex-direction: column; /* Вертикальное расположение label и input */
+    gap: 5px; /* Меньший зазор между меткой и полем */
+    width: 100%;
+    align-items: center; /* Центрируем внутри группы */
+}
+
+#tournament #add-players label {
+    color: var(--text-color);
+    font-size: 18px;
+    text-align: center; /* Центрируем текст метки */
+}
+
+#tournament #add-players input {
+    width: 300px; /* Фиксированная ширина */
+    height: 50px;
+    font-size: 24px;
+    border: 4px solid var(--primary-color);
+    box-shadow: 3px 4px 0 var(--secondary-color);
+    background-color: var(--background-color);
+    color: var(--text-color);
+    padding: 0 10px;
+    text-align: center; /* Центрируем текст внутри поля */
+}
+
+#tournament #add-players button {
+    margin-top: 20px;
+    padding: 15px 30px;
+    font-size: 24px;
+    border: 4px solid var(--primary-color);
+    color: var(--primary-color);
+    text-shadow: 1px 3px 0 var(--secondary-color);
+    background-color: var(--background-color);
+    box-shadow: inset 0 0 15px 0 var(--secondary-color);
+    transition: all var(--transition-speed);
+    cursor: pointer;
+}
+
+#tournament #add-players button:hover {
+    transform: scale(1.05);
+    box-shadow: inset 0 0 25px 0 var(--secondary-color);
+}
+
+#tournament #add-players .error {
+    color: var(--danger-color); /* Яркий красный цвет для видимости */
+    font-size: 16px;
+    text-align: center;
+    text-shadow: 2px 2px 0 var(--secondary-color); /* Улучшаем читаемость */
+    padding: 10px; /* Добавляем отступы для текста */
+    background-color: rgba(255, 0, 0, 0.1); /* Лёгкий фон для выделения */
+    border-radius: 4px; /* Скругление краёв */
+}
+
+/* View Tournament Subsection */
+#tournament #view-tournament {
+    font-family: 'Press Start 2P';
+}
+
+#tournament #view-tournament h1 {
+    font-size: clamp(24px, 5vw, var(--h1-size));
+    color: var(--primary-color);
+    text-shadow: clamp(2px, 0.5vw, 3px) clamp(2px, 0.6vw, 4px) 0 var(--secondary-color);
+    text-align: center;
+    margin-bottom: clamp(10px, 2vw, 20px);
+}
+
+#tournament #view-tournament h2 {
+    font-size: clamp(18px, 4vw, var(--h2-size));
+    color: var(--secondary-color);
+    text-shadow: clamp(1px, 0.3vw, 2px) clamp(1px, 0.3vw, 2px) 0 var(--primary-color);
+    margin-bottom: clamp(10px, 2vw, 15px);
+}
+
+#tournament #view-tournament .section {
+    border: clamp(2px, 0.5vw, 4px) solid var(--primary-color);
+    box-shadow: clamp(2px, 0.5vw, 3px) clamp(2px, 0.6vw, 4px) 0 var(--secondary-color);
+    padding: clamp(10px, 2vw, var(--section-padding));
+    margin-bottom: clamp(15px, 3vw, 30px);
+}
+
+#tournament #view-tournament .players-list {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(8px, 1.5vw, 15px);
+}
+
+#tournament #view-tournament .player-item {
+    font-size: clamp(14px, 2.5vw, var(--text-size));
+    color: var(--text-color);
+    text-shadow: 1px 1px 0 var(--secondary-color);
+    display: grid;
+    grid-template-columns: minmax(auto, 1fr) auto minmax(auto, 1fr);
+    gap: clamp(8px, 1.5vw, 15px);
+    align-items: center;
+    justify-items: center;
+}
+
+#tournament #view-tournament .table-container {
+    overflow-x: auto;
+    margin-top: 20px;
+}
+
+#tournament #view-tournament table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    color: var(--text-color);
+    text-align: center;
+    font-size: clamp(12px, 2vw, var(--table-text-size));
+}
+
+#tournament #view-tournament th,
+#tournament #view-tournament td {
+    padding: clamp(8px, 1.5vw, var(--table-cell-padding));
+    text-align: center;
+    border: 2px solid var(--primary-color);
+    min-width: clamp(100px, 15vw, 150px);
+}
+
+#tournament #view-tournament th {
+    background-color: var(--primary-color);
+    color: var(--background-color);
+    font-size: clamp(14px, 2.5vw, var(--table-head-size));
+    text-shadow: 1px 1px 0 var(--secondary-color);
+    padding: 20px;
+    white-space: nowrap;
+}
+
+#tournament #view-tournament td {
+    font-size: 16px;
+}
+
+#tournament #view-tournament tr:hover td {
+    background-color: rgba(0, 255, 0, 0.1);
+}
+
+#tournament #view-tournament button {
+    padding: clamp(8px, 1.5vw, 15px) clamp(12px, 2vw, 20px);
+    font-size: clamp(12px, 2vw, var(--button-text-size));
+    font-family: 'Press Start 2P';
+    border: 3px solid var(--primary-color);
+    color: var(--primary-color);
+    text-shadow: 1px 2px 0 var(--secondary-color);
+    background-color: var(--background-color);
+    box-shadow: inset 0 0 10px 0 var(--secondary-color);
+    cursor: pointer;
+    transition: all var(--transition-speed);
+}
+
+#tournament #view-tournament button:hover {
+    transform: scale(1.05);
+    box-shadow: inset 0 0 20px 0 var(--secondary-color);
+}
+
+#tournament #view-tournament .status-finished {
+    color: var(--success-color);
+    font-size: clamp(12px, 2vw, var(--text-size));
+    text-shadow: 1px 1px 0 var(--secondary-color);
+}
+
+#tournament #view-tournament .winner-section {
+    text-align: center;
+    padding: clamp(15px, 3vw, 30px);
+    border: 4px solid var(--success-color);
+    box-shadow: 0 0 20px var(--success-color);
+    animation: glow 1.5s ease-in-out infinite alternate;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+#tournament #view-tournament .winner-section h2 {
+    font-size: clamp(20px, 4vw, 28px);
+    margin-bottom: 0;
+}
+
+#tournament #view-tournament .winner-section .home-button {
+    font-size: clamp(16px, 3vw, 20px);
+    padding: 15px 30px;
+    margin-top: 10px;
+    min-width: 250px;
+}
+
+#tournament #view-tournament .winner-section .home-button:hover {
+    transform: scale(1.1);
+    box-shadow: inset 0 0 30px 0 var(--secondary-color);
+}
+
+@keyframes glow {
+    from {
+        box-shadow: 0 0 20px var(--success-color);
+    }
+    to {
+        box-shadow: 0 0 30px var(--success-color), 0 0 40px var(--secondary-color);
+    }
+}
+
+/* Responsive adjustments for tournament subsections */
+@media (max-width: 480px) {
+    #tournament #view-tournament .player-item {
+        grid-template-columns: 1fr;
+        text-align: center;
+    }
+
+    #tournament #view-tournament table {
+        display: block;
+        overflow-x: auto;
+    }
+
+    #tournament #view-tournament th,
+    #tournament #view-tournament td {
+        white-space: nowrap;
+        min-width: 80px;
+    }
+
+    #tournament #view-tournament .section {
+        padding: 10px;
+    }
+}
+
+.additional-matches-container {
+    margin-top: 30px;
+    border-top: 1px solid #ddd;
+    padding-top: 15px;
+}
+
+.additional-matches-container h3 {
+    color: #e74c3c;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
+
+

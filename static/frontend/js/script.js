@@ -1,19 +1,26 @@
+// static/frontend/js/script.js
+
 // Page navigation
 // Track current page for navigation
+// scripts.js
+
+// Page navigation
 let currentPage = 'home';
+// Tournament-specific variables
+let currentTournamentId = null; // Хранит ID текущего турнира
+let participantCount = 0;       // Хранит количество участников
 
 function showPage(pageId, pushState = true) {
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     
-    // Handle page access permissions
+    // Перенаправление при необходимости
     if (isLoggedIn && ['login', 'register'].includes(pageId)) {
-        console.log('Redirecting to home: logged-in user attempting to access auth page');
         pageId = 'home';
     } else if (!isLoggedIn && ['profile', 'settings'].includes(pageId)) {
-        console.log('Redirecting to login: non-logged-in user attempting to access protected page');
         pageId = 'login';
     }
 
+// <<<<<<< master
     // Special handling for OAuth callback path
     if (pageId === 'oauth/callback') {
         console.log('Processing OAuth callback...');
@@ -39,23 +46,30 @@ function showPage(pageId, pushState = true) {
     }
 
     // Changed: Use let instead of const for targetPage since we need to reassign it
+// =======
+    // Проверка OAuth
+    if (pageId === 'home' && window.location.pathname === '/home') {
+        checkOAuthLogin();
+    }
+
+    // Проверяем, существует ли вообще такой div
+// >>>>>>> 8ec6d59
     let targetPage = document.getElementById(pageId);
     if (!targetPage) {
         console.error(`Page ${pageId} not found`);
-        pageId = 'home'; // Fallback to home page if target doesn't exist
+        pageId = 'home';
         targetPage = document.getElementById(pageId);
     }
 
-    // Only push state if we're actually changing pages and pushState is true
+    // Работаем с history
     if (pushState && pageId !== currentPage) {
         const newUrl = pageId === 'home' ? '/' : `/${pageId}`;
         history.pushState({ pageId }, '', newUrl);
     }
 
-    // Store current page
     currentPage = pageId;
 
-    // Update active page in navigation
+    // Обновляем активную ссылку
     document.querySelectorAll('.nav-links a').forEach(link => {
         link.classList.remove('active');
         if (link.getAttribute('href') === `/${pageId}` || (pageId === 'home' && link.getAttribute('href') === '/')) {
@@ -63,83 +77,66 @@ function showPage(pageId, pushState = true) {
         }
     });
 
-    // Hide all pages
+    // Скрываем все страницы
     document.querySelectorAll('.page').forEach(page => {
         page.classList.remove('active');
         page.style.display = 'none';
     });
 
-    // Show target page
+    // Показываем нужную
     targetPage.classList.add('active');
     targetPage.style.display = 'block';
 
+    // Загрузка профиля и т.д.
     if (pageId === 'profile') {
         loadProfileData();
     }
-
-    // Clean up any existing game
-    if (window.currentGame) {
-        window.currentGame.cleanup();
-        window.currentGame = null;
-    }
-
     if (pageId === 'settings') {
         loadProfileData();
         loadSettingsData();
     }
 
-    // Handle game initializations
-    initializeGameIfNeeded(pageId);
-}
+    // Очищаем существующий экземпляр игры, если переходим не на страницу 'game'
+    if (window.currentGame && pageId !== 'game') {
+        window.currentGame.cleanup();
+        window.currentGame = null;
+    }
 
-// Separate function for game initialization
-function initializeGameIfNeeded(pageId) {
-    if (pageId === 'game') {
-        console.log('Starting game initialization...');
-        const gameContainer = document.querySelector('.game-container');
-        if (gameContainer) {
-            // Clear container and ensure it's visible
-            gameContainer.innerHTML = '';
-            gameContainer.style.display = 'block';
-            
-            // Initialize game without specifying mode to show selection first
-            PongGame.initializeGame(gameContainer);
+    // Дополнительная инициализация (например, Pong или TicTacToe)
+    initializeGameIfNeeded(pageId);
+
+    // Если это турнирная «страница», покажем первый подблок
+    if (pageId === 'tournament') {
+        if (window.currentTournamentId) {
+            showTournamentSubsection('view-tournament');
+            loadTournamentData(window.currentTournamentId);
         } else {
-            console.error('Game container not found');
-        }
-    } else if (pageId === 'tictactoe') {
-        const gameContainer = document.querySelector('.tictactoe-container');
-        if (gameContainer) {
-            window.currentGame = new window.TicTacToeGame(gameContainer);
+            showTournamentSubsection('create-tournament');
         }
     }
 }
 
-// Handle browser back/forward navigation
+window.showPage = showPage;
+
 window.addEventListener('popstate', (event) => {
     if (!event.state) {
-        // If no state exists, create one based on current URL
         const path = window.location.pathname;
         const pageId = path.substring(1) || 'home';
         history.replaceState({ pageId }, '', path);
         showPage(pageId, false);
         return;
     }
-
     showPage(event.state.pageId, false);
 });
 
-// Initialize history state on page load
 window.addEventListener('load', () => {
     const path = window.location.pathname;
     const initialPage = path.substring(1) || 'home';
-    
-    // Set initial history state if it doesn't exist
     if (!history.state) {
         history.replaceState({ pageId: initialPage }, '', path);
     }
-    
     showPage(initialPage, false);
+// <<<<<<< master
     checkLoginState(); // Ensure login state is checked after page is shown
 
     // If user is logged in, fetch fresh profile data to update avatars
@@ -149,9 +146,11 @@ window.addEventListener('load', () => {
 
     // Clear avatar cache on page load
     clearAvatarCache();
+// =======
+    checkLoginState();
+// >>>>>>> 8ec6d59
 });
 
-// Add click handler for navigation links to prevent default behavior
 document.addEventListener('click', (event) => {
     const link = event.target.closest('a');
     if (link && link.getAttribute('href')?.startsWith('/')) {
@@ -161,19 +160,11 @@ document.addEventListener('click', (event) => {
     }
 });
 
-// Check login state and update UI accordingly
 function checkLoginState() {
-    console.log('Checking login state...');
-    
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    console.log('isLoggedIn:', isLoggedIn);
-    
     document.body.classList.remove('is-logged-in', 'is-logged-out');
     document.body.classList.add(isLoggedIn ? 'is-logged-in' : 'is-logged-out');
     
-    console.log('Body classes after update:', document.body.classList.toString());
-    
-    // Get all nav links
     const loggedInNav = document.querySelector('.nav-links.logged-in');
     const loggedOutNav = document.querySelector('.nav-links.logged-out');
     
@@ -186,7 +177,6 @@ function checkLoginState() {
     }
 }
 
-// Helper function to get CSRF token
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -204,6 +194,63 @@ function getCookie(name) {
     }
     return cookieValue;
 }
+
+// Инициализация игр (Pong / TicTacToe)
+function initializeGameIfNeeded(pageId) {
+    // Очищаем существующий экземпляр игры, если он есть
+    if (window.currentGame) {
+        window.currentGame.cleanup();
+        window.currentGame = null;
+    }
+
+    if (pageId === 'game') {
+        const gameContainer = document.querySelector('.game-container');
+        if (gameContainer) {
+            gameContainer.innerHTML = '';
+            gameContainer.style.display = 'block';
+            // Инициализируем игру: для турнира используем режим 'pvp' и matchId,
+            // для обычной игры — без параметров
+            const mode = window.currentMatchId ? 'pvp' : null;
+            PongGame.initializeGame(gameContainer, mode);
+        } else {
+            console.error('Game container not found');
+        }
+    } else if (pageId === 'tictactoe') {
+        const gameContainer = document.querySelector('.tictactoe-container');
+        if (gameContainer) {
+            window.currentGame = new window.TicTacToeGame(gameContainer);
+        }
+    }
+}
+
+// // Show tournament subsection
+// Функция для показа под-секций в блоке "tournament"
+function showTournamentSubsection(subSection) {
+    document.querySelectorAll('#tournament .sub-section').forEach(section => {
+        section.style.display = 'none';
+    });
+    const target = document.getElementById(subSection);
+    if (target) {
+        target.style.display = 'block';
+    }
+}
+
+// Загрузка данных турнира
+async function loadTournamentData(tournamentId) {
+    try {
+        const response = await fetch(`/tournaments/api/tournaments/${tournamentId}/`);
+        const data = await response.json();
+        const displayDiv = document.getElementById('tournament-data');
+        if (displayDiv) {
+            displayDiv.innerText = JSON.stringify(data, null, 2);
+        }
+    } catch (error) {
+        console.error('Error loading tournament data:', error);
+    }
+}
+
+//================================================================================
+
 
 // Handle login
 async function handleLogin(event) {
@@ -415,59 +462,72 @@ async function handleRegister(event) {
     }
 }
 
-// Add function to start tournament match
 function startTournamentMatch(matchId) {
-    const csrftoken = getCookie('csrftoken');
-    
-    fetch(`/tournaments/match/${matchId}/start/`, {
+    const authToken = localStorage.getItem('authToken');
+    fetch(`/tournaments/api/tournaments/match/${matchId}/start/`, {
         method: 'POST',
         headers: {
-            'X-CSRFToken': csrftoken,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Authorization': `Token ${authToken}`,
+            'Content-Type': 'application/json'
         },
         credentials: 'include'
     })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Store match info
             window.currentMatchId = matchId;
             window.currentMatchPlayers = {
                 player1: data.player1,
                 player2: data.player2
             };
-            window.tournamentId = data.tournament_id;
+            window.tournamentId = data.tournament_id || currentTournamentId;
             
-            // Show game page and hide tournament view
-            document.querySelectorAll('.section').forEach(section => {
-                section.style.display = 'none';
-            });
-            
-            const gameContainer = document.getElementById('game');
-            if (gameContainer) {
-                gameContainer.style.display = 'block';
-                const pongContainer = gameContainer.querySelector('.game-container');
-                PongGame.initializeGame(pongContainer, 'pvp');
-            }
+            // Переходим на страницу игры, инициализация произойдёт через initializeGameIfNeeded
+            showPage('game');
         } else {
             alert(data.message || 'Failed to start match');
         }
     })
     .catch(error => {
         console.error('Error starting match:', error);
-        alert('Failed to start match. Please try again.');
+        alert('Failed to start match');
     });
 }
 
+// Finish match (called from Pong game after completion)
+window.finishTournamentMatch = async function(scorePlayer1, scorePlayer2) {
+    const authToken = localStorage.getItem('authToken');
+    try {
+        const response = await fetch(`/tournaments/api/tournaments/${window.currentMatchId}/finish/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Token ${authToken}`,
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                score_player1: scorePlayer1,
+                score_player2: scorePlayer2
+            })
+        });
+
+        if (response.ok) {
+            showPage('tournament');
+            showTournamentSubsection('view-tournament');
+            loadTournamentData();
+        } else {
+            alert('Failed to finish match');
+        }
+    } catch (error) {
+        console.error('Error finishing match:', error);
+        alert('Failed to finish match');
+    }
+};
+
+
 // Main initialization
 document.addEventListener('DOMContentLoaded', () => {
-
     console.log('DOM loaded, setting up event listeners');
     
     const registerForm = document.getElementById('registerForm');
@@ -478,10 +538,6 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Register form not found');
     }
 
-    // Force initial logout state
-    // localStorage.removeItem('isLoggedIn');
-    // localStorage.removeItem('userData');
-    
     // Check login state
     checkLoginState();
     
@@ -582,9 +638,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const newValue = input.value;
                 const authToken = localStorage.getItem('authToken');
                 
-                console.log('Sending update for:', fieldType);  // Debug log
-                console.log('New value:', newValue);  // Debug log
-                console.log('Auth token:', authToken);  // Debug log
+                console.log('Sending update for:', fieldType);
+                console.log('New value:', newValue);
+                console.log('Auth token:', authToken);
                 
                 try {
                     const response = await fetch('/api/auth/profile/', {
@@ -600,11 +656,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
 
                     const data = await response.json();
-                    console.log('Server response:', data);  // Debug log
+                    console.log('Server response:', data);
                     
                     if (response.ok) {
                         display.textContent = newValue;
-                        // Update userData in localStorage
                         const userData = JSON.parse(localStorage.getItem('userData') || '{}');
                         userData[fieldType] = newValue;
                         localStorage.setItem('userData', JSON.stringify(userData));
@@ -780,53 +835,53 @@ document.addEventListener('DOMContentLoaded', () => {
         loginWith42Button.addEventListener('click', initiate42OAuth);
     }
 
-    // // Add tournament button handler
-    // const tournamentButton = document.getElementById('tournament-button');
-    // if (tournamentButton) {
-    //     tournamentButton.addEventListener('click', (e) => {
-    //         e.preventDefault();
-    //         if (localStorage.getItem('isLoggedIn') === 'true') {
-    //             showPage('tournament');
-    //         } else {
-    //             alert('Please log in to create or join tournaments');
-    //             showPage('login');
-    //         }
-    //     });
-    // }
     // Tournament button handling
-    // Add auth check for game buttons
     const playNowButton = document.getElementById('play-now-button');
-    const tournamentButton = document.querySelector('a[href="/tournaments/create/"]');
-
     function checkAuthAndRedirect(e, destination) {
         e.preventDefault();
         const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-        
         if (!isLoggedIn) {
             alert('Please log in to access this feature');
             showPage('login');
             return;
         }
-
         if (destination === 'game') {
             showPage('game');
         } else if (destination === 'tournament') {
-            window.location.href = '/tournaments/create/';
+            showPage('tournament');
+            showTournamentSubsection('create-tournament'); // Добавляем переключение на создание
         }
     }
 
-    // Add handlers for game buttons
     if (playNowButton) {
         playNowButton.onclick = (e) => checkAuthAndRedirect(e, 'game');
     }
 
+    // Перенос и обновление tournamentButton
+    const tournamentButton = document.getElementById('tournament-button');
     if (tournamentButton) {
-        tournamentButton.onclick = (e) => checkAuthAndRedirect(e, 'tournament');
+        tournamentButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (localStorage.getItem('isLoggedIn') === 'true') {
+                showPage('tournament');
+                showTournamentSubsection('create-tournament');
+            } else {
+                alert('Please log in to create or join tournaments');
+                showPage('login');
+            }
+        });
     }
-    // Add tournament form handler
-    const tournamentForm = document.getElementById('tournament-form');
-    if (tournamentForm) {
-        tournamentForm.addEventListener('submit', handleTournamentCreation);
+
+    // Перенос и обновление create-tournament-form (используем handleTournamentCreation)
+    const createTournamentForm = document.getElementById('create-tournament-form');
+    if (createTournamentForm) {
+        createTournamentForm.addEventListener('submit', handleTournamentCreation);
+    }
+
+    // Перенос и обновление add-players-form (используем handleAddPlayers)
+    const addPlayersForm = document.getElementById('add-players-form');
+    if (addPlayersForm) {
+        addPlayersForm.addEventListener('submit', handleAddPlayers);
     }
 
     // Add event listener for the download data button
@@ -1183,6 +1238,7 @@ async function loadSettingsData() {
     }
 }
 
+// <<<<<<< master
 // Add this function to update the nav avatar from localStorage
 async function updateNavAvatar() {
     const navAvatar = document.querySelector('.nav-avatar');
@@ -1251,41 +1307,44 @@ async function refreshUserData() {
 }
 
 // Add this function to handle tournament creation
+// =======
+// >>>>>>> 8ec6d59
 async function handleTournamentCreation(event) {
     event.preventDefault();
 
     const authToken = localStorage.getItem('authToken');
+    console.log('Creat tournament - Auth Token:', authToken); // Добавляем логирование
     if (!authToken) {
         alert('Please log in to create a tournament');
         showPage('login');
         return;
     }
 
-    const tournamentName = document.getElementById('tournament-name').value;
-    const playerCount = document.getElementById('player-count').value;
+    const participantsCount = document.getElementById('participants_count').value;
+    if (participantsCount < 3 || participantsCount > 8) {
+        alert('Number of participants must be between 3 and 8');
+        return;
+    }
 
     try {
-        const response = await fetch('/api/tournaments/create/', {
+        const response = await fetch('/tournaments/api/tournaments/create/', { // Исправленный URL
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${authToken}`,
                 'X-CSRFToken': getCookie('csrftoken')
             },
-            body: JSON.stringify({
-                name: tournamentName,
-                player_count: parseInt(playerCount)
-            })
+            body: JSON.stringify({ participants_count: parseInt(participantsCount) })
         });
 
         const data = await response.json();
-
         if (response.ok) {
-            alert('Tournament created successfully!');
-            // You can add additional logic here to show the tournament details
-            // or redirect to a tournament view page
+            currentTournamentId = data.tournament_id;
+            participantCount = parseInt(participantsCount, 10);
+            generatePlayerInputs(participantCount);
+            showTournamentSubsection('add-players');
         } else {
-            alert(data.message || 'Failed to create tournament');
+            alert(data.error || 'Failed to create tournament');
         }
     } catch (error) {
         console.error('Error creating tournament:', error);
@@ -1293,6 +1352,7 @@ async function handleTournamentCreation(event) {
     }
 }
 
+// <<<<<<< master
 async function getAccessToken() {
     let token = localStorage.getItem("authToken");
 
@@ -1915,4 +1975,259 @@ function createWinratePieChart(wins, total) {
 }
 
 
+// =======
+// Generate input fields for players
+function generatePlayerInputs(count) {
+    const playerInputsDiv = document.getElementById('player-inputs');
+    playerInputsDiv.innerHTML = '';
 
+    for (let i = 0; i < count; i++) {
+        const inputGroup = document.createElement('div');
+        inputGroup.classList.add('input-group');
+
+        const label = document.createElement('label');
+        label.textContent = `Player ${i + 1}:`;
+        label.setAttribute('for', `player-${i}`);
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.id = `player-${i}`;
+        input.name = `player-${i}`;
+        input.required = true;
+
+        inputGroup.appendChild(label);
+        inputGroup.appendChild(input);
+        playerInputsDiv.appendChild(inputGroup);
+    }
+}
+
+// Handle adding players
+async function handleAddPlayers(event) {
+    event.preventDefault();
+// >>>>>>> 8ec6d59
+
+    const authToken = localStorage.getItem('authToken');
+    console.log('Add Players - Auth Token:', authToken);
+    const csrftoken = getCookie('csrftoken');
+    console.log('Add Players - CSRF Token:', csrftoken); 
+    
+    // Изменяем селектор, чтобы выбирать только поля в #player-inputs
+    const playerInputs = document.querySelectorAll('#player-inputs input');
+    const nicknames = Array.from(playerInputs).map(input => input.value.trim());
+    
+    // Добавляем отладочные сообщения
+    console.log('Player inputs count:', playerInputs.length);
+    console.log('Expected participant count:', participantCount);
+    console.log('Nicknames:', nicknames);
+
+    if (nicknames.length !== participantCount) {
+        console.log('problipaem with particntCount');
+        document.getElementById('add-players-error').textContent = 'Please fill in all player fields';
+        return;
+    }
+
+    const uniqueNicknames = new Set(nicknames);
+    if (uniqueNicknames.size !== nicknames.length) {
+        document.getElementById('add-players-error').textContent = 'Duplicate nicknames detected';
+        return;
+    }
+
+    try {
+        const response = await fetch(`/tournaments/api/tournaments/${currentTournamentId}/add_players/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Token ${authToken}`,
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ nicknames })
+        });
+
+        console.log('Response status:', response.status);
+        
+        // Клонируем ответ для логирования
+        const responseClone = response.clone();
+        const responseText = await responseClone.text();
+        console.log('Response text:', responseText);
+        
+        // Пробуем распарсить оригинальный ответ как JSON
+        try {
+            const data = await response.json();
+            
+            if (response.ok) {
+                console.log("Before showing tournament subsection");
+                showTournamentSubsection('view-tournament');
+                console.log("After showing tournament subsection");
+                await loadTournamentData();
+            } else {
+                document.getElementById('add-players-error').textContent = data.error || 'Failed to add players';
+            }
+        } catch (jsonError) {
+            console.error('Error parsing JSON response:', jsonError);
+            document.getElementById('add-players-error').textContent = 'Сервер вернул некорректный ответ. Попробуйте еще раз.';
+        }
+    } catch (error) {
+        console.error('Error adding players:', error);
+        document.getElementById('add-players-error').textContent = 'Failed to add players. Please try again.';
+    }
+}
+
+// Load and display tournament data
+// Полная функция загрузки и отображения данных турнира
+async function loadTournamentData() {
+    const authToken = localStorage.getItem('authToken');
+    try {
+        const response = await fetch(`/tournaments/api/tournaments/${currentTournamentId}/`, {
+            headers: {
+                'Authorization': `Token ${authToken}`
+            }
+        });
+        const data = await response.json();
+
+        console.log('Полученные данные турнира:', data);
+        console.log('ID текущего матча:', window.currentMatchId);
+
+        // Define renderMatch function first - IMPORTANT!
+        const renderMatch = (match, tableBody) => {
+            const tr = document.createElement('tr');
+            const player1 = data.players.find(p => p.id === match.player1);
+            const player2 = data.players.find(p => p.id === match.player2);
+            const winner = match.winner ? data.players.find(p => p.id === match.winner) : null;
+            
+            tr.innerHTML = `
+                <td>${player1 ? player1.nickname : 'Unknown'}</td>
+                <td>${player2 ? player2.nickname : 'Unknown'}</td>
+                <td>${match.is_complete ? `${match.score_player1}-${match.score_player2}` : '-'}</td>
+                <td>${winner ? winner.nickname : (match.is_complete ? 'Tie' : '-')}</td>
+                <td>
+                    ${match.is_complete 
+                        ? '<span class="status-finished">Finished</span>' 
+                        : `<button onclick="startTournamentMatch(${match.id})">Start Match</button>`}
+                </td>
+            `;
+            tableBody.appendChild(tr);
+        };
+
+        // Regular matches - ADD NULL CHECK
+        const regularMatchesTable = document.getElementById('tournamentMatches');
+        if (regularMatchesTable) {
+            const regularMatchesBody = regularMatchesTable.querySelector('tbody');
+            if (regularMatchesBody) {
+                regularMatchesBody.innerHTML = '';
+                
+                const regularMatches = data.matches.filter(m => !m.is_additional);
+                regularMatches.forEach(match => {
+                    renderMatch(match, regularMatchesBody);
+                });
+            }
+        }
+        
+        // Additional matches (tiebreakers)
+        const additionalMatches = data.matches.filter(m => m.is_additional);
+        
+        // Get the container for additional matches
+        let additionalMatchesContainer = document.getElementById('additionalMatchesContainer');
+        
+        // If there are additional matches but no container, create one
+        if (additionalMatches.length > 0) {
+            const tournamentView = document.querySelector('.tournament-view');
+            if (tournamentView) { // Check if parent exists
+                if (!additionalMatchesContainer) {
+                    additionalMatchesContainer = document.createElement('div');
+                    additionalMatchesContainer.id = 'additionalMatchesContainer';
+                    additionalMatchesContainer.className = 'additional-matches-container';
+                    tournamentView.appendChild(additionalMatchesContainer);
+                }
+                
+                // Clear and populate additional matches section
+                additionalMatchesContainer.innerHTML = `
+                    <h3>Tie-Breaking Matches</h3>
+                    <table id="additionalMatches" class="tournament-table">
+                        <thead>
+                            <tr>
+                                <th>Player 1</th>
+                                <th>Player 2</th>
+                                <th>Score</th>
+                                <th>Winner</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                `;
+                
+                const additionalMatchesBody = additionalMatchesContainer.querySelector('tbody');
+                additionalMatches.forEach(match => {
+                    renderMatch(match, additionalMatchesBody);
+                });
+                
+                // Make sure it's visible
+                additionalMatchesContainer.style.display = 'block';
+            }
+        } else if (additionalMatchesContainer) {
+            // If there are no additional matches but the container exists, hide it
+            additionalMatchesContainer.style.display = 'none';
+        }
+
+        // Update tournament status - ADD NULL CHECK
+        const statusElement = document.getElementById('tournament-status');
+        if (statusElement) {
+            statusElement.textContent = `Tournament (${data.tournament.status})`;
+        }
+
+        // Render players list - ADD NULL CHECK
+        const playersList = document.getElementById('players-list');
+        if (playersList) {
+            playersList.innerHTML = '';
+            data.players.forEach(player => {
+                const li = document.createElement('li');
+                li.classList.add('player-item');
+                li.innerHTML = `<span>${player.nickname}</span><span>Score: ${player.score}</span>`;
+                playersList.appendChild(li);
+            });
+        }
+
+        // Update second tables for regular and additional matches (if they exist)
+        const regularTableBody = document.querySelector('#regular-matches-table tbody');
+        if (regularTableBody) {
+            regularTableBody.innerHTML = '';
+            const regularMatches = data.matches.filter(m => !m.is_additional);
+            regularMatches.forEach(match => renderMatch(match, regularTableBody));
+        }
+
+        // Update additional matches section (second approach)
+        const additionalMatchesSection = document.getElementById('additional-matches');
+        if (additionalMatchesSection) {
+            if (additionalMatches.length > 0) {
+                additionalMatchesSection.style.display = 'block';
+                const additionalTableBody = document.querySelector('#additional-matches-table tbody');
+                if (additionalTableBody) {
+                    additionalTableBody.innerHTML = '';
+                    additionalMatches.forEach(match => renderMatch(match, additionalTableBody));
+                }
+            } else {
+                additionalMatchesSection.style.display = 'none';
+            }
+        }
+
+        // Check for winners - ADD NULL CHECKS
+        const winnerSection = document.getElementById('winner-section');
+        const winnerText = document.getElementById('winner-text');
+
+        if (winnerSection && winnerText && data.tournament.status === 'Complete' && 
+            data.tournament.winner_ids && data.tournament.winner_ids.length > 0) {
+            
+            const winners = data.tournament.winner_ids.map(id => 
+                data.players.find(p => p.id === id)?.nickname || 'Unknown').join(' and ');
+            
+            winnerText.textContent = `Winner${data.tournament.winner_ids.length > 1 ? 's' : ''}: ${winners}`;
+            winnerSection.style.display = 'flex';
+        } else if (winnerSection) {
+            // Hide winner section for new tournaments or tournaments without winners
+            winnerSection.style.display = 'none';
+        }
+
+    } catch (error) {
+        console.error('Error loading tournament:', error);
+    }
+}

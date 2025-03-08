@@ -30,4 +30,6 @@ RUN chmod +x /app/scripts/init_db.sh \
 EXPOSE 443
 
 # Set entrypoint
-ENTRYPOINT ["/app/scripts/entrypoint.sh"]
+
+ENTRYPOINT ["/app/scripts/init_db.sh"]
+CMD ["python", "manage.py", "runserver--traceback", "0.0.0.0:8000"]

@@ -687,6 +687,9 @@ class PongGame {
             tournamentId: window.tournamentId
         };
 
+        // Флаг для предотвращения повторных вызовов finishMatch
+        this.isFinishing = false;
+
         // Initialize game components
         this.renderer = new GameRenderer(canvasContainer);
         this.physics = new GamePhysics(GAME_CONFIG);
@@ -777,7 +780,8 @@ class PongGame {
         if (!this.state.matchId) return;
 
         try {
-            await fetch(`/api/game/match/${this.state.matchId}/state`, {
+            // await fetch(`/tournaments/api/game/match/${this.state.matchId}/state`, {
+            await fetch(`/tournaments/api/tournaments/match/${this.state.matchId}/state/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -797,7 +801,10 @@ class PongGame {
         }
     }
 
+    // 
+    
     async finishMatch() {
+/// <<<< master
         try {
             console.log("I am in finish Match");
     
@@ -834,6 +841,19 @@ class PongGame {
             // Fix the URL to use relative path instead of hardcoded domain
             // Send result to backend
             const response = await fetch('/api/auth/save-match/', {
+// =======
+        // Проверяем, не завершается ли матч уже
+        if (this.isFinishing) return;
+        this.isFinishing = true;
+
+        if (!this.state.matchId) {
+            this.showRestartButton();
+            return;
+        }
+
+        try {
+            const response = await fetch(`/tournaments/api/tournaments/${this.state.matchId}/finish/`, {
+// >>>>>>> 8ec6d59
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -847,6 +867,7 @@ class PongGame {
                     score: scoreString
                 })
             });
+/// <<<<<<< master
     
             const responseText = await response.text();  // Capture response as text
             console.log("Response from backend:", responseText);
@@ -866,6 +887,53 @@ class PongGame {
             restartButton.textContent = 'Restart Game';
             restartButton.onclick = () => this.restartGame();
             gameControls.style.display = 'block';
+// =======
+
+            if (!response.ok) {
+                throw new Error('Failed to finish match');
+            }
+
+            const data = await response.json();
+            if (data.success && this.state.gameStatus === 'finished') {
+                this.showNextGameButton();
+            }
+        } catch (error) {
+            console.error('Error finishing match:', error);
+        }
+
+        // Назначаем обработчик кнопки возврата (исправляем обращение к restartButton)
+        // const restartButton = document.getElementById('restart-button');
+        // if (restartButton) {
+        //     restartButton.onclick = () => {
+        //         window.location.href = this.state.tournamentId ? 
+        //             `/tournaments/${this.state.tournamentId}/` : '/tournaments/';
+        //     };
+        // }
+
+    }
+
+    showNextGameButton() {
+        const gameControls = document.getElementById('game-controls');
+        const restartButton = document.getElementById('restart-button');
+        if (gameControls && restartButton) {
+            gameControls.style.display = 'block';
+            restartButton.textContent = 'NEXT GAME';
+            restartButton.onclick = () => {
+                if (this.state.tournamentId) {
+                    window.currentTournamentId = this.state.tournamentId;
+                    
+                    // Сохраняем счет матча в глобальной переменной для использования на странице турнира
+                    window.lastMatchScore = {
+                        score_player1: this.state.score.player1,
+                        score_player2: this.state.score.player2,
+                        winner: this.state.winner
+                    };
+                    
+                    console.log('Сохраняем счет:', window.lastMatchScore);
+                }
+                window.showPage('tournament');
+            };
+// >>>>>>> 8ec6d59
         }
         return;
     }
