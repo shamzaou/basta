@@ -1954,6 +1954,7 @@ body.is-logged-out .logged-out {
     color: var(--text-color);
     font-size: 18px;
     text-align: center; /* Центрируем текст метки */
+    margin-top: 1rem;
 }
 
 #tournament #add-players input {
