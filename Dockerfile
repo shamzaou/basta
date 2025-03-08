@@ -17,7 +17,7 @@ RUN apt-get update \
 # Install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt \
-    && pip install Werkzeug django-extensions django-werkzeug-debugger-runserver
+    && pip install gunicorn
 
 # Copy project
 COPY . .
@@ -30,6 +30,5 @@ RUN chmod +x /app/scripts/init_db.sh \
 EXPOSE 443
 
 # Set entrypoint
-
 ENTRYPOINT ["/app/scripts/init_db.sh"]
-CMD ["python", "manage.py", "runserver--traceback", "0.0.0.0:8000"]
+CMD ["gunicorn", "--bind", "0.0.0.0:443", "--workers", "3", "basta.wsgi:application"]

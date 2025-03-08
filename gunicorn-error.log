@@ -1,0 +1,862 @@
+[2025-03-08 21:34:07 +0000] [11] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['0.0.0.0:443']
+  backlog: 2048
+  workers: 3
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 30
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /app
+  daemon: False
+  raw_env: []
+  pidfile: None
+  worker_tmp_dir: None
+  user: 0
+  group: 0
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /app/gunicorn-access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /app/gunicorn-error.log
+  loglevel: debug
+  capture_output: True
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: basta.wsgi:application
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x7f2ce8de09a0>
+  on_reload: <function OnReload.on_reload at 0x7f2ce8de0ae0>
+  when_ready: <function WhenReady.when_ready at 0x7f2ce8de0c20>
+  pre_fork: <function Prefork.pre_fork at 0x7f2ce8de0d60>
+  post_fork: <function Postfork.post_fork at 0x7f2ce8de0ea0>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x7f2ce8de0fe0>
+  worker_int: <function WorkerInt.worker_int at 0x7f2ce8de1120>
+  worker_abort: <function WorkerAbort.worker_abort at 0x7f2ce8de1260>
+  pre_exec: <function PreExec.pre_exec at 0x7f2ce8de13a0>
+  pre_request: <function PreRequest.pre_request at 0x7f2ce8de14e0>
+  post_request: <function PostRequest.post_request at 0x7f2ce8de1580>
+  child_exit: <function ChildExit.child_exit at 0x7f2ce8de16c0>
+  worker_exit: <function WorkerExit.worker_exit at 0x7f2ce8de1800>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x7f2ce8de1940>
+  on_exit: <function OnExit.on_exit at 0x7f2ce8de1a80>
+  ssl_context: <function NewSSLContext.ssl_context at 0x7f2ce8de1c60>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: localhost-key.pem
+  certfile: localhost.pem
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-03-08 21:34:07 +0000] [11] [INFO] Starting gunicorn 23.0.0
+[2025-03-08 21:34:07 +0000] [11] [DEBUG] Arbiter booted
+[2025-03-08 21:34:07 +0000] [11] [INFO] Listening at: https://0.0.0.0:443 (11)
+[2025-03-08 21:34:07 +0000] [11] [INFO] Using worker: sync
+[2025-03-08 21:34:07 +0000] [12] [INFO] Booting worker with pid: 12
+[2025-03-08 21:34:07 +0000] [12] [ERROR] Exception in worker process
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/site-packages/gunicorn/arbiter.py", line 608, in spawn_worker
+    worker.init_process()
+  File "/usr/local/lib/python3.11/site-packages/gunicorn/workers/base.py", line 135, in init_process
+    self.load_wsgi()
+  File "/usr/local/lib/python3.11/site-packages/gunicorn/workers/base.py", line 147, in load_wsgi
+    self.wsgi = self.app.wsgi()
+                ^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/gunicorn/app/base.py", line 66, in wsgi
+    self.callable = self.load()
+                    ^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/gunicorn/app/wsgiapp.py", line 57, in load
+    return self.load_wsgiapp()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/gunicorn/app/wsgiapp.py", line 47, in load_wsgiapp
+    return util.import_app(self.app_uri)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/gunicorn/util.py", line 370, in import_app
+    mod = importlib.import_module(module)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1126, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1140, in _find_and_load_unlocked
+ModuleNotFoundError: No module named 'basta'
+[2025-03-08 21:34:07 +0000] [12] [INFO] Worker exiting (pid: 12)
+[2025-03-08 21:34:08 +0000] [11] [ERROR] Worker (pid:12) exited with code 3
+[2025-03-08 21:34:08 +0000] [11] [ERROR] Shutting down: Master
+[2025-03-08 21:34:08 +0000] [11] [ERROR] Reason: Worker failed to boot.
+[2025-03-08 21:36:14 +0000] [16] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['0.0.0.0:443']
+  backlog: 2048
+  workers: 3
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 30
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /app
+  daemon: False
+  raw_env: ['DJANGO_SETTINGS_MODULE=backend.settings']
+  pidfile: None
+  worker_tmp_dir: None
+  user: 0
+  group: 0
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /app/gunicorn-access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /app/gunicorn-error.log
+  loglevel: debug
+  capture_output: True
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: wsgi:application
+  pythonpath: /app
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x7f254d928ae0>
+  on_reload: <function OnReload.on_reload at 0x7f254d928c20>
+  when_ready: <function WhenReady.when_ready at 0x7f254d928d60>
+  pre_fork: <function Prefork.pre_fork at 0x7f254d928ea0>
+  post_fork: <function Postfork.post_fork at 0x7f254d928fe0>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x7f254d929120>
+  worker_int: <function WorkerInt.worker_int at 0x7f254d929260>
+  worker_abort: <function WorkerAbort.worker_abort at 0x7f254d9293a0>
+  pre_exec: <function PreExec.pre_exec at 0x7f254d9294e0>
+  pre_request: <function PreRequest.pre_request at 0x7f254d929620>
+  post_request: <function PostRequest.post_request at 0x7f254d9296c0>
+  child_exit: <function ChildExit.child_exit at 0x7f254d929800>
+  worker_exit: <function WorkerExit.worker_exit at 0x7f254d929940>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x7f254d929a80>
+  on_exit: <function OnExit.on_exit at 0x7f254d929bc0>
+  ssl_context: <function NewSSLContext.ssl_context at 0x7f254d929da0>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: localhost-key.pem
+  certfile: localhost.pem
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-03-08 21:36:14 +0000] [16] [INFO] Starting gunicorn 23.0.0
+[2025-03-08 21:36:14 +0000] [16] [DEBUG] Arbiter booted
+[2025-03-08 21:36:14 +0000] [16] [INFO] Listening at: https://0.0.0.0:443 (16)
+[2025-03-08 21:36:14 +0000] [16] [INFO] Using worker: sync
+[2025-03-08 21:36:14 +0000] [17] [INFO] Booting worker with pid: 17
+WSGI using settings module: backend.settings
+[2025-03-08 21:36:14 +0000] [18] [INFO] Booting worker with pid: 18
+WSGI using settings module: backend.settings
+[2025-03-08 21:36:14 +0000] [19] [INFO] Booting worker with pid: 19
+[2025-03-08 21:36:14 +0000] [16] [DEBUG] 3 workers
+WSGI using settings module: backend.settings
+[2025-03-08 21:37:01 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:37:01 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:37:01 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:37:01 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:37:01 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:37:01 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:37:01 +0000] [19] [DEBUG] GET /
+[2025-03-08 21:37:02 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:37:02 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:37:02 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:37:02 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:37:02 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:37:02 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:37:02 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:37:02 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:37:02 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:37:02 +0000] [18] [DEBUG] GET /static/frontend/css/styles.css
+[2025-03-08 21:37:02 +0000] [17] [DEBUG] GET /static/frontend/js/script.js
+[2025-03-08 21:37:02 +0000] [19] [DEBUG] GET /static/frontend/assets/man.png
+[2025-03-08 21:37:02 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:37:02 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:37:02 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:37:02 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:37:02 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:37:02 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:37:02 +0000] [18] [DEBUG] GET /static/frontend/js/pong.js
+[2025-03-08 21:37:02 +0000] [17] [DEBUG] GET /static/frontend/js/tictactoe.js
+[2025-03-08 21:37:02 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:37:02 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:37:02 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:37:02 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:37:02 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:37:02 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:37:02 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:37:02 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:37:02 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:37:02 +0000] [19] [DEBUG] GET /favicon.ico
+[2025-03-08 21:37:02 +0000] [18] [DEBUG] GET /api/auth/profile/
+[2025-03-08 21:37:02 +0000] [17] [DEBUG] GET /static/frontend/assets/man.png
+[2025-03-08 21:37:04 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:37:04 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:37:04 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:37:04 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:37:04 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:37:04 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:37:04 +0000] [18] [DEBUG] GET /favicon.ico
+[2025-03-08 21:37:05 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:37:05 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:37:05 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:37:05 +0000] [17] [DEBUG] GET /favicon.ico
+[2025-03-08 21:38:08 +0000] [16] [DEBUG] Current configuration:
+  config: ./gunicorn.conf.py
+  wsgi_app: None
+  bind: ['0.0.0.0:443']
+  backlog: 2048
+  workers: 3
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 0
+  max_requests_jitter: 0
+  timeout: 30
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /app
+  daemon: False
+  raw_env: ['DJANGO_SETTINGS_MODULE=backend.settings']
+  pidfile: None
+  worker_tmp_dir: None
+  user: 0
+  group: 0
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: /app/gunicorn-access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
+  errorlog: /app/gunicorn-error.log
+  loglevel: debug
+  capture_output: True
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: udp://localhost:514
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: None
+  default_proc_name: wsgi:application
+  pythonpath: /app
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x7fccfa070ae0>
+  on_reload: <function OnReload.on_reload at 0x7fccfa070c20>
+  when_ready: <function WhenReady.when_ready at 0x7fccfa070d60>
+  pre_fork: <function Prefork.pre_fork at 0x7fccfa070ea0>
+  post_fork: <function Postfork.post_fork at 0x7fccfa070fe0>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x7fccfa071120>
+  worker_int: <function WorkerInt.worker_int at 0x7fccfa071260>
+  worker_abort: <function WorkerAbort.worker_abort at 0x7fccfa0713a0>
+  pre_exec: <function PreExec.pre_exec at 0x7fccfa0714e0>
+  pre_request: <function PreRequest.pre_request at 0x7fccfa071620>
+  post_request: <function PostRequest.post_request at 0x7fccfa0716c0>
+  child_exit: <function ChildExit.child_exit at 0x7fccfa071800>
+  worker_exit: <function WorkerExit.worker_exit at 0x7fccfa071940>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x7fccfa071a80>
+  on_exit: <function OnExit.on_exit at 0x7fccfa071bc0>
+  ssl_context: <function NewSSLContext.ssl_context at 0x7fccfa071da0>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: localhost-key.pem
+  certfile: localhost.pem
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-03-08 21:38:08 +0000] [16] [INFO] Starting gunicorn 23.0.0
+[2025-03-08 21:38:08 +0000] [16] [DEBUG] Arbiter booted
+[2025-03-08 21:38:08 +0000] [16] [INFO] Listening at: https://0.0.0.0:443 (16)
+[2025-03-08 21:38:08 +0000] [16] [INFO] Using worker: sync
+[2025-03-08 21:38:08 +0000] [17] [INFO] Booting worker with pid: 17
+WSGI using settings module: backend.settings
+[2025-03-08 21:38:08 +0000] [18] [INFO] Booting worker with pid: 18
+WSGI using settings module: backend.settings
+[2025-03-08 21:38:08 +0000] [19] [INFO] Booting worker with pid: 19
+WSGI using settings module: backend.settings
+[2025-03-08 21:38:09 +0000] [16] [DEBUG] 3 workers
+[2025-03-08 21:38:22 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:22 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:22 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:22 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:22 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:22 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:22 +0000] [17] [DEBUG] GET /
+[2025-03-08 21:38:22 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:22 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:22 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:22 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:22 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:22 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:22 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:22 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:22 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:22 +0000] [17] [DEBUG] GET /static/frontend/css/styles.a9ebbff4d1f3.css
+[2025-03-08 21:38:22 +0000] [19] [DEBUG] GET /static/frontend/js/script.e75f550688e4.js
+[2025-03-08 21:38:22 +0000] [18] [DEBUG] GET /static/frontend/assets/man.306fd0fb64f6.png
+[2025-03-08 21:38:22 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:22 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:22 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:22 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:22 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:22 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:22 +0000] [19] [DEBUG] GET /static/frontend/js/pong.8a0f4a23651e.js
+[2025-03-08 21:38:22 +0000] [17] [DEBUG] GET /static/frontend/js/tictactoe.e111c75b135e.js
+[2025-03-08 21:38:22 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:22 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:22 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:22 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:22 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:22 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:22 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:22 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:22 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:22 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:22 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:22 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:22 +0000] [19] [DEBUG] GET /favicon.ico
+[2025-03-08 21:38:22 +0000] [18] [DEBUG] GET /api/auth/profile/
+[2025-03-08 21:38:22 +0000] [17] [DEBUG] GET /static/frontend/assets/man.306fd0fb64f6.png
+[2025-03-08 21:38:22 +0000] [17] [DEBUG] GET /static/frontend/assets/man.306fd0fb64f6.png
+[2025-03-08 21:38:25 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:25 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:25 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:25 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:25 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:25 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:25 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:25 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:25 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:25 +0000] [17] [DEBUG] GET /
+[2025-03-08 21:38:26 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:26 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:26 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:26 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:26 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:26 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:26 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:26 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:26 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:26 +0000] [18] [DEBUG] GET /static/frontend/js/script.e75f550688e4.js
+[2025-03-08 21:38:26 +0000] [17] [DEBUG] GET /static/frontend/css/styles.a9ebbff4d1f3.css
+[2025-03-08 21:38:26 +0000] [19] [DEBUG] GET /static/frontend/assets/man.306fd0fb64f6.png
+[2025-03-08 21:38:26 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:26 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:26 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:26 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:26 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:26 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:26 +0000] [17] [DEBUG] GET /static/frontend/js/pong.8a0f4a23651e.js
+[2025-03-08 21:38:26 +0000] [19] [DEBUG] GET /static/frontend/js/tictactoe.e111c75b135e.js
+[2025-03-08 21:38:26 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:26 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:26 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:26 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:26 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:26 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:26 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:26 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:26 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:26 +0000] [17] [DEBUG] GET /favicon.ico
+[2025-03-08 21:38:26 +0000] [18] [DEBUG] GET /api/auth/profile/
+[2025-03-08 21:38:26 +0000] [19] [DEBUG] GET /static/frontend/assets/man.306fd0fb64f6.png
+[2025-03-08 21:38:26 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:26 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:26 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:26 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:26 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:26 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:26 +0000] [19] [DEBUG] GET /
+[2025-03-08 21:38:27 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:27 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:27 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:27 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:27 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:27 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:27 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:27 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:27 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:27 +0000] [19] [DEBUG] GET /favicon.ico
+[2025-03-08 21:38:27 +0000] [17] [DEBUG] GET /api/auth/profile/
+[2025-03-08 21:38:27 +0000] [18] [DEBUG] GET /static/frontend/assets/man.306fd0fb64f6.png
+[2025-03-08 21:38:31 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:31 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:31 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:32 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:32 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:32 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:32 +0000] [17] [DEBUG] GET /favicon.ico
+[2025-03-08 21:38:34 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:34 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:34 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:34 +0000] [17] [DEBUG] POST /tournaments/api/tournaments/create/
+Request received at create_tournament
+[2025-03-08 21:38:37 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:37 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:37 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:37 +0000] [18] [DEBUG] POST /tournaments/api/tournaments/1/add_players/
+[2025-03-08 21:38:37 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:37 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:37 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:37 +0000] [18] [DEBUG] GET /tournaments/api/tournaments/1/
+[2025-03-08 21:38:39 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:39 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:39 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:39 +0000] [19] [DEBUG] POST /tournaments/api/tournaments/match/1/start/
+[2025-03-08 21:38:39 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:39 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:39 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:39 +0000] [19] [DEBUG] GET /favicon.ico
+[2025-03-08 21:38:41 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:41 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:41 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:41 +0000] [19] [DEBUG] POST /tournaments/api/tournaments/match/1/state/
+[2025-03-08 21:38:42 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:42 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:42 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:42 +0000] [19] [DEBUG] POST /tournaments/api/tournaments/match/1/state/
+[2025-03-08 21:38:43 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:43 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:43 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:43 +0000] [19] [DEBUG] POST /tournaments/api/tournaments/match/1/state/
+[2025-03-08 21:38:43 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:43 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:43 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:43 +0000] [19] [DEBUG] POST /tournaments/api/tournaments/match/1/state/
+[2025-03-08 21:38:44 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:44 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:44 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:44 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:44 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:44 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:44 +0000] [17] [DEBUG] POST /tournaments/api/tournaments/1/finish/
+[2025-03-08 21:38:44 +0000] [18] [DEBUG] POST /tournaments/api/tournaments/match/1/state/
+[2025-03-08 21:38:45 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:45 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:45 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:45 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:45 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:45 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:45 +0000] [17] [DEBUG] GET /tournaments/api/tournaments/1/
+[2025-03-08 21:38:45 +0000] [18] [DEBUG] GET /favicon.ico
+[2025-03-08 21:38:46 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:46 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:46 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:46 +0000] [17] [DEBUG] POST /tournaments/api/tournaments/match/2/start/
+[2025-03-08 21:38:46 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:46 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:46 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:46 +0000] [17] [DEBUG] GET /favicon.ico
+[2025-03-08 21:38:47 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:47 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:47 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:47 +0000] [17] [DEBUG] POST /tournaments/api/tournaments/match/2/state/
+[2025-03-08 21:38:48 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:48 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:48 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:48 +0000] [17] [DEBUG] POST /tournaments/api/tournaments/match/2/state/
+[2025-03-08 21:38:49 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:49 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:49 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:49 +0000] [19] [DEBUG] POST /tournaments/api/tournaments/match/2/state/
+[2025-03-08 21:38:51 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:51 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:51 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:51 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:51 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:51 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:51 +0000] [19] [DEBUG] POST /tournaments/api/tournaments/2/finish/
+[2025-03-08 21:38:51 +0000] [18] [DEBUG] POST /tournaments/api/tournaments/match/2/state/
+[2025-03-08 21:38:52 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:52 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:52 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:52 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:52 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:52 +0000] [19] [DEBUG] GET /tournaments/api/tournaments/1/
+[2025-03-08 21:38:52 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:52 +0000] [17] [DEBUG] GET /favicon.ico
+[2025-03-08 21:38:53 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:53 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:53 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:53 +0000] [17] [DEBUG] POST /tournaments/api/tournaments/match/3/start/
+[2025-03-08 21:38:53 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:53 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:53 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:53 +0000] [19] [DEBUG] GET /favicon.ico
+[2025-03-08 21:38:54 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:54 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:54 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:54 +0000] [18] [DEBUG] POST /tournaments/api/tournaments/match/3/state/
+[2025-03-08 21:38:55 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:55 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:55 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:55 +0000] [17] [DEBUG] POST /tournaments/api/tournaments/match/3/state/
+[2025-03-08 21:38:56 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:56 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:56 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:56 +0000] [17] [DEBUG] POST /tournaments/api/tournaments/match/3/state/
+[2025-03-08 21:38:57 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:57 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:57 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:57 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:57 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:57 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:57 +0000] [18] [DEBUG] POST /tournaments/api/tournaments/3/finish/
+[2025-03-08 21:38:57 +0000] [19] [DEBUG] POST /tournaments/api/tournaments/match/3/state/
+[2025-03-08 21:38:58 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:58 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:58 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:58 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:58 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:58 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:58 +0000] [19] [DEBUG] GET /tournaments/api/tournaments/1/
+[2025-03-08 21:38:58 +0000] [18] [DEBUG] GET /favicon.ico
+[2025-03-08 21:38:59 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:38:59 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:38:59 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:38:59 +0000] [17] [DEBUG] GET /favicon.ico
+[2025-03-08 21:39:01 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:01 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:01 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:01 +0000] [17] [DEBUG] GET /api/auth/profile/
+[2025-03-08 21:39:01 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:01 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:01 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:01 +0000] [18] [DEBUG] GET /favicon.ico
+[2025-03-08 21:39:01 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:01 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:01 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:01 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:01 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:01 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:01 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:01 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:01 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:01 +0000] [17] [DEBUG] GET /api/auth/friends/
+[2025-03-08 21:39:01 +0000] [18] [DEBUG] GET /api/auth/profile/
+[2025-03-08 21:39:01 +0000] [19] [DEBUG] GET /static/frontend/assets/man.png
+[2025-03-08 21:39:01 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:01 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:01 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:01 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:01 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:01 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:01 +0000] [17] [DEBUG] GET /api/auth/users/
+[2025-03-08 21:39:01 +0000] [19] [DEBUG] GET /api/auth/friends/
+[2025-03-08 21:39:01 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:01 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:01 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:01 +0000] [18] [DEBUG] GET /api/auth/users/
+[2025-03-08 21:39:04 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:04 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:04 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:04 +0000] [19] [DEBUG] GET /favicon.ico
+[2025-03-08 21:39:05 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:05 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:05 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:05 +0000] [17] [DEBUG] GET /favicon.ico
+[2025-03-08 21:39:10 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:10 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:10 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:10 +0000] [17] [DEBUG] POST /api/auth/save-match/
+Authorization Header: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQxNDcyNDQwLCJpYXQiOjE3NDE0Njg4NDAsImp0aSI6IjljMWUyNmVmZGU0ZjQ3NTg4ZDJmZDkzNTk4MGJlNjZmIiwidXNlcl9pZCI6MX0.9AxGETydFQt7iA13GKb2_nsbbFSldhijZ5Z9r2HprkY
+Received data: {
+    "game_type": "PONG",
+    "opponent": "AI",
+    "result": "LOSS",
+    "score": "0-3"
+}
+[2025-03-08 21:39:13 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:13 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:13 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:13 +0000] [17] [DEBUG] POST /tournaments/api/tournaments/match/game_1741469951709/state/
+[2025-03-08 21:39:14 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:14 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:14 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:14 +0000] [17] [DEBUG] POST /tournaments/api/tournaments/match/game_1741469951709/state/
+[2025-03-08 21:39:15 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:15 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:15 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:15 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:15 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:15 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:15 +0000] [19] [DEBUG] POST /api/auth/save-match/
+[2025-03-08 21:39:15 +0000] [18] [DEBUG] POST /tournaments/api/tournaments/match/game_1741469951709/state/
+Authorization Header: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQxNDcyNDQwLCJpYXQiOjE3NDE0Njg4NDAsImp0aSI6IjljMWUyNmVmZGU0ZjQ3NTg4ZDJmZDkzNTk4MGJlNjZmIiwidXNlcl9pZCI6MX0.9AxGETydFQt7iA13GKb2_nsbbFSldhijZ5Z9r2HprkY
+Received data: {
+    "game_type": "PONG",
+    "opponent": "AI",
+    "result": "LOSS",
+    "score": "0-3"
+}
+[2025-03-08 21:39:16 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:16 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:16 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:16 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:16 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:16 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:16 +0000] [19] [DEBUG] GET /api/auth/profile/
+[2025-03-08 21:39:16 +0000] [18] [DEBUG] GET /favicon.ico
+[2025-03-08 21:39:16 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:16 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:16 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:16 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:16 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:16 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:16 +0000] [17] [DEBUG] GET /api/auth/profile/
+[2025-03-08 21:39:16 +0000] [19] [DEBUG] GET /api/auth/friends/
+[2025-03-08 21:39:16 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:16 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:16 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:16 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:16 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:16 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:16 +0000] [18] [DEBUG] GET /api/auth/friends/
+[2025-03-08 21:39:16 +0000] [17] [DEBUG] GET /api/auth/users/
+[2025-03-08 21:39:16 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:16 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:16 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:16 +0000] [18] [DEBUG] GET /api/auth/users/
+[2025-03-08 21:39:18 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:18 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:18 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:18 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:18 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:18 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:18 +0000] [19] [DEBUG] POST /api/auth/match/create/
+[2025-03-08 21:39:18 +0000] [17] [DEBUG] POST /api/auth/match/create/
+[2025-03-08 21:39:18 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:18 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:18 +0000] [18] [DEBUG] Failed to send error message.
+🚀 Received request to create match🚀 Received request to create match
+
+Headers: Headers: {'Host': 'localhost', 'Connection': 'keep-alive', 'Content-Length': '39', 'Sec-Ch-Ua-Platform': '"Windows"', 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQxNDcyNDQwLCJpYXQiOjE3NDE0Njg4NDAsImp0aSI6IjljMWUyNmVmZGU0ZjQ3NTg4ZDJmZDkzNTk4MGJlNjZmIiwidXNlcl9pZCI6MX0.9AxGETydFQt7iA13GKb2_nsbbFSldhijZ5Z9r2HprkY', 'X-Csrftoken': 'CxVmH1hVttibrgp2IVXL89TUXy2cTFMK', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36', 'Sec-Ch-Ua': '"Chromium";v="134", "Not:A-Brand";v="24", "Google Chrome";v="134"', 'Content-Type': 'application/json', 'Sec-Ch-Ua-Mobile': '?0', 'Accept': '*/*', 'Origin': 'https://localhost', 'Sec-Fetch-Site': 'same-origin', 'Sec-Fetch-Mode': 'cors', 'Sec-Fetch-Dest': 'empty', 'Referer': 'https://localhost/tictactoe', 'Accept-Encoding': 'gzip, deflate, br, zstd', 'Accept-Language': 'en-US,en;q=0.9,fr-FR;q=0.8,fr;q=0.7,ar;q=0.6', 'Cookie': 'Webstorm-c9dda885=64923685-bc81-466f-a62f-19546bbd1ee7; csrftoken=CxVmH1hVttibrgp2IVXL89TUXy2cTFMK; sessionid=mzt5fxhwf3ahz38puhz57wgg5rjqqpk1'}{'Host': 'localhost', 'Connection': 'keep-alive', 'Content-Length': '39', 'Sec-Ch-Ua-Platform': '"Windows"', 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQxNDcyNDQwLCJpYXQiOjE3NDE0Njg4NDAsImp0aSI6IjljMWUyNmVmZGU0ZjQ3NTg4ZDJmZDkzNTk4MGJlNjZmIiwidXNlcl9pZCI6MX0.9AxGETydFQt7iA13GKb2_nsbbFSldhijZ5Z9r2HprkY', 'X-Csrftoken': 'CxVmH1hVttibrgp2IVXL89TUXy2cTFMK', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36', 'Sec-Ch-Ua': '"Chromium";v="134", "Not:A-Brand";v="24", "Google Chrome";v="134"', 'Content-Type': 'application/json', 'Sec-Ch-Ua-Mobile': '?0', 'Accept': '*/*', 'Origin': 'https://localhost', 'Sec-Fetch-Site': 'same-origin', 'Sec-Fetch-Mode': 'cors', 'Sec-Fetch-Dest': 'empty', 'Referer': 'https://localhost/tictactoe', 'Accept-Encoding': 'gzip, deflate, br, zstd', 'Accept-Language': 'en-US,en;q=0.9,fr-FR;q=0.8,fr;q=0.7,ar;q=0.6', 'Cookie': 'Webstorm-c9dda885=64923685-bc81-466f-a62f-19546bbd1ee7; csrftoken=CxVmH1hVttibrgp2IVXL89TUXy2cTFMK; sessionid=mzt5fxhwf3ahz38puhz57wgg5rjqqpk1'}
+
+User: User: shamzaou@student.42abudhabi.ae
+shamzaou@student.42abudhabi.ae
+Request Data: {'game_type': 'TICTACTOE', 'mode': 'vsAI'}Request Data: 
+{'game_type': 'TICTACTOE', 'mode': 'vsAI'}
+✅ Match Created: d1e991b9-cc57-45ce-b39e-cc6cd999c763 for shamzaou@student.42abudhabi.ae
+✅ Match Created: 06aea3c1-4125-44b5-9da4-75baacf972c1 for shamzaou@student.42abudhabi.ae
+[2025-03-08 21:39:18 +0000] [18] [DEBUG] GET /favicon.ico
+[2025-03-08 21:39:19 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:19 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:19 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:19 +0000] [18] [DEBUG] POST /api/game/match/d1e991b9-cc57-45ce-b39e-cc6cd999c763/state
+[2025-03-08 21:39:20 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:20 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:20 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:20 +0000] [18] [DEBUG] POST /api/game/match/d1e991b9-cc57-45ce-b39e-cc6cd999c763/state
+[2025-03-08 21:39:20 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:20 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:20 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:20 +0000] [18] [DEBUG] POST /api/game/match/d1e991b9-cc57-45ce-b39e-cc6cd999c763/state
+[2025-03-08 21:39:22 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:22 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:22 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:22 +0000] [18] [DEBUG] POST /api/game/match/d1e991b9-cc57-45ce-b39e-cc6cd999c763/state
+[2025-03-08 21:39:24 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:24 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:24 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:24 +0000] [17] [DEBUG] POST /api/game/match/d1e991b9-cc57-45ce-b39e-cc6cd999c763/state
+[2025-03-08 21:39:25 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:25 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:25 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:25 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:25 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:25 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:25 +0000] [19] [DEBUG] POST /api/auth/save-match/
+[2025-03-08 21:39:25 +0000] [17] [DEBUG] POST /api/game/match/d1e991b9-cc57-45ce-b39e-cc6cd999c763/state
+Authorization Header: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQxNDcyNDQwLCJpYXQiOjE3NDE0Njg4NDAsImp0aSI6IjljMWUyNmVmZGU0ZjQ3NTg4ZDJmZDkzNTk4MGJlNjZmIiwidXNlcl9pZCI6MX0.9AxGETydFQt7iA13GKb2_nsbbFSldhijZ5Z9r2HprkY
+Received data: {
+    "game_type": "TICTACTOE",
+    "opponent": "Player 2",
+    "result": "LOSS",
+    "score": "0-1"
+}
+[2025-03-08 21:39:26 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:26 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:26 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:26 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:26 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:26 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:26 +0000] [17] [DEBUG] GET /api/auth/profile/
+[2025-03-08 21:39:26 +0000] [18] [DEBUG] GET /favicon.ico
+[2025-03-08 21:39:26 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:26 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:26 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:26 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:26 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:26 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:26 +0000] [18] [DEBUG] GET /api/auth/profile/
+[2025-03-08 21:39:26 +0000] [17] [DEBUG] GET /api/auth/friends/
+[2025-03-08 21:39:26 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:26 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:26 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:26 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:26 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:26 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:26 +0000] [18] [DEBUG] GET /api/auth/users/
+[2025-03-08 21:39:26 +0000] [19] [DEBUG] GET /api/auth/friends/
+[2025-03-08 21:39:26 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:26 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:26 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:26 +0000] [18] [DEBUG] GET /api/auth/users/
+[2025-03-08 21:39:30 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:30 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:30 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:30 +0000] [19] [DEBUG] GET /favicon.ico
+[2025-03-08 21:39:33 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:33 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:33 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:33 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:33 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:33 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:33 +0000] [19] [DEBUG] GET /api/auth/profile/
+[2025-03-08 21:39:33 +0000] [17] [DEBUG] GET /favicon.ico
+[2025-03-08 21:39:33 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:33 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:33 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:33 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:33 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:33 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:33 +0000] [18] [DEBUG] GET /api/auth/profile/
+[2025-03-08 21:39:33 +0000] [19] [DEBUG] GET /api/auth/friends/
+[2025-03-08 21:39:33 +0000] [19] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:33 +0000] [19] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:33 +0000] [19] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:33 +0000] [19] [DEBUG] GET /api/auth/users/
+[2025-03-08 21:39:33 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:33 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:33 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:33 +0000] [17] [DEBUG] GET /api/auth/profile/
+[2025-03-08 21:39:33 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:33 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:33 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:33 +0000] [17] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:33 +0000] [17] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:33 +0000] [17] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:33 +0000] [18] [DEBUG] GET /api/auth/profile/
+[2025-03-08 21:39:33 +0000] [17] [DEBUG] GET /api/auth/friends/
+[2025-03-08 21:39:33 +0000] [18] [DEBUG] Error processing SSL request.
+[2025-03-08 21:39:33 +0000] [18] [WARNING] Invalid request from ip=172.19.0.1: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] sslv3 alert certificate unknown (_ssl.c:2580)
+[2025-03-08 21:39:33 +0000] [18] [DEBUG] Failed to send error message.
+[2025-03-08 21:39:33 +0000] [18] [DEBUG] GET /api/auth/users/

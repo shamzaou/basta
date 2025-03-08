@@ -13,7 +13,11 @@ services:
       - db
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/basta_db
-      - DEBUG=1
+      - DEBUG=0
+      - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,[::1]
+      - DJANGO_SETTINGS_MODULE=production_settings
+      - SECRET_KEY=y9cb37808e60df664717e8c9dceb9a5993c65ca3b2bc400dfa0d3220c27cb2541
+      - PYTHONPATH=/app
     networks:
       - basta-network
     entrypoint: ["/bin/bash", "/app/scripts/entrypoint.sh"]
