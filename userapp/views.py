@@ -971,7 +971,7 @@ def get_friends(request):
                 'id': friend.id,
                 'username': friend.username,
                 'display_name': friend.display_name if hasattr(friend, 'display_name') else friend.username,
-                'avatar': friend.profile_picture.url if friend.profile_picture else None
+                # 'avatar': friend.profile_picture.url if friend.profile_picture else None
             })
         
         return Response({
