@@ -463,7 +463,6 @@ nav {
 }
 
 .field-container {
-    display: flex;
     align-items: center;
     gap: 1em;
 }
@@ -653,15 +652,19 @@ nav {
         display: flex;
     }
 
-    .nav-links {
-        display: none;
+    /* Fix for nav links in mobile view - ensure they're hidden by default */
+    .nav-links.logged-in,
+    .nav-links.logged-out {
+        display: none !important; /* Important to override other display settings */
         width: 100%;
         text-align: center;
         padding-top: 1em;
     }
 
-    .nav-links.active {
-        display: flex;
+    /* Only show when active class is applied */
+    .nav-links.logged-in.active,
+    .nav-links.logged-out.active {
+        display: flex !important;
         flex-direction: column;
     }
 
@@ -747,25 +750,15 @@ body.is-logged-out .logged-out {
 
 /* Mobile menu adjustments */
 @media (max-width: 768px) {
-    body.is-logged-in .logged-in,
-    body.is-logged-out .logged-out {
-        display: none;
-    }
-
-    body.is-logged-in .logged-in.active,
-    body.is-logged-out .logged-out.active {
-        display: flex;
-        flex-direction: column;
-        width: 100%;
-        align-items: center;
-    }
-
     .nav-links li {
         margin: 0.5em 0;
+        width: 100%; /* Make menu items full width on mobile */
+        text-align: center;
     }
 
     .btn-nav {
         margin: 0.5em 0;
+        width: 80%; /* Make buttons slightly narrower than full width */
     }
 }
 

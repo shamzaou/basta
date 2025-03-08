@@ -525,17 +525,38 @@ document.addEventListener('DOMContentLoaded', () => {
         registerForm.addEventListener('submit', handleRegister);
     }
     
-    // Mobile menu handling
+    // Mobile menu handling - Improved version
     const hamburger = document.getElementById('hamburger-menu');
     const navLinksLoggedIn = document.querySelector('.nav-links.logged-in');
     const navLinksLoggedOut = document.querySelector('.nav-links.logged-out');
     
     if (hamburger) {
         hamburger.addEventListener('click', () => {
-            const navLinks = document.body.classList.contains('is-logged-in') 
-                ? navLinksLoggedIn 
-                : navLinksLoggedOut;
-            navLinks?.classList.toggle('active');
+            // Determine which navigation to toggle based on login state
+            const isLoggedIn = document.body.classList.contains('is-logged-in');
+            const activeNav = isLoggedIn ? navLinksLoggedIn : navLinksLoggedOut;
+            
+            if (activeNav) {
+                activeNav.classList.toggle('active');
+                console.log('Toggle menu:', activeNav.classList.contains('active') ? 'opened' : 'closed');
+            }
+        });
+        
+        // Close mobile menu when clicking a link
+        document.querySelectorAll('.nav-links a').forEach(link => {
+            link.addEventListener('click', () => {
+                navLinksLoggedIn?.classList.remove('active');
+                navLinksLoggedOut?.classList.remove('active');
+            });
+        });
+        
+        // Close mobile menu when clicking outside
+        document.addEventListener('click', (event) => {
+            const isClickInside = event.target.closest('.nav-links') || event.target.closest('#hamburger-menu');
+            if (!isClickInside) {
+                navLinksLoggedIn?.classList.remove('active');
+                navLinksLoggedOut?.classList.remove('active');
+            }
         });
     }
     
