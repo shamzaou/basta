@@ -842,50 +842,8 @@ class PongGame {
                 const tournamentData = await tournamentResponse.json();
                 console.log("Tournament match finish response:", tournamentData);
                 
-                // Then also record in the user's match history that this was a tournament game
-                try {
-                    // For tournament matches - Save to match history with tournament flag
-                    const player1Element = document.getElementById('player1-name');
-                    const player2Element = document.getElementById('player2-name');
-                
-                    const currentUser = player1Element ? player1Element.textContent : "Player 1";
-                    const opponent = player2Element ? player2Element.textContent : "Player 2";
-                
-                    const userScore = this.state.score.player1 || 0;
-                    const opponentScore = this.state.score.player2 || 0;
-                    const scoreString = `${userScore}-${opponentScore}`;
-                
-                    // Determine result
-                    let result = 'DRAW';
-                    if (userScore > opponentScore) {
-                        result = 'WIN';
-                    } else if (opponentScore > userScore) {
-                        result = 'LOSS';
-                    }
-                    
-                    // Add to user's match history, marking as a tournament match with metadata
-                    const historyResponse = await fetch('/api/auth/save-match/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${authToken}`,
-                            'X-CSRFToken': getCookie('csrftoken')
-                        },
-                        body: JSON.stringify({
-                            game_type: 'TOURNAMENT',
-                            opponent: opponent,
-                            result: result,
-                            score: scoreString,
-                            tournament_id: tournamentId,
-                            match_id: matchId
-                        })
-                    });
-                    
-                    console.log('Tournament match history saved:', await historyResponse.text());
-                } catch (historyError) {
-                    console.error('Failed to save tournament to match history:', historyError);
-                    // Continue anyway as this is a secondary operation
-                }
+                // Note: We don't save tournament matches to match history anymore
+                // This prevents them from affecting user statistics
                 
                 if (tournamentData.success && this.state.gameStatus === 'finished') {
                     this.showNextGameButton();

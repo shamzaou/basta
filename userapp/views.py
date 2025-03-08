@@ -51,18 +51,18 @@ def profile_view(request):
         try:
             user = request.user
             
-            # Get user's match history (most recent 5 matches)
-            match_history = MatchHistory.objects.filter(user=user).order_by('-date_played')[:5]
+            # Exclude tournament games from both match history and statistics
+            match_history = MatchHistory.objects.filter(user=user).exclude(game_type='TOURNAMENT').order_by('-date_played')[:5]
             
-            # Calculate statistics
-            total_matches = MatchHistory.objects.filter(user=user).count()
-            wins = MatchHistory.objects.filter(user=user, result='WIN').count()
+            # Calculate statistics excluding tournament games
+            total_matches = MatchHistory.objects.filter(user=user).exclude(game_type='TOURNAMENT').count()
+            wins = MatchHistory.objects.filter(user=user, result='WIN').exclude(game_type='TOURNAMENT').count()
             win_rate = int((wins / total_matches) * 100) if total_matches > 0 else 0
             
-            # Find best score from wins
+            # Find best score from wins, excluding tournament matches
             best_score = "0-0"
             if wins > 0:
-                best_score_matches = MatchHistory.objects.filter(user=user, result='WIN')
+                best_score_matches = MatchHistory.objects.filter(user=user, result='WIN').exclude(game_type='TOURNAMENT')
                 if best_score_matches.exists():
                     # Find match with biggest score difference
                     best_match = None
