@@ -208,12 +208,6 @@ function initializeGameIfNeeded(pageId) {
         if (gameContainer) {
             gameContainer.innerHTML = '';
             gameContainer.style.display = 'block';
-            
-            // Reset tournament-related data for non-tournament games
-            if (!window.currentMatchId) {
-                resetTournamentData();
-            }
-            
             // Инициализируем игру: для турнира используем режим 'pvp' и matchId,
             // для обычной игры — без параметров
             const mode = window.currentMatchId ? 'pvp' : null;
@@ -226,17 +220,6 @@ function initializeGameIfNeeded(pageId) {
         if (gameContainer) {
             window.currentGame = new window.TicTacToeGame(gameContainer);
         }
-    }
-}
-
-// Add a new function to reset tournament data
-function resetTournamentData() {
-    if (!window.location.pathname.includes('tournament')) {
-        console.log('Resetting tournament data for clean game start');
-        window.currentMatchId = null;
-        window.tournamentId = null;
-        window.currentMatchPlayers = null;
-        window.lastMatchScore = null;
     }
 }
 
@@ -863,8 +846,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         if (destination === 'game') {
-            // Reset tournament data when explicitly starting a new game from button
-            resetTournamentData();
             showPage('game');
         } else if (destination === 'tournament') {
             showPage('tournament');
@@ -1101,11 +1082,6 @@ async function loadProfileData() {
             
             if (data.match_history && data.match_history.length > 0) {
                 data.match_history.forEach(match => {
-                    // Skip tournament games in profile display
-                    if (match.game_type === 'TOURNAMENT') {
-                        return; // Skip this iteration
-                    }
-                    
                     const matchCard = document.createElement('div');
                     matchCard.className = 'match-card';
                     
@@ -1149,14 +1125,6 @@ async function loadProfileData() {
                     
                     matchHistoryContainer.appendChild(matchCard);
                 });
-                
-                // If there are no non-tournament matches to display, show no matches message
-                const hasVisibleMatches = matchHistoryContainer.querySelectorAll('.match-card').length > 0;
-                if (!hasVisibleMatches) {
-                    const noMatches = document.createElement('p');
-                    noMatches.textContent = 'No regular matches played yet.';
-                    matchHistoryContainer.appendChild(noMatches);
-                }
             } else {
                 const noMatches = document.createElement('p');
                 noMatches.textContent = 'No matches played yet.';
