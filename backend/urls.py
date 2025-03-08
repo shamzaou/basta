@@ -12,14 +12,8 @@ urlpatterns = [
     path('tournaments/', include('tournaments.urls')),
     # path('tournaments/api/tournaments/create/', views.create_tournament),
     # Keep your catch-all route at the end
-    
-    # (WRONG!) Redirect all requsests from backend and frontend to the index.html
-    # re_path(r'^.*$', index, name='index'),
-
-    # (CORRECT!) Redirect only request related to frontend that not contain a '/api' in url
-    re_path(r'^(?!.*api)', index, name='index'),
-
-    # Catch-all для фронтенда, исключая все пути с /api и /tournaments
-    # re_path(r'^(?!/api/|/tournaments/)(?:.*)$', index, name='index'),
+  
+    re_path(r'^.*$', index, name='index'),
     
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+

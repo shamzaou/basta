@@ -29,6 +29,7 @@
                 <ul class="nav-links logged-out">
                     <li><a href="/" onclick="showPage('home'); return false;" class="active">Home</a></li>
                     <li><a href="/tictactoe" onclick="showPage('tictactoe'); return false;">TicTacToe</a></li>
+                    <li><a href="/about" onclick="showPage('about'); return false;">About</a></li>
                     <li><a href="/login" onclick="showPage('login'); return false;" class="btn-nav">Log in</a></li>
                     <li><a href="/register" onclick="showPage('register'); return false;" class="btn-nav">Register</a></li>
                 </ul>
@@ -37,6 +38,7 @@
                 <ul class="nav-links logged-in">
                     <li><a href="/" onclick="showPage('home'); return false;" class="active">Home</a></li>
                     <li><a href="/tictactoe" onclick="showPage('tictactoe'); return false;">TicTacToe</a></li>
+                    <li><a href="/about" onclick="showPage('about'); return false;">About</a></li>
                     <li><a href="/profile" onclick="showPage('profile'); return false;">Profile</a></li>
                     <li class="avatar-dropdown">
                         <div class="avatar-container">
@@ -82,46 +84,85 @@
         <div id="profile" class="page">
             <div class="container">
                 <h1>Player Profile</h1>
-                <div class="profile-container">
-                    <div class="profile-header">
-                        <img id="profile-avatar" src="{% static 'frontend/assets/man.png' %}" alt="Profile Avatar" class="profile-avatar">
-                        <div class="profile-info">
-                            <h2 id="profile-username">Loading...</h2>
-                            <p>Joined: <span id="profile-joined">Loading...</span></p>
+                <div class="profile-page-container">
+                    <div class="profile-container">
+                        <div class="profile-header">
+                            <div class="profile-header-left">
+                                <img id="profile-avatar" src="{% static 'frontend/assets/man.png' %}" alt="Profile Avatar" class="profile-avatar">
+                                <div class="profile-info">
+                                    <h2 id="profile-username">Loading...</h2>
+                                    <p>Joined: <span id="profile-joined">Loading...</span></p>
+                                </div>
+                            </div>
+                            <!-- Pie chart positioned as a sibling element to profile-header-left -->
+                            <div id="winrate-chart" class="winrate-chart-container"></div>
+                        </div>
+
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <h3>Games Played</h3>
+                                <div class="stat-value">156</div>
+                            </div>
+                            <div class="stat-card">
+                                <h3>Win Rate</h3>
+                                <div class="stat-value">68%</div>
+                            </div>
+                            <div class="stat-card">
+                                <h3>Best Score</h3>
+                                <div class="stat-value">11-0</div>
+                            </div>
+                        </div>
+
+                        <div class="match-history">
+                            <h2>Recent Matches</h2>
+                            <div class="match-card">
+                                <span>vs. Player2</span>
+                                <span>11-9</span>
+                                <span class="match-result win">WIN</span>
+                            </div>
+                            <div class="match-card">
+                                <span>vs. Player3</span>
+                                <span>7-11</span>
+                                <span class="match-result loss">LOSS</span>
+                            </div>
+                            <div class="match-card">
+                                <span>vs. Player4</span>
+                                <span>11-5</span>
+                                <span class="match-result win">WIN</span>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <h3>Games Played</h3>
-                            <div class="stat-value">156</div>
+                    <!-- Add friends panel -->
+                    <div class="friends-panel">
+                        <div class="friends-header">
+                            <h2>Friends</h2>
+                            <div class="tabs">
+                                <button class="tab-btn active" data-tab="my-friends">My Friends</button>
+                                <button class="tab-btn" data-tab="all-users">Find Users</button>
+                            </div>
                         </div>
-                        <div class="stat-card">
-                            <h3>Win Rate</h3>
-                            <div class="stat-value">68%</div>
-                        </div>
-                        <div class="stat-card">
-                            <h3>Best Score</h3>
-                            <div class="stat-value">11-0</div>
-                        </div>
-                    </div>
-
-                    <div class="match-history">
-                        <h2>Recent Matches</h2>
-                        <div class="match-card">
-                            <span>vs. Player2</span>
-                            <span>11-9</span>
-                            <span class="match-result win">WIN</span>
-                        </div>
-                        <div class="match-card">
-                            <span>vs. Player3</span>
-                            <span>7-11</span>
-                            <span class="match-result loss">LOSS</span>
-                        </div>
-                        <div class="match-card">
-                            <span>vs. Player4</span>
-                            <span>11-5</span>
-                            <span class="match-result win">WIN</span>
+                        
+                        <div class="friends-list-container">
+                            <div class="tab-content active" id="my-friends">
+                                <div class="friends-search">
+                                    <input type="text" placeholder="Search friends..." id="friends-search-input">
+                                </div>
+                                <div class="friends-list" id="friends-list">
+                                    <!-- Friend items will be inserted dynamically -->
+                                    <div class="loading-indicator">Loading your friends...</div>
+                                </div>
+                            </div>
+                            
+                            <div class="tab-content" id="all-users">
+                                <div class="friends-search">
+                                    <input type="text" placeholder="Find users..." id="users-search-input">
+                                </div>
+                                <div class="friends-list" id="users-list">
+                                    <!-- User items will be inserted dynamically -->
+                                    <div class="loading-indicator">Loading users...</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -137,26 +178,24 @@
                         <div class="settings-section">
                             <h2>Profile Information</h2>
                             <div class="form-group">
-                                <label for="username">Username*</label>
+                                <label for="username">Username</label>
                                 <div class="field-container">
                                     <div class="field-display">PlayerOne</div>
-                                    <input type="text" class="field-input" id="username" name="username" value="PlayerOne" required>
-                                    <button type="button" class="edit-btn" data-field="username">Edit</button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="email">Email Address</label>
+                                <div class="field-container">
+                                    <div class="field-display">player1@example.com</div>
+                                    <input type="email" class="field-input" id="email" name="email" value="player1@example.com" required>
                                 </div>
                             </div>
                             <div class="form-group">
                                 <label for="display-name">Display Name (Optional)</label>
                                 <div class="field-container">
-                                    <div class="field-display">The Champion</div>
+                                    <div class="field-display">nickname</div>
                                     <input type="text" class="field-input" id="display-name" name="display-name" value="The Champion">
                                     <button type="button" class="edit-btn" data-field="display-name">Edit</button>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="email">Email Address*</label>
-                                <div class="field-container">
-                                    <div class="field-display">player1@example.com</div>
-                                    <input type="email" class="field-input" id="email" name="email" value="player1@example.com" required>
                                 </div>
                             </div>
                         </div>
@@ -227,6 +266,181 @@
             </div>
         </div>
 
+        <!-- About Page -->
+        <div id="about" class="page">
+            <div class="container">
+                <h1>About FAST_PONG</h1>
+                <div class="about-container">
+                    <div class="about-section">
+                        <h2>Our Story</h2>
+                        <p>FAST_PONG was created as a modern homage to the classic Pong game released in 1972. Our goal was to combine retro gaming nostalgia with modern web technologies to create an engaging multiplayer experience.</p>
+                        <p>This project was developed as part of the 42 School curriculum, where a team of passionate developers came together to create a unique gaming platform.</p>
+                    </div>
+
+                    <div class="about-section">
+                        <h2>The Team</h2>
+                        <div class="team-grid">
+                            <div class="team-member">
+                                <img src="{% static 'frontend/assets/team/salim.jpg' %}" alt="Salim" class="team-avatar">
+                                <h3>Salim</h3>
+                                <p>Backend Developer</p>
+                                <div class="social-links">
+                                    <a href="https://github.com/salimef" target="_blank">GitHub</a>
+                                    <a href="https://linkedin.com/in/salimef" target="_blank">LinkedIn</a>
+                                </div>
+                            </div>
+                            <div class="team-member">
+                                <img src="{% static 'frontend/assets/team/anthony.jpg' %}" alt="Nasser" class="team-avatar">
+                                <h3>Nasser</h3>
+                                <p>Frontend Developer</p>
+                                <div class="social-links">
+                                    <a href="https://github.com/anthony" target="_blank">GitHub</a>
+                                    <a href="https://linkedin.com/in/anthony" target="_blank">LinkedIn</a>
+                                </div>
+                            </div>
+                            <div class="team-member">
+                                <img src="{% static 'frontend/assets/team/yann.jpg' %}" alt="Ali" class="team-avatar">
+                                <h3>Ali</h3>
+                                <p>Game Designer</p>
+                                <div class="social-links">
+                                    <a href="https://github.com/yann" target="_blank">GitHub</a>
+                                    <a href="https://linkedin.com/in/yann" target="_blank">LinkedIn</a>
+                                </div>
+                            </div>
+                            <div class="team-member">
+                                <img src="{% static 'frontend/assets/team/yann.jpg' %}" alt="Nur" class="team-avatar">
+                                <h3>Nur</h3>
+                                <p>Game Designer</p>
+                                <div class="social-links">
+                                    <a href="https://github.com/yann" target="_blank">GitHub</a>
+                                    <a href="https://linkedin.com/in/yann" target="_blank">LinkedIn</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="about-section">
+                        <h2>Technologies Used</h2>
+                        <div class="tech-stack">
+                            <div class="tech-item">
+                                <span class="tech-icon">🐍</span>
+                                <span class="tech-name">Django</span>
+                            </div>
+                            <div class="tech-item">
+                                <span class="tech-icon">🌐</span>
+                                <span class="tech-name">JavaScript</span>
+                            </div>
+                            <div class="tech-item">
+                                <span class="tech-icon">🎮</span>
+                                <span class="tech-name">Three.js</span>
+                            </div>
+                            <div class="tech-item">
+                                <span class="tech-icon">🔐</span>
+                                <span class="tech-name">OAuth</span>
+                            </div>
+                            <div class="tech-item">
+                                <span class="tech-icon">📱</span>
+                                <span class="tech-name">Responsive Design</span>
+                            </div>
+                            <div class="tech-item">
+                                <span class="tech-icon">🛢️</span>
+                                <span class="tech-name">PostgreSQL</span>
+                            </div>
+                            <div class="tech-item">
+                                <span class="tech-icon">🅱️</span>
+                                <span class="tech-name">Bootstrap</span>
+                            </div>
+                            <div class="tech-item">
+                                <span class="tech-icon">🔒</span>
+                                <span class="tech-name">2FA Security</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="about-section">
+                        <h2>Project Features</h2>
+                        <ul class="features-list">
+                            <li><span class="feature-check">✅</span> Classic Pong gameplay with modern 3D graphics</li>
+                            <li><span class="feature-check">✅</span> TicTacToe mini-game</li>
+                            <li><span class="feature-check">✅</span> User authentication with OAuth</li>
+                            <li><span class="feature-check">✅</span> Two-factor authentication</li>
+                            <li><span class="feature-check">✅</span> Tournament system</li>
+                            <li><span class="feature-check">✅</span> Detailed player statistics</li>
+                            <li><span class="feature-check">✅</span> Friend system</li>
+                            <li><span class="feature-check">✅</span> GDPR-compliant user data management</li>
+                        </ul>
+                    </div>
+
+                    <div class="about-section">
+                        <h2>Privacy Policy</h2>
+                        
+                        <div class="privacy-section">
+                            <h3>1. Data We Collect</h3>
+                            <p>We collect and store the following types of data:</p>
+                            <ul class="privacy-list">
+                                <li><strong>Account Information</strong>: Username, email address, and profile settings.</li>
+                                <li><strong>Game Data</strong>: Match history, scores, and statistics.</li>
+                                <li><strong>User Preferences</strong>: Settings related to notifications and gameplay experience.</li>
+                                <li><strong>Security & Authentication Data</strong>: Login timestamps and session management for security purposes.</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="privacy-section">
+                            <h3>2. How We Use Your Data</h3>
+                            <p>We use your data strictly to:</p>
+                            <ul class="privacy-list">
+                                <li>Provide and enhance the gaming experience.</li>
+                                <li>Maintain account security and prevent unauthorized access.</li>
+                                <li>Generate statistics for improving the platform.</li>
+                                <li>Comply with legal and security requirements.</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="privacy-section">
+                            <h3>3. Your Rights</h3>
+                            <p>In compliance with GDPR, you have the right to:</p>
+                            <ul class="privacy-list">
+                                <li><strong>Access</strong>: Download a copy of your personal data.</li>
+                                <li><strong>Edit</strong>: Modify your account details and preferences, for password change contact the support via the email below.</li>
+                                <li><strong>Delete</strong>: Permanently remove your account and data.</li>
+                            </ul>
+                            <p>You can exercise these rights through your account settings or by contacting support.</p>
+                        </div>
+                        
+                        <div class="privacy-section">
+                            <h3>4. Data Retention & Security</h3>
+                            <ul class="privacy-list">
+                                <li>Your data is securely stored.</li>
+                                <li>If your account remains inactive for <strong>6 months</strong>, it will be automatically deleted.</li>
+                                <li>We take appropriate security measures to protect your information from unauthorized access.</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="privacy-section">
+                            <h3>5. Third-Party Services</h3>
+                            <p>We do not share your personal data with third parties, except where required for legal compliance or security purposes.</p>
+                        </div>
+                        
+                        <div class="privacy-section">
+                            <h3>6. Changes to This Policy</h3>
+                            <p>We may update this Privacy Policy periodically. Users will be notified of significant changes via email or in-app notifications.</p>
+                            <p>For any questions regarding this policy, please contact us through the following email: <a href="mailto:shamzaou@student.42abudhabi.ae">shamzaou@student.42abudhabi.ae</a>.</p>
+                        </div>
+                    </div>
+
+                    <div class="about-section">
+                        <h2>Legal Disclaimer</h2>
+                        <div class="disclaimer-container">
+                            <div class="disclaimer-content">
+                                <p>This project is designed for educational purposes only and is not intended for commercial purposes. During the development of the project, the intellectual property rights of others were not affected.</p>
+                                <p>FAST_PONG was developed as part of the 42 School curriculum, with the primary goal of learning modern web development technologies and practices.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Login Page -->
         <div id="login" class="page">
             <div class="container">
@@ -263,7 +477,7 @@
                     </div>
                     <form id="registerForm" class="form-container">
                         <div class="input-container">
-                            <span>Nickname:</span>
+                            <span>Username:</span>
                             <input type="text" name="username" class="input-field" id="id_username" required>
                         </div>
                         

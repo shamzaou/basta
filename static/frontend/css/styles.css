@@ -324,6 +324,17 @@ nav {
     align-items: center;
     gap: 2em;
     margin-bottom: 2em;
+    position: relative;
+    /* Make it wrap on smaller screens */
+    flex-wrap: wrap;
+    justify-content: space-between; /* Space between avatar/info and chart */
+}
+
+/* Position avatar and info in a flex container */
+.profile-header-left {
+    display: flex;
+    align-items: center;
+    gap: 2em;
 }
 
 .profile-avatar {
@@ -359,14 +370,44 @@ nav {
     margin-top: 2em;
 }
 
+/* Style for game type indicator in match history */
+.match-card .game-type {
+    font-size: 0.8em;
+    font-weight: bold;
+    color: #00aaff;
+    background-color: rgba(0, 170, 255, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-right: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Add style for match date */
+.match-card .match-date {
+    font-size: 0.7em;
+    color: rgba(255, 255, 255, 0.6);
+    margin-left: 8px;
+    font-style: italic;
+    position: absolute;
+    right: 15px;
+    top: 10px;
+}
+
+/* Adjust the match card to fit the new element */
 .match-card {
-    background-color: rgba(255, 255, 255, 0.05);
-    border-radius: var(--border-radius);
-    padding: 1em;
-    margin-bottom: 1em;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 10px 15px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+    margin-bottom: 10px;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.8em;
+    border-left: 3px solid #00ff00;
+    position: relative; /* Add this to position the date */
+    padding-top: 20px; /* Add more padding at the top for the date */
 }
 
 .match-result {
@@ -423,7 +464,6 @@ nav {
 }
 
 .field-container {
-    display: flex;
     align-items: center;
     gap: 1em;
 }
@@ -553,7 +593,6 @@ nav {
     padding: 1em;
     border-radius: 4px;
     margin-top: 1em;
-    font-size: 0.9em;
 }
 
 .danger-zone {
@@ -614,15 +653,19 @@ nav {
         display: flex;
     }
 
-    .nav-links {
-        display: none;
+    /* Fix for nav links in mobile view - ensure they're hidden by default */
+    .nav-links.logged-in,
+    .nav-links.logged-out {
+        display: none !important; /* Important to override other display settings */
         width: 100%;
         text-align: center;
         padding-top: 1em;
     }
 
-    .nav-links.active {
-        display: flex;
+    /* Only show when active class is applied */
+    .nav-links.logged-in.active,
+    .nav-links.logged-out.active {
+        display: flex !important;
         flex-direction: column;
     }
 
@@ -708,25 +751,15 @@ body.is-logged-out .logged-out {
 
 /* Mobile menu adjustments */
 @media (max-width: 768px) {
-    body.is-logged-in .logged-in,
-    body.is-logged-out .logged-out {
-        display: none;
-    }
-
-    body.is-logged-in .logged-in.active,
-    body.is-logged-out .logged-out.active {
-        display: flex;
-        flex-direction: column;
-        width: 100%;
-        align-items: center;
-    }
-
     .nav-links li {
         margin: 0.5em 0;
+        width: 100%; /* Make menu items full width on mobile */
+        text-align: center;
     }
 
     .btn-nav {
         margin: 0.5em 0;
+        width: 80%; /* Make buttons slightly narrower than full width */
     }
 }
 
@@ -856,7 +889,7 @@ body.is-logged-out .logged-out {
 .form-group label {
     font-family: 'Press Start 2P', cursive;
     font-size: 0.8em;
-    color: var(--text-color);
+    color: var (--text-color);
 }
 
 .file-input {
@@ -1209,6 +1242,505 @@ body.is-logged-out .logged-out {
     box-shadow: 0 0 20px #00ccff;
 }
 
+/* Friends Panel Styles */
+.profile-page-container {
+    display: grid;
+    /* Change to 2fr 1fr to make profile container wider while keeping friend panel same size */
+    grid-template-columns: 2fr 320px;
+    gap: 2em;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.friends-panel {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: var(--border-radius);
+    padding: 1.5em;
+    max-height: 700px;
+    display: flex;
+    flex-direction: column;
+}
+
+.friends-header {
+    margin-bottom: 1em;
+}
+
+.friends-header h2 {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 1.2em;
+    color: var(--primary-color);
+    margin-bottom: 1em;
+}
+
+.tabs {
+    display: flex;
+    gap: 0.5em;
+    margin-bottom: 1em;
+}
+
+.tab-btn {
+    background-color: transparent;
+    border: 2px solid var(--primary-color);
+    color: var(--text-color);
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.7em;
+    padding: 0.8em 1em;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    flex: 1;
+}
+
+.tab-btn:hover {
+    background-color: rgba(0, 255, 0, 0.1);
+}
+
+.tab-btn.active {
+    background-color: var(--primary-color);
+    color: var(--background-color);
+}
+
+.friends-search {
+    margin-bottom: 1em;
+}
+
+.friends-search input {
+    width: 100%;
+    padding: 0.8em;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 2px solid var(--primary-color);
+    border-radius: 4px;
+    color: var(--text-color);
+    font-family: 'Roboto', sans-serif;
+}
+
+.friends-search input:focus {
+    outline: none;
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+.friends-list-container {
+    flex: 1;
+    overflow: hidden;
+}
+
+.tab-content {
+    display: none;
+    height: 100%;
+}
+
+.tab-content.active {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.friends-list {
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Update friend-item styles to compensate for lack of avatar */
+.friend-item {
+    display: flex;
+    align-items: center;
+    padding: 0.8em;
+    border-radius: 4px;
+    margin-bottom: 0.5em;
+    background-color: rgba(255, 255, 255, 0.05);
+    transition: background-color 0.3s ease;
+    justify-content: space-between; /* Better spacing without avatar */
+}
+
+/* Remove the friend-avatar class as it's no longer needed */
+/* .friend-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--primary-color);
+    margin-right: 1em;
+} */
+
+/* Update friend-info to take more space */
+.friend-info {
+    flex: 1;
+    padding-left: 0.5em; /* Add a bit of padding since we removed the avatar */
+}
+
+.friend-name {
+    font-weight: bold;
+    color: var(--text-color);
+}
+
+.friend-username {
+    font-size: 0.8em;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.friend-action {
+    padding: 0.5em 1em;
+    background-color: transparent;
+    border: 2px solid var(--primary-color);
+    color: var(--primary-color);
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.7em;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.friend-action:hover {
+    background-color: var(--primary-color);
+    color: var(--background-color);
+}
+
+.friend-action.remove {
+    border-color: var(--danger-color);
+    color: var (--danger-color);
+}
+
+.friend-action.remove:hover {
+    background-color: var(--danger-color);
+    color: var(--text-color);
+}
+
+.loading-indicator {
+    text-align: center;
+    padding: 1em;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 2em;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* Media query for responsive design */
+@media (max-width: 920px) {
+    .profile-page-container {
+        grid-template-columns: 1fr;
+    }
+
+    .profile-header {
+        justify-content: center;
+        text-align: center;
+    }
+
+    .friends-panel {
+        max-height: none;
+    }
+}
+
+/* Add win rate pie chart container */
+.winrate-chart-container {
+    position: relative; /* Change from absolute to relative */
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background-color: rgba(0, 255, 0, 0.05); /* Match stats cards */
+    border: 2px solid var(--primary-color); /* Match stats cards */
+    padding: 10px;
+    box-sizing: content-box; /* Ensure padding doesn't affect size */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Add media query for small/medium screens */
+@media (max-width: 1100px) {
+    .winrate-chart-container {
+        position: relative;
+        right: auto;
+        top: auto;
+        transform: none;
+        margin: 0 auto;
+    }
+}
+
+/* About Page Styles */
+.about-container {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: var(--border-radius);
+    padding: 2em;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.about-section {
+    margin-bottom: 3em;
+    padding-bottom: 2em;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.about-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.about-section p {
+    text-align: left;
+    font-family: 'Roboto', sans-serif;
+    font-size: 1em;
+    line-height: 1.6;
+    margin-bottom: 1.5em;
+}
+
+.team-grid {
+    display: flex;  /* Change from grid to flex */
+    flex-wrap: nowrap; /* Prevent wrapping */
+    justify-content: space-between; /* Space evenly between members */
+    gap: 1em; /* Reduce gap to fit in one line */
+    margin-top: 2em;
+    overflow-x: auto; /* Add horizontal scroll for smaller screens */
+    padding-bottom: 1em; /* Add padding for scrollbar */
+    padding-top: 8px; /* Add padding to the top to prevent border disappearance on hover */
+}
+
+.team-member {
+    flex: 0 0 auto; /* Fixed width, no grow/shrink */
+    width: 220px; /* Set fixed width for each member */
+    background-color: rgba(0, 255, 0, 0.05);
+    border: 2px solid var(--primary-color);
+    border-radius: var(--border-radius);
+    padding: 1.5em;
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    margin-top: 5px; /* Add margin to the top of each card */
+}
+
+.team-member:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 255, 0, 0.2);
+}
+
+.team-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--primary-color);
+    margin-bottom: 1em;
+}
+
+.team-member h3 {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 1.2em;
+    margin-bottom: 0.5em;
+}
+
+.team-member p {
+    margin-bottom: 1em;
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.9em;
+    color: var(--text-color);
+    opacity: 0.8;
+    text-align: center;
+}
+
+.social-links {
+    display: flex;
+    justify-content: center;
+    gap: 1em;
+    margin-top: 1em;
+}
+
+.social-links a {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: color 0.3s ease;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.7em;
+}
+
+.social-links a:hover {
+    color: var(--secondary-color);
+}
+
+.tech-stack {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1.5em;
+    margin-top: 2em;
+}
+
+.tech-item {
+    display: flex;
+    align-items: center;
+    padding: 1em;
+    background-color: rgba(0, 255, 0, 0.05);
+    border: 2px solid var(--primary-color);
+    border-radius: var(--border-radius);
+    transition: transform 0.3s ease;
+}
+
+.tech-item:hover {
+    transform: translateY(-5px);
+}
+
+.tech-icon {
+    font-size: 1.5em;
+    margin-right: 0.5em;
+}
+
+.tech-name {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.8em;
+}
+
+.features-list {
+    list-style: none;
+    padding: 0;
+    margin: 2em 0;
+}
+
+.features-list li {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1em;
+    font-family: 'Roboto', sans-serif;
+    font-size: 1em;
+    line-height: 1.4;
+}
+
+.feature-check {
+    color: var(--primary-color);
+    margin-right: 1em;
+    font-weight: bold;
+    font-size: 1.2em;
+}
+
+/* Responsive styles for About page */
+@media (max-width: 768px) {
+    .team-grid {
+        padding-bottom: 1.5em; /* More space for the scrollbar */
+        /* Keep the nowrap to force horizontal scroll */
+    }
+    
+    .team-member {
+        width: 180px; /* Slightly smaller on mobile */
+    }
+    
+    .about-section p {
+        font-size: 0.9em;
+    }
+    
+    .tech-name {
+        font-size: 0.7em;
+    }
+}
+
+/* Privacy Policy Styles */
+.privacy-section {
+    margin-bottom: 2em;
+    padding-left: 1em;
+    border-left: 3px solid var(--primary-color);
+}
+
+.privacy-section:last-child {
+    margin-bottom: 0;
+}
+
+.privacy-section h3 {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 1em;
+    color: var(--primary-color);
+    margin-bottom: 1em;
+}
+
+.privacy-section p {
+    text-align: left;
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.9em;
+    line-height: 1.6;
+    margin-bottom: 1em;
+    max-width: none;
+}
+
+.privacy-list {
+    list-style: none;
+    padding-left: 1.5em;
+    margin-bottom: 1.5em;
+}
+
+.privacy-list li {
+    position: relative;
+    padding-left: 1em;
+    margin-bottom: 0.8em;
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.9em;
+    line-height: 1.5;
+}
+
+.privacy-list li::before {
+    content: "•";
+    position: absolute;
+    left: 0;
+    color: var(--primary-color);
+}
+
+.privacy-section a {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.privacy-section a:hover {
+    color: var(--secondary-color);
+    text-decoration: underline;
+}
+
+/* Responsive styling for privacy policy */
+@media (max-width: 768px) {
+    .privacy-section {
+        padding-left: 0.8em;
+    }
+    
+    .privacy-section h3 {
+        font-size: 0.9em;
+    }
+    
+    .privacy-section p, 
+    .privacy-list li {
+        font-size: 0.85em;
+    }
+}
+
+/* Legal Disclaimer Styles */
+.disclaimer-container {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: var(--border-radius);
+    padding: 1.5em;
+    border-left: 3px solid var(--secondary-color);
+    margin-top: 1em;
+}
+
+.disclaimer-content p {
+    text-align: left;
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.95em;
+    line-height: 1.6;
+    margin-bottom: 1em;
+    max-width: none;
+}
+
+.disclaimer-content p:last-child {
+    margin-bottom: 0;
+}
+
+/* Responsive styling for disclaimer */
+@media (max-width: 768px) {
+    .disclaimer-container {
+        padding: 1em;
+    }
+    
+    .disclaimer-content p {
+        font-size: 0.85em;
+    }
+}
+
 /* ================================================================= */
 
 /* Добавляем в конец файла styles.css */
@@ -1530,4 +2062,5 @@ body.is-logged-out .logged-out {
     font-weight: bold;
     margin-bottom: 15px;
 }
+
 

@@ -1,6 +1,7 @@
 # userapp/models.py
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils import timezone
 
 class User(AbstractUser):
     display_name = models.CharField(max_length=150, blank=True, null=True)
@@ -9,6 +10,10 @@ class User(AbstractUser):
     is_42_user = models.BooleanField(default=False)
     intra_id = models.CharField(max_length=50, null=True, blank=True)
     two_factor_enabled = models.BooleanField(default=False)
+    
+    # Add GDPR compliance fields
+    last_activity = models.DateTimeField(default=timezone.now)
+    last_warned_date = models.DateTimeField(null=True, blank=True)
     
     # Override username to ensure it's unique
     username = models.CharField(max_length=150, unique=True)
@@ -26,6 +31,9 @@ class User(AbstractUser):
         help_text='Specific permissions for this user.'
     )
     
+    # Add a many-to-many relationship for friends
+    friends = models.ManyToManyField('self', symmetrical=False, related_name='friend_of')
+    
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
 
@@ -35,3 +43,48 @@ class User(AbstractUser):
     def get_display_name(self):
         """Return display_name if set, otherwise return username"""
         return self.display_name if self.display_name else self.username
+
+    def add_friend(self, friend):
+        """Add a user as friend"""
+        if friend != self and friend not in self.friends.all():
+            self.friends.add(friend)
+            return True
+        return False
+    
+    def remove_friend(self, friend):
+        """Remove a user from friends"""
+        if friend in self.friends.all():
+            self.friends.remove(friend)
+            return True
+        return False
+
+    def update_last_activity(self):
+        """Update the last_activity timestamp"""
+        self.last_activity = timezone.now()
+        self.save(update_fields=['last_activity'])
+
+class MatchHistory(models.Model):
+    GAME_CHOICES = (
+        ('PONG', 'Pong'),
+        ('TICTACTOE', 'TicTacToe'),
+    )
+    
+    RESULT_CHOICES = (
+        ('WIN', 'Win'),
+        ('LOSS', 'Loss'),
+        ('DRAW', 'Draw'),
+    )
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='matches')
+    game_type = models.CharField(max_length=10, choices=GAME_CHOICES)
+    opponent = models.CharField(max_length=150)
+    result = models.CharField(max_length=4, choices=RESULT_CHOICES)
+    score = models.CharField(max_length=10)  # Format: "user_score-opponent_score"
+    date_played = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-date_played']
+        verbose_name_plural = 'Match Histories'
+    
+    def __str__(self):
+        return f"{self.user.username} vs {self.opponent} - {self.result}"

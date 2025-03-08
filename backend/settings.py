@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from decouple import config
 from pathlib import Path
 import os
+from datetime import timedelta
 AUTH_USER_MODEL = 'userapp.User'
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -53,10 +54,19 @@ INSTALLED_APPS = [
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.TokenAuthentication',  # Add this line
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.BasicAuthentication',
     ),
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
 MIDDLEWARE = [
@@ -68,6 +78,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'userapp.middleware.UserActivityMiddleware',
 ]
 
 ROOT_URLCONF = 'backend.urls'
@@ -179,8 +190,8 @@ SESSION_SAVE_EVERY_REQUEST = True
 CORS_ALLOW_ALL_ORIGINS = True  # For development only
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8000",
-    "https://localhost:8000",
+    "http://localhost:443",
+    "https://localhost:443",
 ]
 CORS_ALLOW_METHODS = [
     'GET',
@@ -204,8 +215,8 @@ CSRF_COOKIE_SECURE = False
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:8000",
-    "https://localhost:8000",
+    "http://localhost:443",
+    "https://localhost:443",
 ]
 CSRF_USE_SESSIONS = False
 CSRF_COOKIE_NAME = 'csrftoken'
@@ -218,11 +229,6 @@ EMAIL_HOST_USER = "transcendance.2fa@gmail.com"
 EMAIL_HOST_PASSWORD = "poba ejtv oemo afsj"
 DEFAULT_FROM_EMAIL = "2FA <transcendance.2fa@gmail.com>"
 
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
-}
 
 JWT_SETTINGS = {
     'JWT_SECRET_KEY': config('JWT_SECRET_KEY', default='your-secret-key-here'),
@@ -230,8 +236,60 @@ JWT_SETTINGS = {
     'JWT_ALGORITHM': 'HS256',
     'CLIENT_ID': config('CLIENT_ID', default='u-s4t2ud-132fa5622bce53a46a8bed31d7e99019853b85977cc5fece17d95b9ee8cdff22'),
     'CLIENT_SECRET': config('CLIENT_SECRET', default='your-client-secret'),
-    'REDIRECT_URI': config('REDIRECT_URI', default='https://localhost:8000/profile')
+    'REDIRECT_URI': config('REDIRECT_URI', default='https://localhost:443/profile')
 }
+
+OAUTH2_PROVIDER = {
+    'SCOPES': {
+        'read': 'Read scope',
+        'write': 'Write scope',
+    },
+    'ACCESS_TOKEN_EXPIRE_SECONDS': 3600,
+    'REFRESH_TOKEN_EXPIRE_SECONDS': 86400,
+}
+
+# Update JWT settings
+JWT_SETTINGS.update({
+    'STATE_TTL': 600,  # 10 minutes in seconds
+    'OAUTH_AUTHORIZATION_URL': 'https://api.intra.42.fr/oauth/authorize',
+    'OAUTH_TOKEN_URL': 'https://api.intra.42.fr/oauth/token',
+})
+
+# Ensure CORS settings include the OAuth redirect URI
+CORS_ALLOWED_ORIGINS.extend([
+    'https://localhost:443',
+    'http://localhost:443',
+])
+
+CSRF_TRUSTED_ORIGINS.extend([
+    'https://localhost:443',
+    'http://localhost:443',
+])
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# 42 OAuth Settings 
+FORTYTWO_CLIENT_ID = config('FORTYTWO_CLIENT_ID', default='u-s4t2ud-c027f46e7ffb944f9483c4359967dc984c0b904c0cc3b9f628b05ba7c0c67cfc')
+FORTYTWO_CLIENT_SECRET = config('FORTYTWO_CLIENT_SECRET', default='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')
+FORTYTWO_REDIRECT_URI = config('FORTYTWO_REDIRECT_URI', default='https://localhost:443/home')
+
+# Add this at the bottom of settings.py to ensure media files are served in development
+if DEBUG:
+    STATICFILES_DIRS = [
+        os.path.join(BASE_DIR, 'static'),
+    ]
+    STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+    
+    # This is important for serving media files in development
+    from django.conf.urls.static import static
+    from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+    
+    # Additional URL patterns for development
+    STATICFILES_URLS = staticfiles_urlpatterns()
+
+# Add GDPR settings
+# GDPR User Deletion Settings
+INACTIVE_USER_DELETE_MONTHS = 6  # Delete after 6 months of inactivity
+INACTIVE_USER_WARNING_MONTHS = 5  # Warn after 5 months of inactivity
+LAST_ACTIVITY_UPDATE_WINDOW = 15  # Only update last_activity after 15 minutes (in minutes)

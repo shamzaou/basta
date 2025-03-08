@@ -505,9 +505,10 @@ class GameRenderer {
 
 // Input handler class
 class InputHandler {
-    constructor(paddle1, paddle2) {
+    constructor(paddle1, paddle2, gameMode) {
         this.paddle1 = paddle1;
         this.paddle2 = paddle2;
+        this.gameMode = gameMode;
         this.keys = new Set();
         
         // Bind the handlers to maintain context
@@ -520,12 +521,18 @@ class InputHandler {
     }
 
     handleKeyDown(e) {
-        this.keys.add(e.key.toLowerCase());  // Convert to lowercase for consistency
-        
-        // Prevent default for game controls
+        // Prevent default for game controls regardless of game mode
         if (['w', 's', 'arrowup', 'arrowdown', ' '].includes(e.key.toLowerCase())) {
             e.preventDefault();
         }
+        
+        // Only add key to active keys if it's allowed in current game mode
+        if (this.gameMode === 'ai' && (e.key.toLowerCase() === 'arrowup' || e.key.toLowerCase() === 'arrowdown')) {
+            // Don't add AI paddle controls to active keys
+            return;
+        }
+        
+        this.keys.add(e.key.toLowerCase());  // Convert to lowercase for consistency
     }
 
     handleKeyUp(e) {
@@ -544,11 +551,26 @@ class InputHandler {
         }
 
         // Paddle 2 controls (Arrow keys) with tighter bounds
-        if (this.keys.has('arrowup') && this.paddle2.position.z > -2.1) {
-            this.paddle2.position.z -= paddleSpeed;
+        // Only apply if we're in PvP mode
+        if (this.gameMode !== 'ai') {
+            if (this.keys.has('arrowup') && this.paddle2.position.z > -2.1) {
+                this.paddle2.position.z -= paddleSpeed;
+            }
+            if (this.keys.has('arrowdown') && this.paddle2.position.z < 2.1) {
+                this.paddle2.position.z += paddleSpeed;
+            }
         }
-        if (this.keys.has('arrowdown') && this.paddle2.position.z < 2.1) {
-            this.paddle2.position.z += paddleSpeed;
+        // In AI mode, we explicitly do not process arrow keys
+    }
+
+    setGameMode(mode) {
+        // Update game mode if it changes during gameplay
+        this.gameMode = mode;
+        
+        // Clear any AI paddle keys that might be in the set
+        if (mode === 'ai') {
+            this.keys.delete('arrowup');
+            this.keys.delete('arrowdown');
         }
     }
 
@@ -671,7 +693,7 @@ class PongGame {
         // Initialize game components
         this.renderer = new GameRenderer(canvasContainer);
         this.physics = new GamePhysics(GAME_CONFIG);
-        this.inputHandler = new InputHandler(this.renderer.paddle1, this.renderer.paddle2);
+        this.inputHandler = new InputHandler(this.renderer.paddle1, this.renderer.paddle2, gameMode);
         this.ai = gameMode === 'ai' ? new PongAI(this.renderer.paddle2) : null;
         
         // Set initial ball velocity
@@ -782,6 +804,44 @@ class PongGame {
     // 
     
     async finishMatch() {
+/// <<<< master
+        try {
+            console.log("I am in finish Match");
+    
+            // Get player names safely
+            const player1Element = document.getElementById('player1-name');
+            const player2Element = document.getElementById('player2-name');
+    
+            const currentUser = player1Element ? player1Element.textContent : "Player 1";
+    
+            // Determine if it's PvP or AI mode and set a default opponent name
+            let opponent;
+            if (this.gameMode === 'ai') {
+                opponent = "AI";
+            } else {
+                opponent = player2Element && player2Element.textContent.trim() !== "" 
+                    ? player2Element.textContent 
+                    : "Player 2";  // Default name when player2 is missing or empty
+            }
+    
+            const userScore = this.state.score.player1 || 0;
+            const opponentScore = this.state.score.player2 || 0;
+            const scoreString = `${userScore}-${opponentScore}`;
+    
+            // Determine result
+            let result = 'DRAW';
+            if (userScore > opponentScore) {
+                result = 'WIN';
+            } else if (opponentScore > userScore) {
+                result = 'LOSS';
+            }
+    
+            const tokenFM = localStorage.getItem('authToken');
+            
+            // Fix the URL to use relative path instead of hardcoded domain
+            // Send result to backend
+            const response = await fetch('/api/auth/save-match/', {
+// =======
         // Проверяем, не завершается ли матч уже
         if (this.isFinishing) return;
         this.isFinishing = true;
@@ -793,17 +853,41 @@ class PongGame {
 
         try {
             const response = await fetch(`/tournaments/api/tournaments/${this.state.matchId}/finish/`, {
+// >>>>>>> 8ec6d59
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${tokenFM}`,
                     'X-CSRFToken': getCookie('csrftoken')
                 },
                 body: JSON.stringify({
-                    score_player1: this.state.score.player1,
-                    score_player2: this.state.score.player2,
-                    winner: this.state.winner
+                    game_type: 'PONG',
+                    opponent: opponent,
+                    result: result,
+                    score: scoreString
                 })
             });
+/// <<<<<<< master
+    
+            const responseText = await response.text();  // Capture response as text
+            console.log("Response from backend:", responseText);
+    
+            if (!response.ok) {
+                console.error("Failed to save match history:", responseText);
+                throw new Error(responseText);
+            }
+        } catch (error) {
+            console.error('Failed to save Pong match:', error);
+        }
+
+        // Show restart button for normal game
+        const gameControls = document.getElementById('game-controls');
+        const restartButton = document.getElementById('restart-button');
+        if (gameControls && restartButton) {
+            restartButton.textContent = 'Restart Game';
+            restartButton.onclick = () => this.restartGame();
+            gameControls.style.display = 'block';
+// =======
 
             if (!response.ok) {
                 throw new Error('Failed to finish match');
@@ -849,8 +933,11 @@ class PongGame {
                 }
                 window.showPage('tournament');
             };
+// >>>>>>> 8ec6d59
         }
+        return;
     }
+    
 
     restartGame() {
         // Reset game state

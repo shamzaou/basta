@@ -1,0 +1,2 @@
+# Run once a week on Sunday at midnight
+0 0 * * 0 cd /c:/Users/salim/Desktop/Basta && python manage.py delete_inactive_users >> /var/log/gdpr_cleanup.log 2>&1

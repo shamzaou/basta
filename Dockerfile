@@ -16,7 +16,8 @@ RUN apt-get update \
 
 # Install Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip install Werkzeug django-extensions django-werkzeug-debugger-runserver
 
 # Copy project
 COPY . .
@@ -26,8 +27,9 @@ RUN chmod +x /app/scripts/init_db.sh \
     && chmod +x /app/scripts/entrypoint.sh
 
 # Expose port
-EXPOSE 8000
+EXPOSE 443
 
 # Set entrypoint
+
 ENTRYPOINT ["/app/scripts/init_db.sh"]
 CMD ["python", "manage.py", "runserver--traceback", "0.0.0.0:8000"]

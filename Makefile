@@ -28,7 +28,7 @@ build:
 up:
 	@echo "$(GREEN)Starting Docker containers...$(RESET)"
 	docker-compose up -d
-	@echo "$(GREEN)Services are running. Access the application at https://localhost:8000$(RESET)"
+	@echo "$(GREEN)Services are running. Access the application at https://localhost$(RESET)"
 
 down:
 	@echo "$(GREEN)Stopping Docker containers...$(RESET)"

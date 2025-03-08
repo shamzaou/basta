@@ -1,12 +1,13 @@
 # userapp/views.py
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
-from django.contrib.auth import login, logout, authenticate
+from django.contrib.auth import login, logout, authenticate, get_user_model
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
 
 from decouple import config
 
 from rest_framework.authtoken.models import Token  # Add this import
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from django.core.mail import send_mail
 from django.conf import settings
@@ -23,7 +24,7 @@ from rest_framework.decorators import api_view
 import json
 import jwt
 import datetime
-from .models import User
+from .models import User, MatchHistory
 
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated
@@ -33,6 +34,10 @@ from django.core.files.storage import default_storage
 import base64
 from django.core.files.base import ContentFile
 from rest_framework.authentication import SessionAuthentication, TokenAuthentication
+import uuid
+
+import os
+from django.http import HttpResponse, FileResponse
 
 logger = logging.getLogger(__name__)
 
@@ -45,12 +50,62 @@ def profile_view(request):
     if request.method == 'GET':
         try:
             user = request.user
+            
+            # Get user's match history (most recent 5 matches)
+            match_history = MatchHistory.objects.filter(user=user).order_by('-date_played')[:5]
+            
+            # Calculate statistics
+            total_matches = MatchHistory.objects.filter(user=user).count()
+            wins = MatchHistory.objects.filter(user=user, result='WIN').count()
+            win_rate = int((wins / total_matches) * 100) if total_matches > 0 else 0
+            
+            # Find best score from wins
+            best_score = "0-0"
+            if wins > 0:
+                best_score_matches = MatchHistory.objects.filter(user=user, result='WIN')
+                if best_score_matches.exists():
+                    # Find match with biggest score difference
+                    best_match = None
+                    biggest_diff = -1
+                    for match in best_score_matches:
+                        scores = match.score.split('-')
+                        if len(scores) == 2:
+                            try:
+                                user_score = int(scores[0])
+                                opp_score = int(scores[1])
+                                diff = user_score - opp_score
+                                if diff > biggest_diff:
+                                    biggest_diff = diff
+                                    best_match = match
+                            except ValueError:
+                                continue
+                    
+                    if best_match:
+                        best_score = best_match.score
+            
+            # Format match history for response
+            matches = []
+            for match in match_history:
+                matches.append({
+                    'opponent': match.opponent,
+                    'score': match.score,
+                    'result': match.result,
+                    'date': match.date_played.strftime('%d %b %Y'),
+                    'game_type': match.game_type  # Ensure game_type is included
+                })
+                
             return Response({
                 'username': user.username,
                 'email': user.email,
                 'display_name': user.display_name if hasattr(user, 'display_name') else user.username,
                 'avatar': user.profile_picture.url if user.profile_picture else None,
-                'date_joined': user.date_joined.strftime('%B %Y')
+                'date_joined': user.date_joined.strftime('%B %Y'),
+                'stats': {
+                    'games_played': total_matches,
+                    'win_rate': f"{win_rate}%",
+                    'best_score': best_score
+                },
+                'match_history': matches
             })
         except Exception as e:
             print(f"Profile view error: {str(e)}")
@@ -157,69 +212,56 @@ def update_profile(request):
 def login_view(request):
     try:
         data = json.loads(request.body)
-
         email = data.get("email")
         password = data.get("password")
-        
-        print(f"Login attempt for email: {email}")  # Debug log
-        
+
         if not email or not password:
             return JsonResponse({"status": "error", "message": "Email and password are required."}, status=400)
 
         user = authenticate(username=email, password=password)
-        
+
         if not user:
             return JsonResponse({"status": "error", "message": "Invalid email or password."}, status=400)
 
-        # Check if user exists and credentials are valid
-        if user:
-            # First verify if 2FA is enabled for this user
-            if user.two_factor_enabled:
-                # Generate and send OTP only after successful password verification
-                otp = str(random.randint(100000, 999999))
-                cache_key = f"otp_{user.id}"
-                cache.set(cache_key, otp, timeout=300)  # 5 minutes
+        if user.two_factor_enabled:
+            # Handle 2FA before issuing tokens
+            otp = str(random.randint(100000, 999999))
+            cache_key = f"otp_{user.id}"
+            cache.set(cache_key, otp, timeout=300)
 
-                try:
-                    # Send OTP email
-                    send_mail(
-                        "Your Login OTP",
-                        f"Your OTP for login is: {otp}\nValid for 5 minutes.",
-                        settings.DEFAULT_FROM_EMAIL,
-                        [user.email],
-                        fail_silently=False,
-                    )
-                    print(f"OTP sent to {user.email}: {otp}")  # Debug log
-                except Exception as e:
-                    print(f"Failed to send OTP email: {str(e)}")
-                    return JsonResponse({"status": "error", "message": "Failed to send OTP"}, status=500)
+            send_mail(
+                "Your Login OTP",
+                f"Your OTP for login is: {otp}\nValid for 5 minutes.",
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+                fail_silently=False,
+            )
 
-                # Return success but indicate 2FA is required
-                return JsonResponse({
-                    "status": "success",
-                    "requires_2fa": True,
-                    "message": "Please check your email for OTP"
-                })
-            else:
-                # No 2FA required, proceed with normal login
-                login(request, user)
-                Token.objects.filter(user=user).delete()
-                token = Token.objects.create(user=user)
-                
-                return JsonResponse({
-                    "status": "success",
-                    "requires_2fa": False,
-                    "token": token.key,
-                    "user": {
-                        "id": user.id,
-                        "email": user.email,
-                        "username": user.username,
-                        "profile_picture": user.profile_picture.url if user.profile_picture else None,
-                    }
-                })
-    
+            return JsonResponse({
+                "status": "success",
+                "requires_2fa": True,
+                "message": "Please check your email for OTP"
+            })
+
+        # Normal login (no 2FA)
+        login(request, user)
+
+        # Generate JWT tokens
+        refresh = RefreshToken.for_user(user)
+        return JsonResponse({
+            "status": "success",
+            "requires_2fa": False,
+            "access_token": str(refresh.access_token),
+            "refresh_token": str(refresh),
+            "user": {  # Make sure to include user ID
+                "id": user.id,
+                "email": user.email,
+                "username": user.username,
+                "profile_picture": user.profile_picture.url if user.profile_picture else None,
+            }
+        })
+
     except Exception as e:
-        print(f"Login error: {str(e)}")  # Debug log
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
 
 @require_POST
@@ -396,8 +438,20 @@ def check_auth(request):
 def redirect_uri(request):
     if request.method == 'POST':
         try:
-            client_id = config('CLIENT_ID')
-            redirect_uri = config('REDIRECT_URI')
+            # First check if the settings exist
+            if not hasattr(settings, 'FORTYTWO_CLIENT_ID') or not hasattr(settings, 'FORTYTWO_REDIRECT_URI'):
+                print("ERROR: FORTYTWO_CLIENT_ID or FORTYTWO_REDIRECT_URI not defined in settings")
+                return JsonResponse({
+                    "error": "OAuth configuration is incomplete. Please check server settings."
+                }, status=500)
+            
+            # Use the FORTYTWO_ prefixed variables for consistency
+            client_id = settings.FORTYTWO_CLIENT_ID
+            redirect_uri = settings.FORTYTWO_REDIRECT_URI
+            
+            # Debug output
+            print(f"Using client_id: {client_id}")
+            print(f"Using redirect_uri: {redirect_uri}")
             
             oauth_link = (
                 f"https://api.intra.42.fr/oauth/authorize"
@@ -407,8 +461,6 @@ def redirect_uri(request):
             )
             
             print("Generated OAuth link:", oauth_link)
-            print("Client ID:", client_id)
-            print("Redirect URI:", redirect_uri)
             
             return JsonResponse({"oauth_link": oauth_link})
         except Exception as e:
@@ -420,175 +472,186 @@ def redirect_uri(request):
 def oauth_callback(request):
     error = request.GET.get('error')
     if error:
-        print(f"OAuth Error: {error} - {request.GET.get('error_description')}")
-        return redirect("https://localhost:8000/login")
+        return redirect("https://localhost:443/login")
 
     code = request.GET.get("code")
     if not code:
         return JsonResponse({"error": "Authorization code not provided"}, status=400)
 
     try:
-        # Exchange code for access token
         token_url = "https://api.intra.42.fr/oauth/token"
         payload = {
             "grant_type": "authorization_code",
             "code": code,
-            "redirect_uri": settings.JWT_SETTINGS["REDIRECT_URI"],
-            "client_id": settings.JWT_SETTINGS["CLIENT_ID"],
-            "client_secret": settings.JWT_SETTINGS["CLIENT_SECRET"],
+            "redirect_uri": "https://localhost:443/home",
+            "client_id": settings.FORTYTWO_CLIENT_ID,
+            "client_secret": settings.FORTYTWO_CLIENT_SECRET,
         }
         
-        print("Requesting access token with payload:", {
-            **payload,
-            'client_secret': '[REDACTED]'  # Don't log the secret
-        })
-        
         response = requests.post(token_url, data=payload)
-        print("Token response:", response.text)  # Add this for debugging
-        
         if response.status_code != 200:
-            print("Token exchange failed:", response.text)
-            return redirect("https://localhost:8000/login")
+            return redirect("https://localhost:443/login")
 
         access_token = response.json().get("access_token")
 
-        # Fetch user info from 42 API
         user_info_url = "https://api.intra.42.fr/v2/me"
         headers = {"Authorization": f"Bearer {access_token}"}
         user_info_response = requests.get(user_info_url, headers=headers)
-        
+
         if user_info_response.status_code != 200:
-            print("User info fetch failed:", user_info_response.text)
-            return redirect("https://localhost:8000/login")
+            return redirect("https://localhost:443/login")
 
         user_info = user_info_response.json()
         username = user_info.get("login")
         email = user_info.get("email")
 
-        # Create or update user
         user, created = User.objects.get_or_create(
             email=email,
-            defaults={
-                'username': username,
-                'is_42_user': True,
-                'intra_id': user_info.get('id')
-            }
+            defaults={'username': username, 'is_42_user': True, 'intra_id': user_info.get('id')}
         )
 
-        # Create JWT token
-        payload = {
-            "user_id": str(user.id),
-            "email": email,
-            "username": username,
-            "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=1),
-            "iat": datetime.datetime.utcnow(),
-        }
-        jwt_token = jwt.encode(
-            payload, 
-            settings.JWT_SETTINGS["JWT_SECRET_KEY"], 
-            algorithm=settings.JWT_SETTINGS["JWT_ALGORITHM"]
-        )
+        login(request, user)
 
-        # Store in session
-        request.session["jwt_token"] = jwt_token
-        request.session.modified = True
-        
-        print("JWT Token stored in session:", jwt_token)
-        print("Session data:", dict(request.session))
+        # Generate JWT tokens
+        refresh = RefreshToken.for_user(user)
 
-        # Create response with session cookie
-        response = redirect("https://localhost:8000/home")
-        response.set_cookie(
-            'sessionid',
-            request.session.session_key,
-            max_age=86400,
-            httponly=True,
-            samesite='Lax',
-            secure=False  # Set to True in production with HTTPS
-        )
-        
-        # Set JWT token in cookie as well
+        response = redirect("https://localhost:443/home")
         response.set_cookie(
             'jwt_token',
-            jwt_token,
+            str(refresh.access_token),
             max_age=86400,
             httponly=True,
             samesite='Lax',
-            secure=False  # Set to True in production with HTTPS
+            secure=True
         )
-        
+        response.set_cookie(
+            'refresh_token',
+            str(refresh),
+            max_age=604800,
+            httponly=True,
+            samesite='Lax',
+            secure=True
+        )
+
         return response
-        
+
     except Exception as e:
-        print("OAuth callback error:", str(e))
-        return redirect("https://localhost:8000/login")
+        return JsonResponse({'error': str(e)}, status=500)
 
 @csrf_exempt
+@require_POST
 def get_token(request):
-    # Try to get token from session first
-    token = request.session.get("jwt_token")
-    
-    # If not in session, try to get from cookie
-    if not token:
-        token = request.COOKIES.get('jwt_token')
-    
-    print("Session data:", dict(request.session))
-    print("Cookies:", dict(request.COOKIES))
-    print("Retrieved token:", token)
-    
-    if not token:
-        return JsonResponse({
-            "error": "Not authenticated",
-            "debug_info": {
-                "session_keys": list(request.session.keys()),
-                "cookies": dict(request.COOKIES)
-            }
-        }, status=401)
-
     try:
-        # Verify the token
-        payload = jwt.decode(
-            token, 
-            settings.JWT_SETTINGS["JWT_SECRET_KEY"],
-            algorithms=[settings.JWT_SETTINGS["JWT_ALGORITHM"]]
+        # Extract code from request
+        body_unicode = request.body.decode('utf-8')
+        body_data = json.loads(body_unicode)
+        code = body_data.get('code')
+
+        if not code:
+            return JsonResponse({'error': 'Authorization code is required'}, status=400)
+
+        # Debugging: Print settings values to verify they're loaded
+        print(f"FORTYTWO_CLIENT_ID: {settings.FORTYTWO_CLIENT_ID}")
+        print(f"FORTYTWO_REDIRECT_URI: {settings.FORTYTWO_REDIRECT_URI}")
+
+        # Exchange code for access token with 42 API
+        token_url = 'https://api.intra.42.fr/oauth/token'
+        token_data = {
+            'grant_type': 'authorization_code',
+            'client_id': settings.FORTYTWO_CLIENT_ID,
+            'client_secret': settings.FORTYTWO_CLIENT_SECRET,
+            'code': code,
+            'redirect_uri': settings.FORTYTWO_REDIRECT_URI
+        }
+
+        token_response = requests.post(token_url, data=token_data)
+
+        if token_response.status_code != 200:
+            error_message = f"Token request failed with status {token_response.status_code}: {token_response.text}"
+            print(error_message)
+            return JsonResponse({'error': error_message}, status=401)
+
+        token_json = token_response.json()
+        access_token = token_json.get('access_token')
+
+        # Get user info from 42 API
+        user_url = 'https://api.intra.42.fr/v2/me'
+        headers = {'Authorization': f'Bearer {access_token}'}
+        user_response = requests.get(user_url, headers=headers)
+
+        if user_response.status_code != 200:
+            error_message = f"User data request failed with status {user_response.status_code}: {user_response.text}"
+            print(error_message)
+            return JsonResponse({'error': error_message}, status=401)
+
+        user_data = user_response.json()
+        fortytwo_id = user_data.get('id')
+        email = user_data.get('email')
+        username = user_data.get('login')
+
+        print(f"User data received: ID={fortytwo_id}, username={username}, email={email}")
+
+        # Get or create user
+        User = get_user_model()
+        user, created = User.objects.get_or_create(
+            email=email,
+            defaults={'username': username, 'is_42_user': True, 'intra_id': fortytwo_id}
         )
-        return JsonResponse({"token": token})
-    except jwt.ExpiredSignatureError:
-        return JsonResponse({"error": "Token expired"}, status=401)
-    except jwt.InvalidTokenError:
-        return JsonResponse({"error": "Invalid token"}, status=401)
+
+        # Ensure intra_id is saved for new users
+        if created:
+            user.intra_id = fortytwo_id
+            user.save()
+
+        # Log the user in
+        login(request, user)
+
+        # Generate JWT tokens using Simple JWT
+        refresh = RefreshToken.for_user(user)
+
+        # Return tokens and user data
+        return JsonResponse({
+            "status": "success",
+            "access_token": str(refresh.access_token),  # Use this in frontend requests
+            "refresh_token": str(refresh),  # Store this to refresh access tokens
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "profile_picture": user.profile_picture.url if user.profile_picture else None,
+            }
+        })
+
+    except Exception as e:
+        print(f"Error in get_token: {str(e)}")
+        return JsonResponse({'error': f'Authentication failed: {str(e)}'}, status=500)
+
 
 @api_view(['POST'])
 def verify_otp_view(request):
     username = request.data.get('username')
     otp = request.data.get('otp')
 
-    # Debugging: Log incoming data
-    logger.debug(f"Received username: {username}")
-    logger.debug(f"Received OTP: {otp}")
-
     if not username or not otp:
-        return Response({"error": "Username and OTP are required."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": "Username and OTP are required."}, status=400)
 
     try:
         user = User.objects.get(username=username)
         cache_key = f"otp_{user.id}"
         cached_otp = cache.get(cache_key)
 
-        # Debugging: Log cached OTP
-        logger.debug(f"Cached OTP for user {user.username}: {cached_otp}")
-
         if cached_otp == otp:
-            token = jwt.encode(
-                {"username": user.username, "exp": datetime.datetime.utcnow() + datetime.timedelta(days=1)},
-                settings.SECRET_KEY,
-                algorithm="HS256"
-            )
-            return Response({"message": "OTP verified successfully.", "token": token}, status=status.HTTP_200_OK)
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                "message": "OTP verified successfully.",
+                "access_token": str(refresh.access_token),
+                "refresh_token": str(refresh)
+            }, status=200)
         else:
-            return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Invalid OTP."}, status=400)
+
     except User.DoesNotExist:
-        return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"error": "User not found."}, status=404)
 
 @api_view(['GET', 'PUT'])
 @permission_classes([IsAuthenticated])
@@ -635,3 +698,349 @@ def user_settings_view(request):
             }
         })
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def match_history_view(request):
+    """Get user's match history"""
+    user = request.user
+    matches = MatchHistory.objects.filter(user=user).order_by('-date_played')[:10]  # Limit to 10 most recent
+    
+    match_data = []
+    for match in matches:
+        match_data.append({
+            'id': match.id,
+            'game_type': match.game_type,
+            'opponent': match.opponent,
+            'result': match.result,
+            'score': match.score,
+            'date': match.date_played.strftime('%B %d, %Y')
+        })
+    
+    return Response({
+        'match_history': match_data
+    })
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def save_match_view(request):
+    """Save a new match result"""
+    print("Authorization Header:", request.headers.get('Authorization'))  # Debugging line
+
+    user = request.user
+    data = request.data
+
+    # Log incoming data
+    print("Received data:", json.dumps(data, indent=4))
+
+    try:
+        # Validate required fields
+        required_fields = ['game_type', 'opponent', 'result', 'score']
+        for field in required_fields:
+            if field not in data:
+                print(f"Missing field: {field}")
+                return Response({
+                    'status': 'error',
+                    'message': f'Missing required field: {field}'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Save the match
+        match = MatchHistory.objects.create(
+            user=user,
+            game_type=data['game_type'],
+            opponent=data['opponent'],
+            result=data['result'],
+            score=data['score']
+        )
+
+        print(f"Match {match.id} saved successfully!")
+        return Response({'status': 'success', 'match_id': match.id})
+
+    except Exception as e:
+        print(f"Error saving match: {str(e)}")
+        return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_match(request):
+    """
+    Initializes a new Tic-Tac-Toe match and returns a match_id.
+    """
+    try:
+        print("🚀 Received request to create match")  # Check if request reaches here
+        print("Headers:", request.headers)  # Check what headers are received
+        print("User:", request.user)  # Check if Django recognizes the user
+        print("Request Data:", request.data)  # Print incoming request data
+
+        if not request.user.is_authenticated:
+            return Response({'error': 'User not authenticated'}, status=401)
+
+        match_id = str(uuid.uuid4())  # Generate a unique match ID
+        print(f"✅ Match Created: {match_id} for {request.user}")  # Confirm match creation
+
+        return Response({'match_id': match_id, 'opponent': 'AI'}, status=201)
+
+    except Exception as e:
+        print(f"🔥 ERROR in create_match(): {str(e)}")  # Print error message
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_account(request):
+    try:
+        user = request.user
+        user.delete()
+        return Response({'status': 'success', 'message': 'Account deleted successfully'})
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=400)
+
+# Clean up get_avatar_image view function by removing unnecessary debug logs
+@api_view(['GET'])
+def get_avatar_image(request, user_id):
+    """Serve user avatar directly"""
+    try:
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=404)
+        
+        if user.profile_picture:
+            # Get the actual file path
+            file_path = user.profile_picture.path
+            
+            # Check if file exists
+            if os.path.exists(file_path):
+                # Determine content type based on file extension
+                content_type = 'image/jpeg'  # Default
+                if file_path.lower().endswith('.png'):
+                    content_type = 'image/png'
+                elif file_path.lower().endswith('.gif'):
+                    content_type = 'image/gif'
+                
+                # Use Django's FileResponse for better performance
+                return FileResponse(open(file_path, 'rb'), content_type=content_type)
+        
+        # Return default avatar if no custom avatar or file not found
+        default_avatar_path = os.path.join(settings.BASE_DIR, 'static', 'frontend', 'assets', 'man.png')
+        
+        if os.path.exists(default_avatar_path):
+            return FileResponse(open(default_avatar_path, 'rb'), content_type='image/png')
+        else:
+            return Response({"error": "Avatar not found"}, status=404)
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return Response({"error": str(e)}, status=500)
+
+@api_view(['GET'])
+def debug_avatar_path(request, user_id):
+    """Debug helper to check avatar paths"""
+    try:
+        user = User.objects.get(id=user_id)
+        
+        response_data = {
+            "user_id": user_id,
+            "username": user.username,
+        }
+        
+        if user.profile_picture:
+            response_data.update({
+                "has_profile_picture": True,
+                "profile_picture_url": user.profile_picture.url,
+                "profile_picture_path": user.profile_picture.path,
+                "file_exists": os.path.exists(user.profile_picture.path)
+            })
+        else:
+            response_data["has_profile_picture"] = False
+            
+        # Check the MEDIA_ROOT and URL settings
+        response_data["media_root"] = settings.MEDIA_ROOT
+        response_data["media_url"] = settings.MEDIA_URL
+        
+        return Response(response_data)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=404)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+# Add the user data export view
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def export_user_data(request):
+    """Export all user data in a structured format"""
+    try:
+        user = request.user
+        
+        # Get user's match history
+        match_history = MatchHistory.objects.filter(user=user).order_by('-date_played')
+        
+        # Calculate statistics
+        total_matches = match_history.count()
+        wins = match_history.filter(result='WIN').count()
+        losses = match_history.filter(result='LOSS').count()
+        draws = match_history.filter(result='DRAW').count()
+        win_rate = int((wins / total_matches) * 100) if total_matches > 0 else 0
+        
+        # Format match history for response
+        matches = []
+        for match in match_history:
+            matches.append({
+                'id': match.id,
+                'game_type': match.game_type,
+                'opponent': match.opponent,
+                'score': match.score,
+                'result': match.result,
+                'date_played': match.date_played.isoformat(),
+            })
+        
+        # Build comprehensive user data
+        user_data = {
+            'user_information': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'display_name': user.display_name if hasattr(user, 'display_name') else user.username,
+                'date_joined': user.date_joined.isoformat(),
+                'last_login': user.last_login.isoformat() if user.last_login else None,
+                'is_42_user': user.is_42_user if hasattr(user, 'is_42_user') else False,
+            },
+            'profile': {
+                'avatar_url': user.profile_picture.url if user.profile_picture else None,
+            },
+            'statistics': {
+                'games_played': total_matches,
+                'wins': wins,
+                'losses': losses,
+                'draws': draws,
+                'win_rate': f"{win_rate}%",
+            },
+            'match_history': matches,
+            'export_date': datetime.datetime.now().isoformat(),
+        }
+        
+        return Response(user_data)
+        
+    except Exception as e:
+        return Response({
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_all_users(request):
+    """Get list of all users except the current user"""
+    try:
+        # Exclude current user and maybe some system users
+        users = User.objects.exclude(id=request.user.id).exclude(is_superuser=True)
+        
+        # Check which users are friends with the current user
+        user_friends_ids = request.user.friends.values_list('id', flat=True)
+        
+        users_data = []
+        for user in users:
+            users_data.append({
+                'id': user.id,
+                'username': user.username,
+                'display_name': user.display_name if hasattr(user, 'display_name') else user.username,
+                'avatar': user.profile_picture.url if user.profile_picture else None,
+                'is_friend': user.id in user_friends_ids
+            })
+        
+        return Response({
+            'users': users_data
+        })
+    except Exception as e:
+        return Response({
+            'status': 'error',
+            'message': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_friends(request):
+    """Get list of user's friends"""
+    try:
+        friends = request.user.friends.all()
+        friends_data = []
+        
+        for friend in friends:
+            friends_data.append({
+                'id': friend.id,
+                'username': friend.username,
+                'display_name': friend.display_name if hasattr(friend, 'display_name') else friend.username,
+                # 'avatar': friend.profile_picture.url if friend.profile_picture else None
+            })
+        
+        return Response({
+            'friends': friends_data
+        })
+    except Exception as e:
+        return Response({
+            'status': 'error',
+            'message': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_friend(request, user_id):
+    """Add a user as friend"""
+    try:
+        friend = User.objects.get(id=user_id)
+        user = request.user
+        
+        result = user.add_friend(friend)
+        
+        if result:
+            return Response({
+                'status': 'success',
+                'message': f'Added {friend.username} as friend'
+            })
+        else:
+            return Response({
+                'status': 'error',
+                'message': 'Could not add friend'
+            }, status=status.HTTP_400_BAD_REQUEST)
+    except User.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'User not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({
+            'status': 'error',
+            'message': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def remove_friend(request, user_id):
+    """Remove a user from friends"""
+    try:
+        friend = User.objects.get(id=user_id)
+        user = request.user
+        
+        result = user.remove_friend(friend)
+        
+        if result:
+            return Response({
+                'status': 'success',
+                'message': f'Removed {friend.username} from friends'
+            })
+        else:
+            return Response({
+                'status': 'error',
+                'message': 'Could not remove friend'
+            }, status=status.HTTP_400_BAD_REQUEST)
+    except User.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'User not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({
+            'status': 'error',
+            'message': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

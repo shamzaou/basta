@@ -122,32 +122,46 @@ class TicTacToeGame {
     }
 
     updateStatusDisplay() {
-        this.statusDisplay.innerHTML = this.gameActive ? 
-            `It's ${this.currentPlayer}'s turn` : 
-            this.gameState.includes("") ? 
-                `Player ${this.currentPlayer} has won!` : 
-                `Game ended in a draw!`;
+        if (this.gameActive) {
+            this.statusDisplay.innerHTML = `It's ${this.currentPlayer}'s turn`;
+        } else if (this.state.winner) {
+            this.statusDisplay.innerHTML = `Player ${this.state.winner} has won!`;
+        } else {
+            this.statusDisplay.innerHTML = `Game ended in a draw!`;
+        }
     }
 
     async initializeMatch() {
         try {
-            const response = await fetch('/api/game/match/create', {
+            const token = localStorage.getItem('authToken');
+    
+            const response = await fetch('/api/auth/match/create/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,  // Add JWT authentication
                     'X-CSRFToken': getCookie('csrftoken')
                 },
                 body: JSON.stringify({
                     game_type: 'TICTACTOE',
-                    mode: 'pvp'
+                    mode: 'vsAI'
                 })
             });
-
+    
+            if (!response.ok) {
+                throw new Error(`HTTP Error ${response.status}: ${await response.text()}`);
+            }
+    
             const data = await response.json();
+            console.log("Match initialized:", data);
             this.state.matchId = data.match_id;
             this.state.matchStartTime = new Date();
+            this.state.gameStatus = 'playing';
+    
+            return data.match_id;
         } catch (error) {
-            console.error('Failed to initialize match:', error);
+            console.error('Failed to initialize Tic-Tac-Toe match:', error);
+            return null;
         }
     }
 
@@ -176,26 +190,63 @@ class TicTacToeGame {
     }
 
     async finishMatch() {
-        if (!this.state.matchId) return;
-
         try {
-            await fetch(`/api/game/match/${this.state.matchId}/finish`, {
+            console.log("I am in finishMatch");
+    
+            // Get player names safely
+            const player1Element = document.getElementById('player1-name');
+            
+            // Set default player names
+            const currentUser = player1Element ? player1Element.textContent : "Player 1";
+            // Always use "Player 2" for opponent in TicTacToe since there's no AI
+            const opponent = "Player 2";
+    
+            let userScore = 0;
+            let opponentScore = 0;
+    
+            // Determine result and assign scores
+            let result = 'DRAW';
+            if (this.state.winner === 'X') {
+                result = 'WIN';
+                userScore = 1;  // Player X wins, gets 1 point
+            } else if (this.state.winner === 'O') {
+                result = 'LOSS';
+                opponentScore = 1;  // Player O wins, gets 1 point
+            }
+    
+            const scoreString = `${userScore}-${opponentScore}`;
+    
+            const tokenFM = localStorage.getItem('authToken');
+            
+            // Send result to backend
+            const response = await fetch('/api/auth/save-match/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${tokenFM}`,
                     'X-CSRFToken': getCookie('csrftoken')
                 },
                 body: JSON.stringify({
-                    final_board: this.gameState,
-                    winner: this.state.winner,
-                    duration: (Date.now() - this.state.matchStartTime) / 1000,
-                    final_score: this.state.score
+                    game_type: 'TICTACTOE',
+                    opponent: opponent,
+                    result: result,
+                    score: scoreString
                 })
             });
+    
+            const responseText = await response.text();  // Capture response as text
+            console.log("Response from backend:", responseText);
+    
+            if (!response.ok) {
+                console.error("Failed to save match history:", responseText);
+                throw new Error(responseText);
+            }
         } catch (error) {
-            console.error('Failed to finish match:', error);
+            console.error('Failed to save Tic-Tac-Toe match:', error);
         }
     }
+    
+    
 
     handleCellClick(clickedCell) {
         const clickedCellIndex = parseInt(clickedCell.getAttribute('data-cell-index'));
@@ -213,6 +264,7 @@ class TicTacToeGame {
 
     checkResult() {
         let roundWon = false;
+        let winningLine = null;
 
         for (let i = 0; i < this.winningConditions.length; i++) {
             const [a, b, c] = this.winningConditions[i];
@@ -224,6 +276,7 @@ class TicTacToeGame {
             if (this.gameState[a] === this.gameState[b] && 
                 this.gameState[b] === this.gameState[c]) {
                 roundWon = true;
+                winningLine = [a, b, c];
                 break;
             }
         }
@@ -234,11 +287,13 @@ class TicTacToeGame {
             this.gameActive = false;
             this.finishMatch();
             this.updateStatusDisplay();
-            return;
+            return; // Exit the function here after a win is detected
         }
 
+        // Only check for a draw if there's no win
         if (!this.gameState.includes("")) {
             this.gameActive = false;
+            this.state.gameStatus = 'draw';
             this.finishMatch();
             this.updateStatusDisplay();
             return;
