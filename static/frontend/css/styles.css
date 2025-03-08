@@ -382,6 +382,17 @@ nav {
     letter-spacing: 1px;
 }
 
+/* Add style for match date */
+.match-card .match-date {
+    font-size: 0.7em;
+    color: rgba(255, 255, 255, 0.6);
+    margin-left: 8px;
+    font-style: italic;
+    position: absolute;
+    right: 15px;
+    top: 10px;
+}
+
 /* Adjust the match card to fit the new element */
 .match-card {
     display: flex;
@@ -394,6 +405,8 @@ nav {
     font-family: 'Press Start 2P', cursive;
     font-size: 0.8em;
     border-left: 3px solid #00ff00;
+    position: relative; /* Add this to position the date */
+    padding-top: 20px; /* Add more padding at the top for the date */
 }
 
 .match-result {

@@ -1024,10 +1024,28 @@ async function loadProfileData() {
                     result.className = `match-result ${match.result === 'WIN' ? 'win' : 'loss'}`;
                     result.textContent = match.result;
                     
+                    // Add date display
+                    const dateSpan = document.createElement('span');
+                    dateSpan.className = 'match-date';
+                    
+                    // Format date if available, otherwise show "No date"
+                    if (match.date) {
+                        // Try to parse and format the date
+                        try {
+                            const matchDate = new Date(match.date);
+                            dateSpan.textContent = matchDate.toLocaleDateString();
+                        } catch (e) {
+                            dateSpan.textContent = match.date;
+                        }
+                    } else {
+                        dateSpan.textContent = "No date";
+                    }
+                    
                     matchCard.appendChild(gameType);
                     matchCard.appendChild(opponent);
                     matchCard.appendChild(score);
                     matchCard.appendChild(result);
+                    matchCard.appendChild(dateSpan); // Add the date to the card
                     
                     matchHistoryContainer.appendChild(matchCard);
                 });
