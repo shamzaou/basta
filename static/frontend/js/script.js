@@ -902,6 +902,21 @@ document.addEventListener('DOMContentLoaded', () => {
     if (downloadDataBtn) {
         downloadDataBtn.addEventListener('click', handleDownloadUserData);
     }
+
+    // TicTacToe button login check handler
+    const tictactoeButton = document.querySelector('a[href="/tictactoe"]');
+    if (tictactoeButton) {
+        tictactoeButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            if (isLoggedIn) {
+                showPage('tictactoe');
+            } else {
+                alert('Please log in to play TicTacToe');
+                showPage('login');
+            }
+        });
+    }
 });
 
 async function initiate42OAuth() {

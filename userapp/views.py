@@ -742,7 +742,7 @@ def save_match_view(request):
 
     try:
         # Extract match data
-        game_type = data.get('game_type', 'PONG')  # Default to PONG if not specified
+        game_type = data.get('game_type', 'PONG')  # Default to PONG 5 specified
         opponent = data.get('opponent', 'Unknown')
         result = data.get('result', 'DRAW')
         score = data.get('score', '0-0')
