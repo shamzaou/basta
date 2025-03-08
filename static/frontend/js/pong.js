@@ -801,115 +801,184 @@ class PongGame {
         }
     }
 
-    // 
-    
+    // Fix the finishMatch function by properly merging both implementations
     async finishMatch() {
-/// <<<< master
-        try {
-            console.log("I am in finish Match");
-    
-            // Get player names safely
-            const player1Element = document.getElementById('player1-name');
-            const player2Element = document.getElementById('player2-name');
-    
-            const currentUser = player1Element ? player1Element.textContent : "Player 1";
-    
-            // Determine if it's PvP or AI mode and set a default opponent name
-            let opponent;
-            if (this.gameMode === 'ai') {
-                opponent = "AI";
-            } else {
-                opponent = player2Element && player2Element.textContent.trim() !== "" 
-                    ? player2Element.textContent 
-                    : "Player 2";  // Default name when player2 is missing or empty
-            }
-    
-            const userScore = this.state.score.player1 || 0;
-            const opponentScore = this.state.score.player2 || 0;
-            const scoreString = `${userScore}-${opponentScore}`;
-    
-            // Determine result
-            let result = 'DRAW';
-            if (userScore > opponentScore) {
-                result = 'WIN';
-            } else if (opponentScore > userScore) {
-                result = 'LOSS';
-            }
-    
-            const tokenFM = localStorage.getItem('authToken');
-            
-            // Fix the URL to use relative path instead of hardcoded domain
-            // Send result to backend
-            const response = await fetch('/api/auth/save-match/', {
-// =======
-        // Проверяем, не завершается ли матч уже
+        // Prevent double-finishing
         if (this.isFinishing) return;
         this.isFinishing = true;
 
-        if (!this.state.matchId) {
-            this.showRestartButton();
-            return;
-        }
-
         try {
-            const response = await fetch(`/tournaments/api/tournaments/${this.state.matchId}/finish/`, {
-// >>>>>>> 8ec6d59
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${tokenFM}`,
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify({
+            // Get match ID - use either the tournament match ID or the normal match ID
+            const matchId = this.state.matchId || window.currentMatchId;
+            const tournamentId = window.tournamentId || this.state.tournamentId;
+            
+            console.log("Finishing match with ID:", matchId);
+            console.log("Tournament ID:", tournamentId);
+            console.log("Scores:", this.state.score);
+
+            // For tournament matches
+            if (tournamentId) {
+                // Tournament API call
+                const authToken = localStorage.getItem('authToken');
+                
+                // First, save the match in the tournament system
+                const tournamentResponse = await fetch(`/tournaments/api/tournaments/${matchId}/finish/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`,
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        score_player1: this.state.score.player1,
+                        score_player2: this.state.score.player2
+                    })
+                });
+
+                if (!tournamentResponse.ok) {
+                    console.error('Failed to finish tournament match in tournament system');
+                }
+
+                const tournamentData = await tournamentResponse.json();
+                console.log("Tournament match finish response:", tournamentData);
+                
+                // Then also record in the user's match history that this was a tournament game
+                try {
+                    // For tournament matches - Save to match history with tournament flag
+                    const player1Element = document.getElementById('player1-name');
+                    const player2Element = document.getElementById('player2-name');
+                
+                    const currentUser = player1Element ? player1Element.textContent : "Player 1";
+                    const opponent = player2Element ? player2Element.textContent : "Player 2";
+                
+                    const userScore = this.state.score.player1 || 0;
+                    const opponentScore = this.state.score.player2 || 0;
+                    const scoreString = `${userScore}-${opponentScore}`;
+                
+                    // Determine result
+                    let result = 'DRAW';
+                    if (userScore > opponentScore) {
+                        result = 'WIN';
+                    } else if (opponentScore > userScore) {
+                        result = 'LOSS';
+                    }
+                    
+                    // Add to user's match history, marking as a tournament match with metadata
+                    const historyResponse = await fetch('/api/auth/save-match/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${authToken}`,
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify({
+                            game_type: 'TOURNAMENT',
+                            opponent: opponent,
+                            result: result,
+                            score: scoreString,
+                            tournament_id: tournamentId,
+                            match_id: matchId
+                        })
+                    });
+                    
+                    console.log('Tournament match history saved:', await historyResponse.text());
+                } catch (historyError) {
+                    console.error('Failed to save tournament to match history:', historyError);
+                    // Continue anyway as this is a secondary operation
+                }
+                
+                if (tournamentData.success && this.state.gameStatus === 'finished') {
+                    this.showNextGameButton();
+                }
+            } else {
+                // For regular matches - Save to match history
+                const player1Element = document.getElementById('player1-name');
+                const player2Element = document.getElementById('player2-name');
+            
+                const currentUser = player1Element ? player1Element.textContent : "Player 1";
+                
+                // Determine if it's PvP or AI mode and set opponent name
+                let opponent;
+                if (this.gameMode === 'ai') {
+                    opponent = "AI";
+                } else {
+                    opponent = player2Element && player2Element.textContent.trim() !== "" 
+                        ? player2Element.textContent 
+                        : "Player 2";
+                }
+            
+                const userScore = this.state.score.player1 || 0;
+                const opponentScore = this.state.score.player2 || 0;
+                const scoreString = `${userScore}-${opponentScore}`;
+            
+                // Determine result
+                let result = 'DRAW';
+                if (userScore > opponentScore) {
+                    result = 'WIN';
+                } else if (opponentScore > userScore) {
+                    result = 'LOSS';
+                }
+            
+                const authToken = localStorage.getItem('authToken');
+                
+                console.log("Saving regular match:", {
                     game_type: 'PONG',
-                    opponent: opponent,
-                    result: result,
-                    score: scoreString
-                })
-            });
-/// <<<<<<< master
-    
-            const responseText = await response.text();  // Capture response as text
-            console.log("Response from backend:", responseText);
-    
-            if (!response.ok) {
-                console.error("Failed to save match history:", responseText);
-                throw new Error(responseText);
+                    opponent,
+                    result,
+                    score: scoreString,
+                    auth: authToken ? "Present" : "Missing"
+                });
+                
+                // Send result to backend
+                const response = await fetch('/api/auth/save-match/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`,
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        game_type: 'PONG',
+                        opponent: opponent,
+                        result: result,
+                        score: scoreString
+                    })
+                });
+                
+                // Debug the raw response for troubleshooting
+                const rawResponseText = await response.text();
+                console.log("Raw response from save-match:", rawResponseText);
+                
+                // Try to parse the response as JSON if possible
+                let responseData;
+                try {
+                    responseData = JSON.parse(rawResponseText);
+                    console.log("Parsed response:", responseData);
+                } catch (e) {
+                    console.log("Response is not valid JSON");
+                }
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to save match history: ${rawResponseText}`);
+                }
+                
+                // Show restart button for normal game
+                this.showRestartButton();
             }
         } catch (error) {
-            console.error('Failed to save Pong match:', error);
+            console.error('Failed to finalize match:', error);
+            this.showRestartButton(); // Fall back to restart button even if error
         }
+    }
 
-        // Show restart button for normal game
+    showRestartButton() {
         const gameControls = document.getElementById('game-controls');
         const restartButton = document.getElementById('restart-button');
         if (gameControls && restartButton) {
             restartButton.textContent = 'Restart Game';
             restartButton.onclick = () => this.restartGame();
             gameControls.style.display = 'block';
-// =======
-
-            if (!response.ok) {
-                throw new Error('Failed to finish match');
-            }
-
-            const data = await response.json();
-            if (data.success && this.state.gameStatus === 'finished') {
-                this.showNextGameButton();
-            }
-        } catch (error) {
-            console.error('Error finishing match:', error);
         }
-
-        // Назначаем обработчик кнопки возврата (исправляем обращение к restartButton)
-        // const restartButton = document.getElementById('restart-button');
-        // if (restartButton) {
-        //     restartButton.onclick = () => {
-        //         window.location.href = this.state.tournamentId ? 
-        //             `/tournaments/${this.state.tournamentId}/` : '/tournaments/';
-        //     };
-        // }
-
     }
 
     showNextGameButton() {
@@ -922,22 +991,19 @@ class PongGame {
                 if (this.state.tournamentId) {
                     window.currentTournamentId = this.state.tournamentId;
                     
-                    // Сохраняем счет матча в глобальной переменной для использования на странице турнира
+                    // Save match score in global variable for tournament page
                     window.lastMatchScore = {
                         score_player1: this.state.score.player1,
                         score_player2: this.state.score.player2,
                         winner: this.state.winner
                     };
                     
-                    console.log('Сохраняем счет:', window.lastMatchScore);
+                    console.log('Saving score:', window.lastMatchScore);
                 }
                 window.showPage('tournament');
             };
-// >>>>>>> 8ec6d59
         }
-        return;
     }
-    
 
     restartGame() {
         // Reset game state
@@ -962,11 +1028,17 @@ class PongGame {
         this.state.score[scorer]++;
         
         // Update score display
-        document.getElementById('score').textContent = 
-            `${this.state.score.player1.toString().padStart(2, '0')} - ${this.state.score.player2.toString().padStart(2, '0')}`;
+        const scoreDisplay = document.getElementById('score');
+        if (scoreDisplay) {
+            scoreDisplay.textContent = 
+                `${this.state.score.player1.toString().padStart(2, '0')} - ${this.state.score.player2.toString().padStart(2, '0')}`;
+        }
+
+        console.log(`Score updated: ${scorer} scored. New score:`, this.state.score);
 
         // Check for game end
         if (this.state.score[scorer] >= GAME_CONFIG.pointsToWin) {
+            console.log(`Game finished! Winner: ${scorer}`);
             this.state.gameStatus = 'finished';
             this.state.winner = scorer;
             this.finishMatch();

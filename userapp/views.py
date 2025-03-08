@@ -707,14 +707,20 @@ def match_history_view(request):
     
     match_data = []
     for match in matches:
-        match_data.append({
+        match_info = {
             'id': match.id,
             'game_type': match.game_type,
             'opponent': match.opponent,
             'result': match.result,
             'score': match.score,
             'date': match.date_played.strftime('%B %d, %Y')
-        })
+        }
+        
+        # Include metadata for tournament matches
+        if match.game_type == 'TOURNAMENT' and hasattr(match, 'metadata') and match.metadata:
+            match_info['metadata'] = match.metadata
+            
+        match_data.append(match_info)
     
     return Response({
         'match_history': match_data
@@ -734,31 +740,42 @@ def save_match_view(request):
     print("Received data:", json.dumps(data, indent=4))
 
     try:
-        # Validate required fields
-        required_fields = ['game_type', 'opponent', 'result', 'score']
-        for field in required_fields:
-            if field not in data:
-                print(f"Missing field: {field}")
-                return Response({
-                    'status': 'error',
-                    'message': f'Missing required field: {field}'
-                }, status=status.HTTP_400_BAD_REQUEST)
-
-        # Save the match
-        match = MatchHistory.objects.create(
+        # Extract match data
+        game_type = data.get('game_type', 'PONG')  # Default to PONG if not specified
+        opponent = data.get('opponent', 'Unknown')
+        result = data.get('result', 'DRAW')
+        score = data.get('score', '0-0')
+        
+        # Handle tournament-specific data
+        tournament_id = data.get('tournament_id')
+        match_id = data.get('match_id')
+        
+        # Create the match history entry
+        match = MatchHistory(
             user=user,
-            game_type=data['game_type'],
-            opponent=data['opponent'],
-            result=data['result'],
-            score=data['score']
+            game_type=game_type,
+            opponent=opponent,
+            result=result,
+            score=score
         )
-
-        print(f"Match {match.id} saved successfully!")
-        return Response({'status': 'success', 'match_id': match.id})
+        
+        # If this is a tournament match, add additional metadata
+        if game_type == 'TOURNAMENT' and tournament_id:
+            # Create a proper metadata dictionary
+            match.metadata = {
+                'tournament_id': tournament_id,
+                'match_id': match_id
+            }
+            
+        match.save()
+        
+        return Response({'status': 'success'}, status=status.HTTP_201_CREATED)
 
     except Exception as e:
-        print(f"Error saving match: {str(e)}")
-        return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({
+            'status': 'error',
+            'message': str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 @csrf_exempt
 @api_view(['POST'])

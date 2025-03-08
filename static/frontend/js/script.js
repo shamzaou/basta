@@ -20,7 +20,6 @@ function showPage(pageId, pushState = true) {
         pageId = 'login';
     }
 
-// <<<<<<< master
     // Special handling for OAuth callback path
     if (pageId === 'oauth/callback') {
         console.log('Processing OAuth callback...');
@@ -43,17 +42,13 @@ function showPage(pageId, pushState = true) {
     const urlParams = new URLSearchParams(window.location.search);
     if (pageId === 'home' && urlParams.has('code')) {
         checkOAuthLogin();
-    }
-
-    // Changed: Use let instead of const for targetPage since we need to reassign it
-// =======
-    // Проверка OAuth
-    if (pageId === 'home' && window.location.pathname === '/home') {
+    } else if (pageId === 'home' && window.location.pathname === '/home') {
+        // Alternative OAuth check from tournament branch
         checkOAuthLogin();
     }
 
+    // Use let instead of const for targetPage since we need to reassign it
     // Проверяем, существует ли вообще такой div
-// >>>>>>> 8ec6d59
     let targetPage = document.getElementById(pageId);
     if (!targetPage) {
         console.error(`Page ${pageId} not found`);
@@ -136,7 +131,6 @@ window.addEventListener('load', () => {
         history.replaceState({ pageId: initialPage }, '', path);
     }
     showPage(initialPage, false);
-// <<<<<<< master
     checkLoginState(); // Ensure login state is checked after page is shown
 
     // If user is logged in, fetch fresh profile data to update avatars
@@ -146,9 +140,6 @@ window.addEventListener('load', () => {
 
     // Clear avatar cache on page load
     clearAvatarCache();
-// =======
-    checkLoginState();
-// >>>>>>> 8ec6d59
 });
 
 document.addEventListener('click', (event) => {
@@ -1081,49 +1072,100 @@ async function loadProfileData() {
             matchHistoryContainer.appendChild(title);
             
             if (data.match_history && data.match_history.length > 0) {
+                // Create a set to track tournaments we've already displayed
+                const displayedTournaments = new Set();
+                
                 data.match_history.forEach(match => {
-                    const matchCard = document.createElement('div');
-                    matchCard.className = 'match-card';
-                    
-                    // Add game type indicator
-                    const gameType = document.createElement('span');
-                    gameType.className = 'game-type';
-                    gameType.textContent = match.game_type || 'PONG'; // Default to PONG if not specified
-                    
-                    const opponent = document.createElement('span');
-                    opponent.textContent = `vs. ${match.opponent}`;
-                    
-                    const score = document.createElement('span');
-                    score.textContent = match.score;
-                    
-                    const result = document.createElement('span');
-                    result.className = `match-result ${match.result === 'WIN' ? 'win' : 'loss'}`;
-                    result.textContent = match.result;
-                    
-                    // Add date display
-                    const dateSpan = document.createElement('span');
-                    dateSpan.className = 'match-date';
-                    
-                    // Format date if available, otherwise show "No date"
-                    if (match.date) {
-                        // Try to parse and format the date
-                        try {
-                            const matchDate = new Date(match.date);
-                            dateSpan.textContent = matchDate.toLocaleDateString();
-                        } catch (e) {
-                            dateSpan.textContent = match.date;
+                    // For tournaments, only show one entry per tournament ID
+                    if (match.game_type === 'TOURNAMENT') {
+                        // If metadata contains tournament_id, check if we've already displayed it
+                        const tournamentId = match.metadata?.tournament_id || 'unknown_tournament';
+                        
+                        // Skip if we've already displayed this tournament
+                        if (displayedTournaments.has(tournamentId)) {
+                            return;
                         }
+                        
+                        // Mark this tournament as displayed
+                        displayedTournaments.add(tournamentId);
+                        
+                        // Create a specialized tournament card
+                        const matchCard = document.createElement('div');
+                        matchCard.className = 'match-card tournament-card';
+                        
+                        // Tournament badge
+                        const gameType = document.createElement('span');
+                        gameType.className = 'game-type tournament-game';
+                        gameType.textContent = 'TOURNAMENT';
+                        
+                        // Result (win/loss/draw)
+                        const result = document.createElement('span');
+                        result.className = `match-result ${match.result === 'WIN' ? 'win' : match.result === 'LOSS' ? 'loss' : 'draw'}`;
+                        result.textContent = match.result;
+                        
+                        // Date display
+                        const dateSpan = document.createElement('span');
+                        dateSpan.className = 'match-date';
+                        
+                        if (match.date) {
+                            try {
+                                const matchDate = new Date(match.date);
+                                dateSpan.textContent = matchDate.toLocaleDateString();
+                            } catch (e) {
+                                dateSpan.textContent = match.date;
+                            }
+                        } else {
+                            dateSpan.textContent = "No date";
+                        }
+                        
+                        // Add elements to card
+                        matchCard.appendChild(gameType);
+                        matchCard.appendChild(result);
+                        matchCard.appendChild(dateSpan);
+                        
+                        // Add to container
+                        matchHistoryContainer.appendChild(matchCard);
                     } else {
-                        dateSpan.textContent = "No date";
+                        // Regular match display (unchanged)
+                        const matchCard = document.createElement('div');
+                        matchCard.className = 'match-card';
+                        
+                        const gameType = document.createElement('span');
+                        gameType.className = 'game-type';
+                        gameType.textContent = match.game_type || 'PONG';
+                        
+                        const opponent = document.createElement('span');
+                        opponent.textContent = `vs. ${match.opponent}`;
+                        
+                        const score = document.createElement('span');
+                        score.textContent = match.score;
+                        
+                        const result = document.createElement('span');
+                        result.className = `match-result ${match.result === 'WIN' ? 'win' : match.result === 'LOSS' ? 'loss' : 'draw'}`;
+                        result.textContent = match.result;
+                        
+                        const dateSpan = document.createElement('span');
+                        dateSpan.className = 'match-date';
+                        
+                        if (match.date) {
+                            try {
+                                const matchDate = new Date(match.date);
+                                dateSpan.textContent = matchDate.toLocaleDateString();
+                            } catch (e) {
+                                dateSpan.textContent = match.date;
+                            }
+                        } else {
+                            dateSpan.textContent = "No date";
+                        }
+                        
+                        matchCard.appendChild(gameType);
+                        matchCard.appendChild(opponent);
+                        matchCard.appendChild(score);
+                        matchCard.appendChild(result);
+                        matchCard.appendChild(dateSpan);
+                        
+                        matchHistoryContainer.appendChild(matchCard);
                     }
-                    
-                    matchCard.appendChild(gameType);
-                    matchCard.appendChild(opponent);
-                    matchCard.appendChild(score);
-                    matchCard.appendChild(result);
-                    matchCard.appendChild(dateSpan); // Add the date to the card
-                    
-                    matchHistoryContainer.appendChild(matchCard);
                 });
             } else {
                 const noMatches = document.createElement('p');
@@ -1238,7 +1280,6 @@ async function loadSettingsData() {
     }
 }
 
-// <<<<<<< master
 // Add this function to update the nav avatar from localStorage
 async function updateNavAvatar() {
     const navAvatar = document.querySelector('.nav-avatar');
@@ -1307,8 +1348,6 @@ async function refreshUserData() {
 }
 
 // Add this function to handle tournament creation
-// =======
-// >>>>>>> 8ec6d59
 async function handleTournamentCreation(event) {
     event.preventDefault();
 
@@ -1352,7 +1391,6 @@ async function handleTournamentCreation(event) {
     }
 }
 
-// <<<<<<< master
 async function getAccessToken() {
     let token = localStorage.getItem("authToken");
 
@@ -1974,8 +2012,6 @@ function createWinratePieChart(wins, total) {
     container.appendChild(svg);
 }
 
-
-// =======
 // Generate input fields for players
 function generatePlayerInputs(count) {
     const playerInputsDiv = document.getElementById('player-inputs');
@@ -2004,7 +2040,6 @@ function generatePlayerInputs(count) {
 // Handle adding players
 async function handleAddPlayers(event) {
     event.preventDefault();
-// >>>>>>> 8ec6d59
 
     const authToken = localStorage.getItem('authToken');
     console.log('Add Players - Auth Token:', authToken);

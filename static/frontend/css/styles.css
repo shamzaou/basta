@@ -408,6 +408,13 @@ nav {
     border-left: 3px solid #00ff00;
     position: relative; /* Add this to position the date */
     padding-top: 20px; /* Add more padding at the top for the date */
+    border-left: 3px solid transparent;
+    transition: all 0.2s ease-in-out;
+}
+
+.match-card:hover {
+    background-color: rgba(0, 0, 0, 0.2);
+    transform: translateX(5px);
 }
 
 .match-result {
@@ -421,6 +428,103 @@ nav {
 
 .match-result.loss {
     color: var(--danger-color);
+}
+
+.match-card .game-type.tournament-game + span + span + span.match-result.win {
+    border-left-color: #ffd700;
+}
+
+.match-card .game-type.tournament-game + span + span + span.match-result.loss {
+    border-left-color: #ff6b6b;
+}
+
+/* Tournament match highlight */
+.game-type.tournament-game {
+    color: #ffcc00;
+    font-weight: bold;
+    text-transform: uppercase;
+    position: relative;
+}
+
+.game-type.tournament-game::after {
+    content: "🏆";
+    position: absolute;
+    top: -2px;
+    right: -16px;
+    font-size: 0.9em;
+}
+
+/* Tournament match card styles */
+.match-card.tournament-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    border-left: 5px solid #ffd700; /* Gold border for tournaments */
+    background-color: rgba(255, 215, 0, 0.05); /* Slight gold background */
+    position: relative;
+}
+
+/* Make tournament badge more prominent */
+.tournament-card .game-type.tournament-game {
+    font-size: 0.9em;
+    color: #ffd700;
+    font-weight: bold;
+    text-transform: uppercase;
+    padding: 4px 8px;
+    background-color: rgba(255, 215, 0, 0.1);
+    border-radius: 4px;
+    letter-spacing: 1px;
+    box-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
+}
+
+/* Trophy icon for tournaments */
+.tournament-card .game-type.tournament-game::after {
+    content: "🏆";
+    margin-left: 6px;
+    font-size: 1em;
+    vertical-align: middle;
+}
+
+/* Position result in center of tournament card */
+.tournament-card .match-result {
+    flex-grow: 1;
+    text-align: center;
+    font-size: 1.1em;
+    padding: 0 15px;
+}
+
+/* Make win/loss/draw more prominent */
+.tournament-card .match-result.win {
+    color: #00ff00;
+    font-weight: bold;
+    text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+}
+
+.tournament-card .match-result.loss {
+    color: #ff4444;
+    font-weight: bold;
+    text-shadow: 0 0 5px rgba(255, 68, 68, 0.5);
+}
+
+.tournament-card .match-result.draw {
+    color: #ffaa00;
+    font-weight: bold;
+    text-shadow: 0 0 5px rgba(255, 170, 0, 0.5);
+}
+
+/* Make date more visible */
+.tournament-card .match-date {
+    font-size: 0.8em;
+    color: rgba(255, 255, 255, 0.8);
+    padding-right: 5px;
+}
+
+/* Hover effect for tournament cards */
+.match-card.tournament-card:hover {
+    transform: translateX(5px);
+    background-color: rgba(255, 215, 0, 0.1);
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
 }
 
 /* Settings Page Specific Styles */
@@ -889,7 +993,7 @@ body.is-logged-out .logged-out {
 .form-group label {
     font-family: 'Press Start 2P', cursive;
     font-size: 0.8em;
-    color: var (--text-color);
+    color: var(--text-color);
 }
 
 .file-input {
@@ -1131,7 +1235,7 @@ body.is-logged-out .logged-out {
 .cta-button:hover {
     background-color: var(--secondary-color);
     transform: scale(1.05);
-    color: var(--background-color);
+    color: var (--background-color);
     text-decoration: none;
 }
 
