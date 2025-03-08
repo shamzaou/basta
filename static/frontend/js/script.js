@@ -1057,39 +1057,39 @@ async function loadTournamentData() {
         console.log('Полученные данные турнира:', data);
         console.log('ID текущего матча:', window.currentMatchId);
 
-        // Отображаем данные о последнем матче, если они есть
-        if (window.lastMatchScore && window.currentMatchId) {
-            console.log('Загружен сохраненный счет матча:', window.lastMatchScore);
+        // // Отображаем данные о последнем матче, если они есть
+        // if (window.lastMatchScore && window.currentMatchId) {
+        //     console.log('Загружен сохраненный счет матча:', window.lastMatchScore);
             
-            // Преобразуем ID в числа для сравнения
-            const currentMatchIdNum = parseInt(window.currentMatchId);
+        //     // Преобразуем ID в числа для сравнения
+        //     const currentMatchIdNum = parseInt(window.currentMatchId);
             
-            // Находим матч в данных и обновляем счет, если он еще не обновлен
-            let matchUpdated = false;
-            data.matches.forEach(match => {
-                if (match.id === currentMatchIdNum || match.match_id === currentMatchIdNum) {
-                    console.log('Обновляем информацию для матча ID:', match.id);
-                    match.score_player1 = window.lastMatchScore.score_player1;
-                    match.score_player2 = window.lastMatchScore.score_player2;
+        //     // Находим матч в данных и обновляем счет, если он еще не обновлен
+        //     let matchUpdated = false;
+        //     data.matches.forEach(match => {
+        //         if (match.id === currentMatchIdNum || match.match_id === currentMatchIdNum) {
+        //             console.log('Обновляем информацию для матча ID:', match.id);
+        //             match.score_player1 = window.lastMatchScore.score_player1;
+        //             match.score_player2 = window.lastMatchScore.score_player2;
                     
-                    // Определяем победителя по счету, если он не указан
-                    if (window.lastMatchScore.winner) {
-                        match.winner = window.lastMatchScore.winner;
-                    } else if (match.score_player1 > match.score_player2) {
-                        match.winner = match.player1;
-                    } else if (match.score_player2 > match.score_player1) {
-                        match.winner = match.player2;
-                    }
+        //             // Определяем победителя по счету, если он не указан
+        //             if (window.lastMatchScore.winner) {
+        //                 match.winner = window.lastMatchScore.winner;
+        //             } else if (match.score_player1 > match.score_player2) {
+        //                 match.winner = match.player1;
+        //             } else if (match.score_player2 > match.score_player1) {
+        //                 match.winner = match.player2;
+        //             }
                     
-                    match.is_complete = true;
-                    matchUpdated = true;
-                }
-            });
+        //             match.is_complete = true;
+        //             matchUpdated = true;
+        //         }
+        //     });
             
-            // Очищаем данные после использования
-            window.lastMatchScore = null;
-            window.currentMatchId = null;
-        }
+        //     // Очищаем данные после использования
+        //     window.lastMatchScore = null;
+        //     window.currentMatchId = null;
+        // }
 
         // Update tournament status
         document.getElementById('tournament-status').textContent = `Tournament (${data.tournament.status})`;
@@ -1114,8 +1114,8 @@ async function loadTournamentData() {
             tr.innerHTML = `
                 <td>${player1 ? player1.nickname : 'Unknown'}</td>
                 <td>${player2 ? player2.nickname : 'Unknown'}</td>
-                <td>${match.is_complete ? `${match.score_player1 || 0}-${match.score_player2 || 0}` : '-'}</td>
-                <td>${winner ? winner.nickname : '-'}</td>
+                <td>${match.is_complete ? `${match.score_player1}-${match.score_player2}` : '-'}</td>
+                <td>${winner ? winner.nickname : (match.is_complete ? 'Tie' : '-')}</td>
                 <td>
                     ${match.is_complete 
                         ? '<span class="status-finished">Finished</span>' 

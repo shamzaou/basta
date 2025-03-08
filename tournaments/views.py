@@ -104,6 +104,8 @@ def view_tournament(request, tournament_id):
                 'id': m.id,
                 'player1': m.player1.id,
                 'player2': m.player2.id,
+                'score_player1': m.score_player1 if m.score_player1 is not None else 0,
+                'score_player2': m.score_player2 if m.score_player2 is not None else 0,
                 'winner': m.winner.id if m.winner else None,
                 'is_complete': m.is_complete,
                 'is_additional': m.is_additional
