@@ -818,13 +818,13 @@ class PongGame {
         }
 
         // Назначаем обработчик кнопки возврата (исправляем обращение к restartButton)
-        const restartButton = document.getElementById('restart-button');
-        if (restartButton) {
-            restartButton.onclick = () => {
-                window.location.href = this.state.tournamentId ? 
-                    `/tournaments/${this.state.tournamentId}/` : '/tournaments/';
-            };
-        }
+        // const restartButton = document.getElementById('restart-button');
+        // if (restartButton) {
+        //     restartButton.onclick = () => {
+        //         window.location.href = this.state.tournamentId ? 
+        //             `/tournaments/${this.state.tournamentId}/` : '/tournaments/';
+        //     };
+        // }
 
     }
 
@@ -835,8 +835,19 @@ class PongGame {
             gameControls.style.display = 'block';
             restartButton.textContent = 'NEXT GAME';
             restartButton.onclick = () => {
-                window.location.href = this.state.tournamentId ? 
-                    `/tournaments/${this.state.tournamentId}/` : '/tournaments/';
+                if (this.state.tournamentId) {
+                    window.currentTournamentId = this.state.tournamentId;
+                    
+                    // Сохраняем счет матча в глобальной переменной для использования на странице турнира
+                    window.lastMatchScore = {
+                        score_player1: this.state.score.player1,
+                        score_player2: this.state.score.player2,
+                        winner: this.state.winner
+                    };
+                    
+                    console.log('Сохраняем счет:', window.lastMatchScore);
+                }
+                window.showPage('tournament');
             };
         }
     }

@@ -1043,6 +1043,7 @@ async function handleAddPlayers(event) {
 }
 
 // Load and display tournament data
+// Полная функция загрузки и отображения данных турнира
 async function loadTournamentData() {
     const authToken = localStorage.getItem('authToken');
     try {
@@ -1052,6 +1053,43 @@ async function loadTournamentData() {
             }
         });
         const data = await response.json();
+
+        console.log('Полученные данные турнира:', data);
+        console.log('ID текущего матча:', window.currentMatchId);
+
+        // Отображаем данные о последнем матче, если они есть
+        if (window.lastMatchScore && window.currentMatchId) {
+            console.log('Загружен сохраненный счет матча:', window.lastMatchScore);
+            
+            // Преобразуем ID в числа для сравнения
+            const currentMatchIdNum = parseInt(window.currentMatchId);
+            
+            // Находим матч в данных и обновляем счет, если он еще не обновлен
+            let matchUpdated = false;
+            data.matches.forEach(match => {
+                if (match.id === currentMatchIdNum || match.match_id === currentMatchIdNum) {
+                    console.log('Обновляем информацию для матча ID:', match.id);
+                    match.score_player1 = window.lastMatchScore.score_player1;
+                    match.score_player2 = window.lastMatchScore.score_player2;
+                    
+                    // Определяем победителя по счету, если он не указан
+                    if (window.lastMatchScore.winner) {
+                        match.winner = window.lastMatchScore.winner;
+                    } else if (match.score_player1 > match.score_player2) {
+                        match.winner = match.player1;
+                    } else if (match.score_player2 > match.score_player1) {
+                        match.winner = match.player2;
+                    }
+                    
+                    match.is_complete = true;
+                    matchUpdated = true;
+                }
+            });
+            
+            // Очищаем данные после использования
+            window.lastMatchScore = null;
+            window.currentMatchId = null;
+        }
 
         // Update tournament status
         document.getElementById('tournament-status').textContent = `Tournament (${data.tournament.status})`;
@@ -1066,47 +1104,42 @@ async function loadTournamentData() {
             playersList.appendChild(li);
         });
 
-        // Render regular matches
-        const regularTableBody = document.querySelector('#regular-matches-table tbody');
-        regularTableBody.innerHTML = '';
-        const regularMatches = data.matches.filter(m => !m.is_additional);
-        regularMatches.forEach(match => {
+        // Функция рендеринга матчей
+        const renderMatch = (match, tableBody) => {
             const tr = document.createElement('tr');
+            const player1 = data.players.find(p => p.id === match.player1);
+            const player2 = data.players.find(p => p.id === match.player2);
+            const winner = match.winner ? data.players.find(p => p.id === match.winner) : null;
+            
             tr.innerHTML = `
-                <td>${data.players.find(p => p.id === match.player1).nickname}</td>
-                <td>${data.players.find(p => p.id === match.player2).nickname}</td>
-                <td>${match.is_complete ? `${match.score_player1}-${match.score_player2}` : '-'}</td>
-                <td>${match.winner ? data.players.find(p => p.id === match.winner).nickname : '-'}</td>
+                <td>${player1 ? player1.nickname : 'Unknown'}</td>
+                <td>${player2 ? player2.nickname : 'Unknown'}</td>
+                <td>${match.is_complete ? `${match.score_player1 || 0}-${match.score_player2 || 0}` : '-'}</td>
+                <td>${winner ? winner.nickname : '-'}</td>
                 <td>
                     ${match.is_complete 
                         ? '<span class="status-finished">Finished</span>' 
                         : `<button onclick="startTournamentMatch(${match.id})">Start Match</button>`}
                 </td>
             `;
-            regularTableBody.appendChild(tr);
-        });
+            tableBody.appendChild(tr);
+        };
 
-        // Render additional matches if they exist
+        // Рендерим основные матчи
+        const regularTableBody = document.querySelector('#regular-matches-table tbody');
+        regularTableBody.innerHTML = '';
+        const regularMatches = data.matches.filter(m => !m.is_additional);
+        regularMatches.forEach(match => renderMatch(match, regularTableBody));
+
+        // Рендерим дополнительные матчи
         const additionalMatches = data.matches.filter(m => m.is_additional);
         if (additionalMatches.length > 0) {
             document.getElementById('additional-matches').style.display = 'block';
             const additionalTableBody = document.querySelector('#additional-matches-table tbody');
             additionalTableBody.innerHTML = '';
-            additionalMatches.forEach(match => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${data.players.find(p => p.id === match.player1).nickname}</td>
-                    <td>${data.players.find(p => p.id === match.player2).nickname}</td>
-                    <td>${match.is_complete ? `${match.score_player1}-${match.score_player2}` : '-'}</td>
-                    <td>${match.winner ? data.players.find(p => p.id === match.winner).nickname : '-'}</td>
-                    <td>
-                        ${match.is_complete 
-                            ? '<span class="status-finished">Finished</span>' 
-                            : `<button onclick="startTournamentMatch(${match.id})">Start Match</button>`}
-                    </td>
-                `;
-                additionalTableBody.appendChild(tr);
-            });
+            additionalMatches.forEach(match => renderMatch(match, additionalTableBody));
+        } else {
+            document.getElementById('additional-matches').style.display = 'none';
         }
 
         // Check for winners
@@ -1118,6 +1151,7 @@ async function loadTournamentData() {
             winnerText.textContent = `Winner${data.tournament.winner_ids.length > 1 ? 's' : ''}: ${winners}`;
             winnerSection.style.display = 'flex';
         }
+        
     } catch (error) {
         console.error('Error loading tournament:', error);
     }
