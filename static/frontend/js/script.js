@@ -1057,54 +1057,7 @@ async function loadTournamentData() {
         console.log('Полученные данные турнира:', data);
         console.log('ID текущего матча:', window.currentMatchId);
 
-        // // Отображаем данные о последнем матче, если они есть
-        // if (window.lastMatchScore && window.currentMatchId) {
-        //     console.log('Загружен сохраненный счет матча:', window.lastMatchScore);
-            
-        //     // Преобразуем ID в числа для сравнения
-        //     const currentMatchIdNum = parseInt(window.currentMatchId);
-            
-        //     // Находим матч в данных и обновляем счет, если он еще не обновлен
-        //     let matchUpdated = false;
-        //     data.matches.forEach(match => {
-        //         if (match.id === currentMatchIdNum || match.match_id === currentMatchIdNum) {
-        //             console.log('Обновляем информацию для матча ID:', match.id);
-        //             match.score_player1 = window.lastMatchScore.score_player1;
-        //             match.score_player2 = window.lastMatchScore.score_player2;
-                    
-        //             // Определяем победителя по счету, если он не указан
-        //             if (window.lastMatchScore.winner) {
-        //                 match.winner = window.lastMatchScore.winner;
-        //             } else if (match.score_player1 > match.score_player2) {
-        //                 match.winner = match.player1;
-        //             } else if (match.score_player2 > match.score_player1) {
-        //                 match.winner = match.player2;
-        //             }
-                    
-        //             match.is_complete = true;
-        //             matchUpdated = true;
-        //         }
-        //     });
-            
-        //     // Очищаем данные после использования
-        //     window.lastMatchScore = null;
-        //     window.currentMatchId = null;
-        // }
-
-        // Update tournament status
-        document.getElementById('tournament-status').textContent = `Tournament (${data.tournament.status})`;
-
-        // Render players list
-        const playersList = document.getElementById('players-list');
-        playersList.innerHTML = '';
-        data.players.forEach(player => {
-            const li = document.createElement('li');
-            li.classList.add('player-item');
-            li.innerHTML = `<span>${player.nickname}</span><span>Score: ${player.score}</span>`;
-            playersList.appendChild(li);
-        });
-
-        // Функция рендеринга матчей
+        // Define renderMatch function first - IMPORTANT!
         const renderMatch = (match, tableBody) => {
             const tr = document.createElement('tr');
             const player1 = data.players.find(p => p.id === match.player1);
@@ -1125,29 +1078,118 @@ async function loadTournamentData() {
             tableBody.appendChild(tr);
         };
 
-        // Рендерим основные матчи
-        const regularTableBody = document.querySelector('#regular-matches-table tbody');
-        regularTableBody.innerHTML = '';
-        const regularMatches = data.matches.filter(m => !m.is_additional);
-        regularMatches.forEach(match => renderMatch(match, regularTableBody));
-
-        // Рендерим дополнительные матчи
+        // Regular matches - ADD NULL CHECK
+        const regularMatchesTable = document.getElementById('tournamentMatches');
+        if (regularMatchesTable) {
+            const regularMatchesBody = regularMatchesTable.querySelector('tbody');
+            if (regularMatchesBody) {
+                regularMatchesBody.innerHTML = '';
+                
+                const regularMatches = data.matches.filter(m => !m.is_additional);
+                regularMatches.forEach(match => {
+                    renderMatch(match, regularMatchesBody);
+                });
+            }
+        }
+        
+        // Additional matches (tiebreakers)
         const additionalMatches = data.matches.filter(m => m.is_additional);
+        
+        // Get the container for additional matches
+        let additionalMatchesContainer = document.getElementById('additionalMatchesContainer');
+        
+        // If there are additional matches but no container, create one
         if (additionalMatches.length > 0) {
-            document.getElementById('additional-matches').style.display = 'block';
-            const additionalTableBody = document.querySelector('#additional-matches-table tbody');
-            additionalTableBody.innerHTML = '';
-            additionalMatches.forEach(match => renderMatch(match, additionalTableBody));
-        } else {
-            document.getElementById('additional-matches').style.display = 'none';
+            const tournamentView = document.querySelector('.tournament-view');
+            if (tournamentView) { // Check if parent exists
+                if (!additionalMatchesContainer) {
+                    additionalMatchesContainer = document.createElement('div');
+                    additionalMatchesContainer.id = 'additionalMatchesContainer';
+                    additionalMatchesContainer.className = 'additional-matches-container';
+                    tournamentView.appendChild(additionalMatchesContainer);
+                }
+                
+                // Clear and populate additional matches section
+                additionalMatchesContainer.innerHTML = `
+                    <h3>Tie-Breaking Matches</h3>
+                    <table id="additionalMatches" class="tournament-table">
+                        <thead>
+                            <tr>
+                                <th>Player 1</th>
+                                <th>Player 2</th>
+                                <th>Score</th>
+                                <th>Winner</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                `;
+                
+                const additionalMatchesBody = additionalMatchesContainer.querySelector('tbody');
+                additionalMatches.forEach(match => {
+                    renderMatch(match, additionalMatchesBody);
+                });
+                
+                // Make sure it's visible
+                additionalMatchesContainer.style.display = 'block';
+            }
+        } else if (additionalMatchesContainer) {
+            // If there are no additional matches but the container exists, hide it
+            additionalMatchesContainer.style.display = 'none';
         }
 
-        // Check for winners
-        if (data.tournament.status === 'Complete' && data.tournament.winner_ids.length > 0) {
-            const winnerSection = document.getElementById('winner-section');
-            const winnerText = document.getElementById('winner-text');
+        // Update tournament status - ADD NULL CHECK
+        const statusElement = document.getElementById('tournament-status');
+        if (statusElement) {
+            statusElement.textContent = `Tournament (${data.tournament.status})`;
+        }
+
+        // Render players list - ADD NULL CHECK
+        const playersList = document.getElementById('players-list');
+        if (playersList) {
+            playersList.innerHTML = '';
+            data.players.forEach(player => {
+                const li = document.createElement('li');
+                li.classList.add('player-item');
+                li.innerHTML = `<span>${player.nickname}</span><span>Score: ${player.score}</span>`;
+                playersList.appendChild(li);
+            });
+        }
+
+        // Update second tables for regular and additional matches (if they exist)
+        const regularTableBody = document.querySelector('#regular-matches-table tbody');
+        if (regularTableBody) {
+            regularTableBody.innerHTML = '';
+            const regularMatches = data.matches.filter(m => !m.is_additional);
+            regularMatches.forEach(match => renderMatch(match, regularTableBody));
+        }
+
+        // Update additional matches section (second approach)
+        const additionalMatchesSection = document.getElementById('additional-matches');
+        if (additionalMatchesSection) {
+            if (additionalMatches.length > 0) {
+                additionalMatchesSection.style.display = 'block';
+                const additionalTableBody = document.querySelector('#additional-matches-table tbody');
+                if (additionalTableBody) {
+                    additionalTableBody.innerHTML = '';
+                    additionalMatches.forEach(match => renderMatch(match, additionalTableBody));
+                }
+            } else {
+                additionalMatchesSection.style.display = 'none';
+            }
+        }
+
+        // Check for winners - ADD NULL CHECKS
+        const winnerSection = document.getElementById('winner-section');
+        const winnerText = document.getElementById('winner-text');
+        
+        if (winnerSection && winnerText && data.tournament.status === 'Complete' && 
+            data.tournament.winner_ids && data.tournament.winner_ids.length > 0) {
+            
             const winners = data.tournament.winner_ids.map(id => 
-                data.players.find(p => p.id === id).nickname).join(' and ');
+                data.players.find(p => p.id === id)?.nickname || 'Unknown').join(' and ');
+            
             winnerText.textContent = `Winner${data.tournament.winner_ids.length > 1 ? 's' : ''}: ${winners}`;
             winnerSection.style.display = 'flex';
         }
@@ -1156,4 +1198,3 @@ async function loadTournamentData() {
         console.error('Error loading tournament:', error);
     }
 }
-

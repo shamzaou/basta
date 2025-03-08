@@ -1518,3 +1518,16 @@ body.is-logged-out .logged-out {
         padding: 10px;
     }
 }
+
+.additional-matches-container {
+    margin-top: 30px;
+    border-top: 1px solid #ddd;
+    padding-top: 15px;
+}
+
+.additional-matches-container h3 {
+    color: #e74c3c;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
+
