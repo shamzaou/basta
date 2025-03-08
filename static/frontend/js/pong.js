@@ -871,75 +871,7 @@ class PongGame {
                 }
             } else {
                 // For regular matches - Save to match history
-                const player1Element = document.getElementById('player1-name');
-                const player2Element = document.getElementById('player2-name');
-            
-                const currentUser = player1Element ? player1Element.textContent : "Player 1";
-                
-                // Determine if it's PvP or AI mode and set opponent name
-                let opponent;
-                if (this.gameMode === 'ai') {
-                    opponent = "AI";
-                } else {
-                    opponent = player2Element && player2Element.textContent.trim() !== "" 
-                        ? player2Element.textContent 
-                        : "Player 2";
-                }
-            
-                const userScore = this.state.score.player1 || 0;
-                const opponentScore = this.state.score.player2 || 0;
-                const scoreString = `${userScore}-${opponentScore}`;
-            
-                // Determine result
-                let result = 'DRAW';
-                if (userScore > opponentScore) {
-                    result = 'WIN';
-                } else if (opponentScore > userScore) {
-                    result = 'LOSS';
-                }
-            
-                const authToken = localStorage.getItem('authToken');
-                
-                console.log("Saving regular match:", {
-                    game_type: 'PONG',
-                    opponent,
-                    result,
-                    score: scoreString,
-                    auth: authToken ? "Present" : "Missing"
-                });
-                
-                // Send result to backend
-                const response = await fetch('/api/auth/save-match/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`,
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
-                    body: JSON.stringify({
-                        game_type: 'PONG',
-                        opponent: opponent,
-                        result: result,
-                        score: scoreString
-                    })
-                });
-                
-                // Debug the raw response for troubleshooting
-                const rawResponseText = await response.text();
-                console.log("Raw response from save-match:", rawResponseText);
-                
-                // Try to parse the response as JSON if possible
-                let responseData;
-                try {
-                    responseData = JSON.parse(rawResponseText);
-                    console.log("Parsed response:", responseData);
-                } catch (e) {
-                    console.log("Response is not valid JSON");
-                }
-                
-                if (!response.ok) {
-                    throw new Error(`Failed to save match history: ${rawResponseText}`);
-                }
+                await this.saveMatchHistory();
                 
                 // Show restart button for normal game
                 this.showRestartButton();
@@ -948,6 +880,80 @@ class PongGame {
             console.error('Failed to finalize match:', error);
             this.showRestartButton(); // Fall back to restart button even if error
         }
+    }
+    
+    // New method to save match history for regular games
+    async saveMatchHistory() {
+        const player1Element = document.getElementById('player1-name');
+        const player2Element = document.getElementById('player2-name');
+    
+        const currentUser = player1Element ? player1Element.textContent : "Player 1";
+        
+        // Determine if it's PvP or AI mode and set opponent name
+        let opponent;
+        if (this.gameMode === 'ai') {
+            opponent = "AI";
+        } else {
+            opponent = player2Element && player2Element.textContent.trim() !== "" 
+                ? player2Element.textContent 
+                : "Player 2";
+        }
+    
+        const userScore = this.state.score.player1 || 0;
+        const opponentScore = this.state.score.player2 || 0;
+        const scoreString = `${userScore}-${opponentScore}`;
+    
+        // Determine result
+        let result = 'DRAW';
+        if (userScore > opponentScore) {
+            result = 'WIN';
+        } else if (opponentScore > userScore) {
+            result = 'LOSS';
+        }
+    
+        const authToken = localStorage.getItem('authToken');
+        
+        console.log("Saving regular match:", {
+            game_type: 'PONG',
+            opponent,
+            result,
+            score: scoreString,
+            auth: authToken ? "Present" : "Missing"
+        });
+        
+        // Send result to backend
+        const response = await fetch('/api/auth/save-match/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`,
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                game_type: 'PONG',
+                opponent: opponent,
+                result: result,
+                score: scoreString
+            })
+        });
+        
+        // Debug the raw response for troubleshooting
+        const rawResponseText = await response.text();
+        console.log("Raw response from save-match:", rawResponseText);
+        
+        // Try to parse the response as JSON if possible
+        try {
+            const responseData = JSON.parse(rawResponseText);
+            console.log("Parsed response:", responseData);
+        } catch (e) {
+            console.log("Response is not valid JSON");
+        }
+        
+        if (!response.ok) {
+            throw new Error(`Failed to save match history: ${rawResponseText}`);
+        }
+        
+        return true;
     }
 
     showRestartButton() {
@@ -984,11 +990,24 @@ class PongGame {
         }
     }
 
-    restartGame() {
+    async restartGame() {
+        // If this is a normal (non-tournament) game and has finished, save the current results before resetting
+        if (!window.tournamentId && !window.currentMatchId && this.state.gameStatus === 'finished') {
+            try {
+                // Generate a unique match ID for the new game
+                this.state.matchId = 'game_' + Date.now();
+                this.state.matchStartTime = new Date();
+                console.log("Starting new game with ID:", this.state.matchId);
+            } catch (error) {
+                console.error('Error initializing new match:', error);
+            }
+        }
+        
         // Reset game state
         this.state.score = { player1: 0, player2: 0 };
         this.state.gameStatus = 'playing';
         this.state.winner = null;
+        this.isFinishing = false; // Reset the finishing flag
         
         // Reset ball position and velocity
         this.renderer.ball.position.copy(this.physics.resetBall());
