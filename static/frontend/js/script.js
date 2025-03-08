@@ -1183,7 +1183,7 @@ async function loadTournamentData() {
         // Check for winners - ADD NULL CHECKS
         const winnerSection = document.getElementById('winner-section');
         const winnerText = document.getElementById('winner-text');
-        
+
         if (winnerSection && winnerText && data.tournament.status === 'Complete' && 
             data.tournament.winner_ids && data.tournament.winner_ids.length > 0) {
             
@@ -1192,8 +1192,11 @@ async function loadTournamentData() {
             
             winnerText.textContent = `Winner${data.tournament.winner_ids.length > 1 ? 's' : ''}: ${winners}`;
             winnerSection.style.display = 'flex';
+        } else if (winnerSection) {
+            // Hide winner section for new tournaments or tournaments without winners
+            winnerSection.style.display = 'none';
         }
-        
+
     } catch (error) {
         console.error('Error loading tournament:', error);
     }
