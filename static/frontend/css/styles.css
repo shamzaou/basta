@@ -1920,6 +1920,7 @@ body.is-logged-out .logged-out {
     color: var(--primary-color);
     text-shadow: 3px 4px 0 var(--secondary-color);
     margin-bottom: 20px; /* Отступ под заголовком */
+    text-align: center; /* Center the heading text */
 }
 
 #tournament #add-players form {
@@ -1929,6 +1930,16 @@ body.is-logged-out .logged-out {
     align-items: center; /* Центрируем форму */
     width: 100%;
     max-width: 500px;
+    margin: 0 auto; /* Add auto margin to center the form horizontally */
+}
+
+#add-players-form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
 }
 
 #tournament #add-players .input-group {
@@ -1963,7 +1974,7 @@ body.is-logged-out .logged-out {
     font-size: 24px;
     border: 4px solid var(--primary-color);
     color: var(--primary-color);
-    text-shadow: 1px 3px 0 var(--secondary-color);
+    text-shadow: 1px 3px 0 var (--secondary-color);
     background-color: var(--background-color);
     box-shadow: inset 0 0 15px 0 var(--secondary-color);
     transition: all var(--transition-speed);
@@ -1975,14 +1986,16 @@ body.is-logged-out .logged-out {
     box-shadow: inset 0 0 25px 0 var(--secondary-color);
 }
 
-#tournament #add-players .error {
+#add-players-error {
     color: var(--danger-color); /* Яркий красный цвет для видимости */
     font-size: 16px;
     text-align: center;
     text-shadow: 2px 2px 0 var(--secondary-color); /* Улучшаем читаемость */
-    padding: 10px; /* Добавляем отступы для текста */
     background-color: rgba(255, 0, 0, 0.1); /* Лёгкий фон для выделения */
     border-radius: 4px; /* Скругление краёв */
+    max-width: 500px; /* Match the form's max-width */
+    margin: 0 auto; /* Center the error message */
+    width: 100%; /* Full width within constraints */
 }
 
 /* View Tournament Subsection */
