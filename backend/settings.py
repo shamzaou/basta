@@ -24,12 +24,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-k@ial)6g@p=y@umgg_oc31#*xu&(g5t&cw=2^n0+3%((z+d)iq'
+SECRET_KEY = config('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*', cast=lambda v: [s.strip() for s in v.split(',')])
 
 
 # Application definition
@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'whitenoise.runserver_nostatic',
     'userapp.apps.UserappConfig',
     'gameapp',
     'django_otp',
@@ -71,6 +72,7 @@ SIMPLE_JWT = {
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -83,22 +85,6 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'backend.urls'
 
-TEMPLATES = [
-    {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-            ],
-        },
-    },
-]
-
 WSGI_APPLICATION = 'backend.wsgi.application'
 
 # Database
@@ -107,11 +93,11 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'basta_db',                  # Match docker-compose.yml
-        'USER': 'postgres',                  # Match docker-compose.yml
-        'PASSWORD': 'postgres',              # Match docker-compose.yml
-        'HOST': 'db',                       # Use the service name from docker-compose.yml
-        'PORT': '5432',
+        'NAME': config('DB_NAME', default='basta_db'),
+        'USER': config('DB_USER', default='postgres'),
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': config('DB_HOST', default='db'),
+        'PORT': config('DB_PORT', default='5432'),
     }
 }
 
@@ -121,9 +107,16 @@ DATABASES = {
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        'OPTIONS': {
+            'user_attributes': ('username', 'email'),
+            'max_similarity': 0.7,
+        }
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': 10,  # Increased from default
+        }
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
@@ -131,8 +124,14 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
+    {
+        'NAME': 'userapp.validators.PasswordStrengthValidator',
+    },
 ]
 
+# Password Policy Settings
+PASSWORD_RESET_TIMEOUT = 3600  # 1 hour in seconds
+PASSWORD_HISTORY_COUNT = 3  # Remember last 3 passwords
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
@@ -187,12 +186,11 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 SESSION_SAVE_EVERY_REQUEST = True
 
 # CORS settings
-CORS_ALLOW_ALL_ORIGINS = True  # For development only
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:443",
-    "https://localhost:443",
-]
+CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=False, cast=bool)
+CORS_ALLOW_CREDENTIALS = config('CORS_ALLOW_CREDENTIALS', default=True, cast=bool)
+CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='https://localhost:443,http://localhost:443', 
+                              cast=lambda v: [s.strip() for s in v.split(',')])
+
 CORS_ALLOW_METHODS = [
     'GET',
     'POST',
@@ -211,32 +209,31 @@ CORS_ALLOW_HEADERS = [
 ]
 
 # CSRF settings
-CSRF_COOKIE_SECURE = False
-CSRF_COOKIE_HTTPONLY = False
-CSRF_COOKIE_SAMESITE = 'Lax'
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:443",
-    "https://localhost:443",
-]
+CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=True, cast=bool)
+CSRF_COOKIE_HTTPONLY = config('CSRF_COOKIE_HTTPONLY', default=False, cast=bool) 
+CSRF_COOKIE_SAMESITE = config('CSRF_COOKIE_SAMESITE', default='Lax')
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='https://localhost:443,http://localhost:443',
+                             cast=lambda v: [s.strip() for s in v.split(',')])
+
 CSRF_USE_SESSIONS = False
 CSRF_COOKIE_NAME = 'csrftoken'
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.gmail.com"
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = "transcendance.2fa@gmail.com"
-EMAIL_HOST_PASSWORD = "poba ejtv oemo afsj"
-DEFAULT_FROM_EMAIL = "2FA <transcendance.2fa@gmail.com>"
+EMAIL_HOST = config('EMAIL_HOST', default="smtp.gmail.com")
+EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default="2FA <transcendance.2fa@gmail.com>")
 
 
 JWT_SETTINGS = {
-    'JWT_SECRET_KEY': config('JWT_SECRET_KEY', default='your-secret-key-here'),
-    'JWT_EXP_DELTA_SECONDS': 4200,
-    'JWT_ALGORITHM': 'HS256',
-    'CLIENT_ID': config('CLIENT_ID', default='u-s4t2ud-132fa5622bce53a46a8bed31d7e99019853b85977cc5fece17d95b9ee8cdff22'),
-    'CLIENT_SECRET': config('CLIENT_SECRET', default='your-client-secret'),
-    'REDIRECT_URI': config('REDIRECT_URI', default='https://localhost:443/profile')
+    'JWT_SECRET_KEY': config('JWT_SECRET_KEY'),
+    'JWT_EXP_DELTA_SECONDS': config('JWT_EXP_DELTA_SECONDS', default=4200, cast=int),
+    'JWT_ALGORITHM': config('JWT_ALGORITHM', default='HS256'),
+    'CLIENT_ID': config('CLIENT_ID'),
+    'CLIENT_SECRET': config('CLIENT_SECRET'),
+    'REDIRECT_URI': config('REDIRECT_URI')
 }
 
 OAUTH2_PROVIDER = {
@@ -270,9 +267,9 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # 42 OAuth Settings 
-FORTYTWO_CLIENT_ID = config('FORTYTWO_CLIENT_ID', default='u-s4t2ud-c027f46e7ffb944f9483c4359967dc984c0b904c0cc3b9f628b05ba7c0c67cfc')
-FORTYTWO_CLIENT_SECRET = config('FORTYTWO_CLIENT_SECRET', default='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')
-FORTYTWO_REDIRECT_URI = config('FORTYTWO_REDIRECT_URI', default='https://localhost:443/home')
+FORTYTWO_CLIENT_ID = config('FORTYTWO_CLIENT_ID')
+FORTYTWO_CLIENT_SECRET = config('FORTYTWO_CLIENT_SECRET')
+FORTYTWO_REDIRECT_URI = config('FORTYTWO_REDIRECT_URI')
 
 # Add this at the bottom of settings.py to ensure media files are served in development
 if DEBUG:
@@ -293,3 +290,5 @@ if DEBUG:
 INACTIVE_USER_DELETE_MONTHS = 6  # Delete after 6 months of inactivity
 INACTIVE_USER_WARNING_MONTHS = 5  # Warn after 5 months of inactivity
 LAST_ACTIVITY_UPDATE_WINDOW = 15  # Only update last_activity after 15 minutes (in minutes)
+
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'

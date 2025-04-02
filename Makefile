@@ -7,6 +7,7 @@ RESET := $(shell tput -Txterm sgr0)
 
 help:
 	@echo "$(GREEN)Available commands:$(RESET)"
+	@echo "$(YELLOW)start$(RESET)          - Start Docker containers"
 	@echo "$(YELLOW)build$(RESET)          - Build Docker containers"
 	@echo "$(YELLOW)up$(RESET)             - Start Docker containers in detached mode"
 	@echo "$(YELLOW)down$(RESET)           - Stop Docker containers"
@@ -36,6 +37,8 @@ down:
 
 
 restart: down build up
+
+start: build up
 
 logs:
 	docker-compose logs -f

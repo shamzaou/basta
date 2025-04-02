@@ -1,5 +1,7 @@
 .env
+.DS_Store
 backend/__pycache__/
 gameapp/__pycache__/
 userapp/__pycache__/
 media/
+gunicorn*.*

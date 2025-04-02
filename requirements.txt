@@ -19,3 +19,5 @@ Werkzeug
 pyOpenSSL
 python-decouple
 PyJWT>=2.0.0
+whitenoise
+daphne
