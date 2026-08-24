@@ -218,7 +218,11 @@ CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='https://localhost
 CSRF_USE_SESSIONS = False
 CSRF_COOKIE_NAME = 'csrftoken'
 
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+# Overridable from .env so the 2FA flow can be demoed/tested without Gmail:
+#   EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend  -> OTP printed in `make logs`
+EMAIL_BACKEND = config('EMAIL_BACKEND', default="django.core.mail.backends.smtp.EmailBackend")
+# Never let a hung SMTP connection block a Gunicorn worker (seconds).
+EMAIL_TIMEOUT = config('EMAIL_TIMEOUT', default=10, cast=int)
 EMAIL_HOST = config('EMAIL_HOST', default="smtp.gmail.com")
 EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
@@ -284,6 +288,19 @@ if DEBUG:
     
     # Additional URL patterns for development
     STATICFILES_URLS = staticfiles_urlpatterns()
+
+# Cache: used to hold pending 2FA one-time codes. Must be SHARED by all Gunicorn
+# workers - the previous default (LocMemCache) was per-process, so a code stored by
+# the worker that handled /login/ was invisible to the worker that handled /verify-otp/.
+# The table is created by `manage.py createcachetable` in scripts/entrypoint.sh.
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'django_cache',
+    }
+}
+# How long an emailed 2FA code stays valid (seconds).
+OTP_TTL_SECONDS = config('OTP_TTL_SECONDS', default=600, cast=int)
 
 # Add GDPR settings
 # GDPR User Deletion Settings

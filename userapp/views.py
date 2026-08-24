@@ -37,9 +37,36 @@ from rest_framework.authentication import SessionAuthentication, TokenAuthentica
 import uuid
 
 import os
+import threading
 from django.http import HttpResponse, FileResponse
 
 logger = logging.getLogger(__name__)
+
+
+def send_otp_email_async(user, otp):
+    """Send the 2FA code in a background thread so the login request returns at once.
+
+    The SMTP round-trip to Gmail used to run inside the request (several seconds, and a
+    500 when it failed). Failures are logged instead of surfaced to the user; the code
+    stays valid in the cache so a retry/resend simply re-mails the same code.
+    """
+    ttl_minutes = getattr(settings, 'OTP_TTL_SECONDS', 600) // 60
+
+    def _send():
+        try:
+            send_mail(
+                "Your Login OTP",
+                f"Your OTP for login is: {otp}\nValid for {ttl_minutes} minutes.",
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+                fail_silently=False,
+            )
+        except Exception:
+            logger.exception("Failed to send OTP email to user id=%s", user.id)
+
+    thread = threading.Thread(target=_send, name=f"otp-mail-{user.id}", daemon=True)
+    thread.start()
+    return thread
 
 
 
@@ -224,18 +251,16 @@ def login_view(request):
             return JsonResponse({"status": "error", "message": "Invalid email or password."}, status=400)
 
         if user.two_factor_enabled:
-            # Handle 2FA before issuing tokens
-            otp = str(random.randint(100000, 999999))
+            # Handle 2FA before issuing tokens.
+            # Re-use a still-valid code if one exists: clicking "Sign In" again while
+            # waiting for a slow email must not invalidate the code already sent.
             cache_key = f"otp_{user.id}"
-            cache.set(cache_key, otp, timeout=300)
+            otp = cache.get(cache_key)
+            if not otp:
+                otp = str(random.randint(100000, 999999))
+                cache.set(cache_key, otp, timeout=getattr(settings, 'OTP_TTL_SECONDS', 600))
 
-            send_mail(
-                "Your Login OTP",
-                f"Your OTP for login is: {otp}\nValid for 5 minutes.",
-                settings.DEFAULT_FROM_EMAIL,
-                [user.email],
-                fail_silently=False,
-            )
+            send_otp_email_async(user, otp)
 
             return JsonResponse({
                 "status": "success",
@@ -269,7 +294,8 @@ def verify_otp(request):
     try:
         data = json.loads(request.body)
         email = data.get("email")
-        otp = data.get("otp")
+        # Normalise: the frontend sends a string, but tolerate numbers and pasted whitespace
+        otp = str(data.get("otp") or "").strip()
 
         print(f"Verifying OTP - Email: {email}, OTP: {otp}")  # Debug log
 
@@ -293,7 +319,7 @@ def verify_otp(request):
         cached_otp = cache.get(cache_key)
         print(f"Cached OTP: {cached_otp}, Received OTP: {otp}")  # Debug log
 
-        if cached_otp and cached_otp == otp:
+        if cached_otp and str(cached_otp) == otp:
             # Login the user
             login(request, user)
             
@@ -308,6 +334,7 @@ def verify_otp(request):
             return JsonResponse({
                 "status": "success",
                 "access_token": str(refresh.access_token),
+                "refresh_token": str(refresh),
                 "user": {
                     "id": user.id,
                     "email": user.email,

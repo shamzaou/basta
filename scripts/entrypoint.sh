@@ -44,9 +44,12 @@ echo "Using DJANGO_SETTINGS_MODULE=$DJANGO_SETTINGS_MODULE"
 echo "Running migrations..."
 python manage.py makemigrations --settings=$DJANGO_SETTINGS_MODULE
 python manage.py migrate --settings=$DJANGO_SETTINGS_MODULE
+# Table backing the shared cache that holds pending 2FA codes (no-op if it exists)
+python manage.py createcachetable --settings=$DJANGO_SETTINGS_MODULE
 
-# Let's skip collectstatic for now since it's causing issues
-# python manage.py collectstatic --noinput --settings=$DJANGO_SETTINGS_MODULE
+# Refresh staticfiles/ (WhiteNoise serves hashed files from the manifest there; without
+# this step edits in static/ are never served)
+python manage.py collectstatic --noinput --settings=$DJANGO_SETTINGS_MODULE
 
 echo "Starting Gunicorn..."
 # Start server with SSL certificates using Gunicorn with detailed logging
