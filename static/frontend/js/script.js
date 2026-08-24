@@ -829,6 +829,44 @@ document.addEventListener('DOMContentLoaded', () => {
 	// Add event listener to delete button
 	document.getElementById('delete-account').addEventListener('click', deleteAccount);
 
+	// GDPR anonymisation (added Aug 2026): keep statistics, strip personal data, disable login
+	async function anonymizeAccount() {
+		const confirmText = window.t ? window.t('js.confirm_anonymize') : 'Anonymize your account? You will be logged out and will not be able to log in again.';
+		if (!confirm(confirmText)) {
+			return;
+		}
+
+		try {
+			const response = await fetch('/api/auth/anonymize-account/', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+					'X-CSRFToken': getCookie('csrftoken')
+				}
+			});
+
+			if (response.ok) {
+				localStorage.removeItem('authToken');
+				localStorage.removeItem('refreshToken');
+				localStorage.removeItem('userData');
+				localStorage.removeItem('isLoggedIn');
+				alert(window.t ? window.t('js.anonymized') : 'Your account has been anonymized.');
+				window.location.href = '/login';
+			} else {
+				const data = await response.json();
+				throw new Error(data.message || 'Failed to anonymize account');
+			}
+		} catch (error) {
+			alert('Failed to anonymize account: ' + error.message);
+		}
+	}
+
+	const anonymizeBtn = document.getElementById('anonymize-account');
+	if (anonymizeBtn) {
+		anonymizeBtn.addEventListener('click', anonymizeAccount);
+	}
+
     // OTP verification button
     const verifyOTPButton = document.getElementById('verify-otp');
     if (verifyOTPButton) {
@@ -1427,7 +1465,7 @@ async function refreshAccessToken() {
     }
 
     try {
-        const response = await fetch('/api/token/refresh/', {
+        const response = await fetch('/api/auth/token/refresh/', {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ refresh: refreshToken })
@@ -1444,7 +1482,7 @@ async function refreshAccessToken() {
         return data.access;
     } catch (error) {
         // console.error("Failed to refresh token:", error);
-        logout();  // Log the user out if refresh fails
+        handleLogout();  // Log the user out if refresh fails
         return null;
     }
 }

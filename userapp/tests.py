@@ -184,3 +184,74 @@ class NoTwoFactorLoginTests(TestCase):
         self.assertFalse(body['requires_2fa'])
         self.assertIn('access_token', body)
         self.assertIn('refresh_token', body)
+
+
+class GdprTests(TestCase):
+    """GDPR module: export (local data management), anonymisation, deletion."""
+    PASSWORD = 'Str0ng!Passw0rd'
+
+    def setUp(self):
+        from .models import MatchHistory
+        self.user = User.objects.create_user(username='carol', email='carol@example.com',
+                                             password=self.PASSWORD, display_name='Carol C')
+        self.friend = User.objects.create_user(username='dave', email='dave@example.com', password=self.PASSWORD)
+        self.user.add_friend(self.friend)
+        MatchHistory.objects.create(user=self.user, game_type='PONG', opponent='AI', result='WIN', score='3-1')
+        MatchHistory.objects.create(user=self.user, game_type='TICTACTOE', opponent='Player 2', result='LOSS', score='0-1')
+        self.client = Client()
+        self.client.force_login(self.user)
+
+    def test_export_contains_profile_and_history(self):
+        r = self.client.get('/api/auth/export-data/')
+        self.assertEqual(r.status_code, 200)
+        body = r.json()
+        self.assertEqual(body['user_information']['email'], 'carol@example.com')
+        self.assertEqual(body['statistics']['games_played'], 2)
+        self.assertEqual(len(body['match_history']), 2)
+
+    def test_anonymize_strips_pii_keeps_stats_and_blocks_login(self):
+        from .models import MatchHistory
+        from django.contrib.auth import authenticate
+        r = self.client.post('/api/auth/anonymize-account/')
+        self.assertEqual(r.status_code, 200, r.content)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.username.startswith('anon_'))
+        self.assertNotIn('carol', self.user.email)
+        self.assertTrue(self.user.email.endswith('@anonymized.invalid'))
+        self.assertIsNone(self.user.display_name)
+        self.assertFalse(self.user.is_active)
+        self.assertFalse(self.user.has_usable_password())
+        self.assertEqual(self.user.friends.count(), 0)
+        self.assertEqual(self.friend.friends.count(), 0)
+        # statistics survive, without personal data
+        self.assertEqual(MatchHistory.objects.filter(user=self.user).count(), 2)
+        # cannot log in anymore
+        self.assertIsNone(authenticate(username=self.user.email, password=self.PASSWORD))
+        r = Client().post('/api/auth/login/', {'email': 'carol@example.com', 'password': self.PASSWORD},
+                          content_type='application/json')
+        self.assertEqual(r.status_code, 400)
+
+    def test_anonymize_requires_auth(self):
+        self.assertIn(Client().post('/api/auth/anonymize-account/').status_code, (401, 403))
+
+    def test_delete_account_removes_user_and_history(self):
+        from .models import MatchHistory
+        r = self.client.delete('/api/auth/delete-account/')
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertFalse(User.objects.filter(email='carol@example.com').exists())
+        self.assertEqual(MatchHistory.objects.count(), 0)
+
+    def test_inactive_user_cleanup_command(self):
+        from datetime import timedelta
+        from io import StringIO
+        from django.core.management import call_command
+        from django.utils import timezone
+        old = User.objects.create_user(username='ghost', email='ghost@example.com', password=self.PASSWORD)
+        User.objects.filter(pk=old.pk).update(last_activity=timezone.now() - timedelta(days=30 * 7))
+        out = StringIO()
+        with override_settings(EMAIL_BACKEND=LOCMEM_EMAIL):
+            call_command('delete_inactive_users', '--dry-run', stdout=out)
+            self.assertTrue(User.objects.filter(pk=old.pk).exists())   # dry run keeps it
+            call_command('delete_inactive_users', stdout=out)
+        self.assertFalse(User.objects.filter(pk=old.pk).exists())
+        self.assertTrue(User.objects.filter(pk=self.user.pk).exists())   # active user untouched

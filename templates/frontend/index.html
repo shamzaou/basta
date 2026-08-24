@@ -27,24 +27,26 @@
                 
                 <!-- logged-out navigation -->
                 <ul class="nav-links logged-out">
-                    <li><a href="/" onclick="showPage('home'); return false;" class="active">Home</a></li>
-                    <li><a href="/about" onclick="showPage('about'); return false;">About</a></li>
-                    <li><a href="/login" onclick="showPage('login'); return false;" class="btn-nav">Log in</a></li>
-                    <li><a href="/register" onclick="showPage('register'); return false;" class="btn-nav">Register</a></li>
+                    <li><a href="/" onclick="showPage('home'); return false;" class="active" data-i18n="nav.home">Home</a></li>
+                    <li><a href="/about" onclick="showPage('about'); return false;" data-i18n="nav.about">About</a></li>
+                    <li><a href="/login" onclick="showPage('login'); return false;" class="btn-nav" data-i18n="nav.login">Log in</a></li>
+                    <li><a href="/register" onclick="showPage('register'); return false;" class="btn-nav" data-i18n="nav.register">Register</a></li>
+                    <li><select class="lang-select" aria-label="Language"></select></li>
                 </ul>
 
                 <!-- logged-in navigation -->
                 <ul class="nav-links logged-in">
-                    <li><a href="/" onclick="showPage('home'); return false;" class="active">Home</a></li>
-                    <li><a href="/tictactoe" onclick="showPage('tictactoe'); return false;">TicTacToe</a></li>
-                    <li><a href="/about" onclick="showPage('about'); return false;">About</a></li>
-                    <li><a href="/profile" onclick="showPage('profile'); return false;">Profile</a></li>
+                    <li><a href="/" onclick="showPage('home'); return false;" class="active" data-i18n="nav.home">Home</a></li>
+                    <li><a href="/tictactoe" onclick="showPage('tictactoe'); return false;" data-i18n="nav.tictactoe">TicTacToe</a></li>
+                    <li><a href="/about" onclick="showPage('about'); return false;" data-i18n="nav.about">About</a></li>
+                    <li><a href="/profile" onclick="showPage('profile'); return false;" data-i18n="nav.profile">Profile</a></li>
+                    <li><select class="lang-select" aria-label="Language"></select></li>
                     <li class="avatar-dropdown">
                         <div class="avatar-container">
                             <img src="{% static 'frontend/assets/man.png' %}" alt="User Avatar" class="nav-avatar">
                             <div class="dropdown-content">
-                                <a href="/settings" onclick="showPage('settings'); return false;" class="dropdown-item">Settings</a>
-                                <a href="#" onclick="handleLogout(); return false;" class="dropdown-item logout">Logout</a>
+                                <a href="/settings" onclick="showPage('settings'); return false;" class="dropdown-item" data-i18n="nav.settings">Settings</a>
+                                <a href="#" onclick="handleLogout(); return false;" class="dropdown-item logout" data-i18n="nav.logout">Logout</a>
                             </div>
                         </div>
                     </li>
@@ -64,14 +66,14 @@
                     <div class="ball"></div>
                     <div class="divider"></div>
                 </div>
-                <p>Welcome to Fast Pong, a unique 3D experience of the classic game of Pong(1972)!</p>
-                <p>Play with your friends, have exciting tournaments and see who will be the best player.</p>
-                <p>Ready to compete? Let the strongest man win!</p>
+                <p data-i18n="home.tagline1">Welcome to Fast Pong, a unique 3D experience of the classic game of Pong(1972)!</p>
+                <p data-i18n="home.tagline2">Play with your friends, have exciting tournaments and see who will be the best player.</p>
+                <p data-i18n="home.tagline3">Ready to compete? Let the strongest man win!</p>
                 <div class="text-center">
                     <div class="btn-group" role="group" aria-label="Button group">
-                        <a href="#" class="btn cta-button" id="play-now-button">PLAY NOW</a>
+                        <a href="#" class="btn cta-button" id="play-now-button" data-i18n="home.play">PLAY NOW</a>
                         <!-- ВАЖНО: вместо /tournaments/create/ делаем SPA-переход -->
-                        <a href="#" class="btn cta-button" id="tournament-button">TOURNAMENT</a>
+                        <a href="#" class="btn cta-button" id="tournament-button" data-i18n="home.tournament">TOURNAMENT</a>
                     </div>
                 </div>
             </div>
@@ -82,7 +84,7 @@
         <!-- Profile Page -->
         <div id="profile" class="page">
             <div class="container">
-                <h1>Player Profile</h1>
+                <h1 data-i18n="profile.title">Player Profile</h1>
                 <div class="profile-page-container">
                     <div class="profile-container">
                         <div class="profile-header">
@@ -90,7 +92,7 @@
                                 <img id="profile-avatar" src="{% static 'frontend/assets/man.png' %}" alt="Profile Avatar" class="profile-avatar">
                                 <div class="profile-info">
                                     <h2 id="profile-username">Loading...</h2>
-                                    <p>Joined: <span id="profile-joined">Loading...</span></p>
+                                    <p><span data-i18n="profile.joined">Joined:</span> <span id="profile-joined">Loading...</span></p>
                                 </div>
                             </div>
                             <!-- Pie chart positioned as a sibling element to profile-header-left -->
@@ -99,21 +101,21 @@
 
                         <div class="stats-grid">
                             <div class="stat-card">
-                                <h3>Games Played</h3>
+                                <h3 data-i18n="profile.games_played">Games Played</h3>
                                 <div class="stat-value">156</div>
                             </div>
                             <div class="stat-card">
-                                <h3>Win Rate</h3>
+                                <h3 data-i18n="profile.win_rate">Win Rate</h3>
                                 <div class="stat-value">68%</div>
                             </div>
                             <div class="stat-card">
-                                <h3>Best Score</h3>
+                                <h3 data-i18n="profile.best_score">Best Score</h3>
                                 <div class="stat-value">11-0</div>
                             </div>
                         </div>
 
                         <div class="match-history">
-                            <h2>Recent Matches</h2>
+                            <h2 data-i18n="profile.recent_matches">Recent Matches</h2>
                             <div class="match-card">
                                 <span>vs. Player2</span>
                                 <span>11-9</span>
@@ -135,17 +137,17 @@
                     <!-- Add friends panel -->
                     <div class="friends-panel">
                         <div class="friends-header">
-                            <h2>Friends</h2>
+                            <h2 data-i18n="profile.friends">Friends</h2>
                             <div class="tabs">
-                                <button class="tab-btn active" data-tab="my-friends">My Friends</button>
-                                <button class="tab-btn" data-tab="all-users">Find Users</button>
+                                <button class="tab-btn active" data-tab="my-friends" data-i18n="profile.my_friends">My Friends</button>
+                                <button class="tab-btn" data-tab="all-users" data-i18n="profile.find_users">Find Users</button>
                             </div>
                         </div>
                         
                         <div class="friends-list-container">
                             <div class="tab-content active" id="my-friends">
                                 <div class="friends-search">
-                                    <input type="text" placeholder="Search friends..." id="friends-search-input">
+                                    <input type="text" placeholder="Search friends..." id="friends-search-input" data-i18n-placeholder="profile.search_friends">
                                 </div>
                                 <div class="friends-list" id="friends-list">
                                     <!-- Friend items will be inserted dynamically -->
@@ -155,7 +157,7 @@
                             
                             <div class="tab-content" id="all-users">
                                 <div class="friends-search">
-                                    <input type="text" placeholder="Find users..." id="users-search-input">
+                                    <input type="text" placeholder="Find users..." id="users-search-input" data-i18n-placeholder="profile.find_users_placeholder">
                                 </div>
                                 <div class="friends-list" id="users-list">
                                     <!-- User items will be inserted dynamically -->
@@ -171,54 +173,54 @@
         <!-- Settings Page -->
         <div id="settings" class="page">
             <div class="container">
-                <h1>User Settings</h1>
+                <h1 data-i18n="settings.title">User Settings</h1>
                 <div class="settings-container">
                     <form id="settings-form">
                         <div class="settings-section">
-                            <h2>Profile Information</h2>
+                            <h2 data-i18n="settings.profile_info">Profile Information</h2>
                             <div class="form-group">
-                                <label for="username">Username</label>
+                                <label for="username" data-i18n="settings.username">Username</label>
                                 <div class="field-container">
                                     <div class="field-display">PlayerOne</div>
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label for="email">Email Address</label>
+                                <label for="email" data-i18n="settings.email">Email Address</label>
                                 <div class="field-container">
                                     <div class="field-display">player1@example.com</div>
                                     <input type="email" class="field-input" id="email" name="email" value="player1@example.com" required>
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label for="display-name">Display Name (Optional)</label>
+                                <label for="display-name" data-i18n="settings.display_name">Display Name (Optional)</label>
                                 <div class="field-container">
                                     <div class="field-display">nickname</div>
                                     <input type="text" class="field-input" id="display-name" name="display-name" value="The Champion">
-                                    <button type="button" class="edit-btn" data-field="display-name">Edit</button>
+                                    <button type="button" class="edit-btn" data-field="display-name" data-i18n="settings.edit">Edit</button>
                                 </div>
                             </div>
                         </div>
 
                         <div class="settings-section">
-                            <h2>Avatar</h2>
+                            <h2 data-i18n="settings.avatar">Avatar</h2>
                             <div class="avatar-upload">
                                 <img src="{% static 'frontend/assets/man.png' %}" alt="Current Avatar" class="current-avatar">
                                 <input type="file" id="avatar-upload" hidden accept="image/*">
-                                <label for="avatar-upload" class="upload-btn">Choose New Avatar</label>
+                                <label for="avatar-upload" class="upload-btn" data-i18n="settings.choose_avatar">Choose New Avatar</label>
                             </div>
-                            <div class="gdpr-notice">
+                            <div class="gdpr-notice" data-i18n="settings.avatar_note">
                                 Note: Uploaded avatars are stored securely and will be automatically compressed. 
                                 Maximum file size: 5MB.
                             </div>
                         </div>
 
                         <div class="settings-section">
-                            <h2>Data & Privacy</h2>
+                            <h2 data-i18n="settings.data_privacy">Data & Privacy</h2>
                             <div class="form-group">
-                                <button type="button" class="btn btn-secondary" id="download-data">
+                                <button type="button" class="btn btn-secondary" id="download-data" data-i18n="settings.download">
                                     Download My Data
                                 </button>
-                                <div class="gdpr-notice">
+                                <div class="gdpr-notice" data-i18n="settings.download_note">
                                     Your data includes: profile information, game history, statistics, and preferences.
                                     Format: JSON
                                 </div>
@@ -226,17 +228,24 @@
                         </div>
 
                         <div class="settings-section">
-                            <h2>Save Changes</h2>
-                            <button type="submit" class="btn btn-primary">Save Settings</button>
+                            <h2 data-i18n="settings.save_changes">Save Changes</h2>
+                            <button type="submit" class="btn btn-primary" data-i18n="settings.save">Save Settings</button>
                         </div>
 
                         <div class="danger-zone">
-                            <h2>Danger Zone</h2>
-                            <p>Once you delete your account, there is no going back. Please be certain.</p>
-                            <button type="button" class="btn btn-danger" id="delete-account">
+                            <h2 data-i18n="settings.danger">Danger Zone</h2>
+                            <p data-i18n="settings.danger_text">Once you delete your account, there is no going back. Please be certain.</p>
+                            <button type="button" class="btn btn-secondary" id="anonymize-account" data-i18n="settings.anonymize">
+                                Anonymize My Account
+                            </button>
+                            <div class="gdpr-notice" data-i18n="settings.anonymize_note">
+                                Replaces your username, email and avatar with anonymous values and disables login.
+                                Your game statistics are kept without any personal data.
+                            </div>
+                            <button type="button" class="btn btn-danger" id="delete-account" data-i18n="settings.delete">
                                 Delete My Account
                             </button>
-                            <div class="gdpr-notice">
+                            <div class="gdpr-notice" data-i18n="settings.delete_note">
                                 This will permanently delete your account and all associated data.
                                 This action cannot be undone.
                             </div>
@@ -249,7 +258,7 @@
         <!-- Game Page -->
         <div id="game" class="page">
             <div class="container">
-                <h1>Pong Game</h1>
+                <h1 data-i18n="game.title">Pong Game</h1>
                 <div class="game-container" style="width: 100%; height: 600px; position: relative; background: #0a0a0a;"></div>
             </div>
         </div>
@@ -257,7 +266,7 @@
         <!-- TicTacToe Page Placeholder -->
         <div id="tictactoe" class="page">
             <div class="container">
-                <h1>TicTacToe</h1>
+                <h1 data-i18n="tictactoe.title">TicTacToe</h1>
                 <div class="tictactoe-container">
                     <!-- TicTacToe game will be inserted here -->
                     <canvas id="tictactoeCanvas"></canvas>
@@ -268,16 +277,16 @@
         <!-- About Page -->
         <div id="about" class="page">
             <div class="container">
-                <h1>About FAST_PONG</h1>
+                <h1 data-i18n="about.title">About FAST_PONG</h1>
                 <div class="about-container">
                     <div class="about-section">
-                        <h2>Our Story</h2>
-                        <p>FAST_PONG was created as a modern homage to the classic Pong game released in 1972. Our goal was to combine retro gaming nostalgia with modern web technologies to create an engaging multiplayer experience.</p>
-                        <p>This project was developed as part of the 42 School curriculum, where a team of passionate developers came together to create a unique gaming platform.</p>
+                        <h2 data-i18n="about.story">Our Story</h2>
+                        <p data-i18n="about.story1">FAST_PONG was created as a modern homage to the classic Pong game released in 1972. Our goal was to combine retro gaming nostalgia with modern web technologies to create an engaging multiplayer experience.</p>
+                        <p data-i18n="about.story2">This project was developed as part of the 42 School curriculum, where a team of passionate developers came together to create a unique gaming platform.</p>
                     </div>
 
                     <div class="about-section">
-                        <h2>The Team</h2>
+                        <h2 data-i18n="about.team">The Team</h2>
                         <div class="team-grid">
                             <div class="team-member">
                                 <h3>Salim</h3>
@@ -299,7 +308,7 @@
                     </div>
 
                     <div class="about-section">
-                        <h2>Technologies Used</h2>
+                        <h2 data-i18n="about.tech">Technologies Used</h2>
                         <div class="tech-stack">
                             <div class="tech-item">
                                 <span class="tech-icon">🐍</span>
@@ -337,7 +346,7 @@
                     </div>
 
                     <div class="about-section">
-                        <h2>Project Features</h2>
+                        <h2 data-i18n="about.features">Project Features</h2>
                         <ul class="features-list">
                             <li><span class="feature-check">✅</span> Classic Pong gameplay with modern 3D graphics</li>
                             <li><span class="feature-check">✅</span> TicTacToe mini-game</li>
@@ -351,7 +360,7 @@
                     </div>
 
                     <div class="about-section">
-                        <h2>Privacy Policy</h2>
+                        <h2 data-i18n="about.privacy">Privacy Policy</h2>
                         
                         <div class="privacy-section">
                             <h3>1. Data We Collect</h3>
@@ -408,7 +417,7 @@
                     </div>
 
                     <div class="about-section">
-                        <h2>Legal Disclaimer</h2>
+                        <h2 data-i18n="about.disclaimer">Legal Disclaimer</h2>
                         <div class="disclaimer-container">
                             <div class="disclaimer-content">
                                 <p>This project is designed for educational purposes only and is not intended for commercial purposes. During the development of the project, the intellectual property rights of others were not affected.</p>
@@ -425,23 +434,23 @@
             <div class="container">
                 <div class="auth-container">
                     <div class="form-header">
-                        <h1>Welcome to FAST_PONG</h1>
+                        <h1 data-i18n="login.title">Welcome to FAST_PONG</h1>
                     </div>
                     
                     <!-- Traditional Login Form -->
                     <form id="loginForm" class="form-container">
                         <div class="input-container">
-                            <span>Email:</span>
+                            <span data-i18n="login.email">Email:</span>
                             <input type="email" name="email" class="input-field" id="login-username" required>
                         </div>
                         
                         <div class="input-container">
-                            <span>Password:</span>
+                            <span data-i18n="login.password">Password:</span>
                             <input type="password" name="password" class="input-field" id="password" required>
                         </div>
                         
-                        <button type="submit" id="login-button" class="auth-button">Sign In</button>
-                        <button type="button" id="login-42" class="auth-button">Sign in with 42</button>
+                        <button type="submit" id="login-button" class="auth-button" data-i18n="login.signin">Sign In</button>
+                        <button type="button" id="login-42" class="auth-button" data-i18n="login.42">Sign in with 42</button>
                     </form>
                 </div>
             </div>
@@ -452,40 +461,40 @@
             <div class="container">
                 <div class="auth-container">
                     <div class="form-header">
-                        <h1>Create Account</h1>
+                        <h1 data-i18n="register.title">Create Account</h1>
                     </div>
                     <form id="registerForm" class="form-container">
                         <div class="input-container">
-                            <span>Username:</span>
+                            <span data-i18n="register.username">Username:</span>
                             <input type="text" name="username" class="input-field" id="id_username" required>
                         </div>
                         
                         <div class="input-container">
-                            <span>Email:</span>
+                            <span data-i18n="register.email">Email:</span>
                             <input type="email" name="email" class="input-field" id="id_email" required>
                         </div>
                         
                         <div class="input-container">
-                            <span>Password:</span>
+                            <span data-i18n="register.password">Password:</span>
                             <input type="password" name="password1" class="input-field" id="id_password1" required>
                         </div>
                         
                         <div class="input-container">
-                            <span>Confirm:</span>
+                            <span data-i18n="register.confirm">Confirm:</span>
                             <input type="password" name="password2" class="input-field" id="id_password2" required>
                         </div>
                         
                         <div class="input-container">
                             <label for="enable_2fa">
                                 <input type="checkbox" id="enable_2fa" name="enable_2fa">
-                                Enable Two-Factor Authentication
+                                <span data-i18n="register.enable2fa">Enable Two-Factor Authentication</span>
                             </label>
-                            <div class="help-text">
+                            <div class="help-text" data-i18n="register.help">
                                 If enabled, you'll need to enter a code sent to your email when logging in
                             </div>
                         </div>
                         
-                        <button type="submit" id="register-button" class="auth-button">Register</button>
+                        <button type="submit" id="register-button" class="auth-button" data-i18n="register.submit">Register</button>
                     </form>
                 </div>
             </div>
@@ -495,26 +504,26 @@
         <!-- Tournament Page -->
         <div id="tournament" class="page">
             <div class="container">
-                <h1>Tournament</h1>
+                <h1 data-i18n="tournament.title">Tournament</h1>
         
                 <!-- Подсекция: Создание турнира -->
                 <div id="create-tournament" class="sub-section">
-                    <h1 class="title">Create Tournament</h1>
+                    <h1 class="title" data-i18n="tournament.create">Create Tournament</h1>
                     <form id="create-tournament-form">
-                        <label for="participants_count">Number of Participants (3-8):</label>
+                        <label for="participants_count" data-i18n="tournament.participants">Number of Participants (3-8):</label>
                         <input type="number" id="participants_count" name="participants_count" min="3" max="8" required>
-                        <button type="submit">Next</button>
+                        <button type="submit" data-i18n="tournament.next">Next</button>
                     </form>
                 </div>
         
                 <!-- Подсекция: Добавление игроков -->
                 <div id="add-players" class="sub-section" style="display: none;">
-                    <h1>Add Players</h1>
+                    <h1 data-i18n="tournament.add_players">Add Players</h1>
                     <form id="add-players-form">
                         <div id="player-inputs">
                             <!-- Поля для никнеймов будут генерироваться через JS -->
                         </div>
-                        <button type="submit">Go!</button>
+                        <button type="submit" data-i18n="tournament.go">Go!</button>
                     </form>
                     <div class="error" id="add-players-error"></div>
                 </div>
@@ -523,22 +532,22 @@
                 <div id="view-tournament" class="sub-section" style="display: none;">
                     <h1 id="tournament-status">Tournament</h1>
                     <div class="section">
-                        <h2>Players:</h2>
+                        <h2 data-i18n="tournament.players">Players:</h2>
                         <ul class="players-list" id="players-list">
                             <!-- Список игроков с очками будет рендериться через JS -->
                         </ul>
                     </div>
                     <div class="section">
-                        <h2>Regular Matches:</h2>
+                        <h2 data-i18n="tournament.regular">Regular Matches:</h2>
                         <div class="table-container">
                             <table id="regular-matches-table">
                                 <thead>
                                     <tr>
-                                        <th>Player 1</th>
-                                        <th>Player 2</th>
-                                        <th>Score</th>
-                                        <th>Winner</th>
-                                        <th>Action</th>
+                                        <th data-i18n="th.player1">Player 1</th>
+                                        <th data-i18n="th.player2">Player 2</th>
+                                        <th data-i18n="th.score">Score</th>
+                                        <th data-i18n="th.winner">Winner</th>
+                                        <th data-i18n="th.action">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -548,16 +557,16 @@
                         </div>
                     </div>
                     <div class="section additional-matches" id="additional-matches" style="display: none;">
-                        <h2>Tiebreaker Matches:</h2>
+                        <h2 data-i18n="tournament.tiebreak">Tiebreaker Matches:</h2>
                         <div class="table-container">
                             <table id="additional-matches-table">
                                 <thead>
                                     <tr>
-                                        <th>Player 1</th>
-                                        <th>Player 2</th>
-                                        <th>Score</th>
-                                        <th>Winner</th>
-                                        <th>Action</th>
+                                        <th data-i18n="th.player1">Player 1</th>
+                                        <th data-i18n="th.player2">Player 2</th>
+                                        <th data-i18n="th.score">Score</th>
+                                        <th data-i18n="th.winner">Winner</th>
+                                        <th data-i18n="th.action">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -568,7 +577,7 @@
                     </div>
                     <div class="winner-section" id="winner-section" style="display: none;">
                         <h2 id="winner-text"></h2>
-                        <button onclick="showPage('home')" class="home-button">Return to Home</button>
+                        <button onclick="showPage('home')" class="home-button" data-i18n="tournament.home">Return to Home</button>
                     </div>
                 </div>
             </div>
@@ -579,16 +588,17 @@
     <!-- Move OTP Modal outside of any page, directly under main -->
     <div id="otp-modal" class="modal">
         <div class="modal-content">
-            <h2>Two-Factor Authentication Required</h2>
-            <p>A verification code has been sent to your email.</p>
+            <h2 data-i18n="otp.title">Two-Factor Authentication Required</h2>
+            <p data-i18n="otp.text">A verification code has been sent to your email.</p>
             <div class="input-container">
-                <input type="text" id="otp-input" pattern="[0-9]{6}" maxlength="6" placeholder="Enter 6-digit code">
+                <input type="text" id="otp-input" pattern="[0-9]{6}" maxlength="6" placeholder="Enter 6-digit code" data-i18n-placeholder="otp.placeholder">
             </div>
-            <button id="verify-otp" class="auth-button">Verify Code</button>
+            <button id="verify-otp" class="auth-button" data-i18n="otp.verify">Verify Code</button>
         </div>
     </div>
 
     <!-- Подключаем ваш scripts.js + three.js + PongGame / TicTacToeGame -->
+    <script src="{% static 'frontend/js/i18n.js' %}"></script>
     <script src="{% static 'frontend/js/script.js' %}"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script type="module">

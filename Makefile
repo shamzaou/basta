@@ -79,6 +79,16 @@ format:
 	docker-compose exec web black .
 	docker-compose exec web isort .
 
+# GDPR inactivity cleanup (the cron line in gdpr_cleanup_crontab is NOT installed in the
+# container image; run it manually or from a host cron). Dry run by default.
+gdpr-cleanup:
+	@echo "$(GREEN)GDPR cleanup (dry run)...$(RESET)"
+	docker-compose exec web python manage.py delete_inactive_users --dry-run
+
+gdpr-cleanup-run:
+	@echo "$(GREEN)GDPR cleanup (deleting inactive users)...$(RESET)"
+	docker-compose exec web python manage.py delete_inactive_users
+
 db:
 	@echo "$(GREEN)Connecting to PostgreSQL database...$(RESET)"
 	docker-compose exec db psql -U postgres -d basta_db

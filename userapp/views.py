@@ -846,6 +846,46 @@ def create_match(request):
         return Response({'error': str(e)}, status=500)
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def anonymize_account(request):
+    """GDPR anonymisation (added Aug 2026): strip every personal identifier from the
+    account but keep the (non-personal) match statistics. The account is disabled and
+    cannot be logged into again. Contrast with delete_account, which hard-deletes the
+    user and cascades to MatchHistory."""
+    try:
+        user = request.user
+        token = uuid.uuid4().hex[:10]
+
+        if user.profile_picture:
+            try:
+                default_storage.delete(user.profile_picture.path)
+            except Exception:
+                pass
+            user.profile_picture = None
+
+        user.username = f"anon_{token}"
+        user.email = f"anon_{token}@anonymized.invalid"
+        user.display_name = None
+        user.first_name = ''
+        user.last_name = ''
+        user.is_42_user = False
+        user.intra_id = None
+        user.two_factor_enabled = False
+        user.is_active = False
+        user.set_unusable_password()
+        user.friends.clear()
+        user.friend_of.clear()
+        user.save()
+
+        Token.objects.filter(user=user).delete()
+        logout(request)
+
+        return Response({'status': 'success', 'message': 'Account anonymized successfully'})
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=400)
+
+
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_account(request):
