@@ -15,12 +15,17 @@ class TournamentTestCase(TestCase):
         self.match.winner = None
         self.match.save()
 
-        # Проверяем, создается ли дополнительный матч
+        # Tiebreaker matches are created lazily by Tournament.get_winner()
+        # (called from the view_tournament endpoint), not by a signal on save.
         self.tournament.refresh_from_db()
+        winners = self.tournament.get_winner()
+        self.assertEqual(len(winners), 2)  # still tied -> list of tied players
         self.assertEqual(Match.objects.filter(tournament=self.tournament).count(), 2)  # Основной + доп. матч
 
     def test_additional_tournament_for_three_players(self):
-        # Добавляем третьего игрока
+        # Добавляем третьего игрока (and drop the 2-player match from setUp so the
+        # round-robin below is the whole tournament)
+        self.match.delete()
         self.player3 = Player.objects.create(tournament=self.tournament, nickname="Player3")
 
         # Завершаем основной турнир с равным количеством очков
@@ -30,5 +35,15 @@ class TournamentTestCase(TestCase):
 
         # Проверяем, создаются ли пары для дополнительного турнира
         self.tournament.refresh_from_db()
+        winners = self.tournament.get_winner()
+        self.assertEqual(len(winners), 3)
         additional_matches = Match.objects.filter(tournament=self.tournament).count()
         self.assertEqual(additional_matches, 6)  # 3 пары в круговом турнире
+        self.assertEqual(Match.objects.filter(tournament=self.tournament, is_additional=True).count(), 3)
+
+    def test_single_winner_creates_no_tiebreaker(self):
+        self.match.is_complete = True
+        self.match.winner = self.player1
+        self.match.save()
+        self.assertEqual(self.tournament.get_winner(), self.player1)
+        self.assertEqual(Match.objects.filter(tournament=self.tournament, is_additional=True).count(), 0)

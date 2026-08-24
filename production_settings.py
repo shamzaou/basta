@@ -30,7 +30,9 @@ except ImportError as e:
 DEBUG = False
 
 # Read secret key from environment variable
-SECRET_KEY = os.environ.get('SECRET_KEY')
+# Fall back to the key loaded from backend/settings.py (.env DJANGO_SECRET_KEY) when the
+# SECRET_KEY env var is not set - otherwise every manage.py command run via this module fails.
+SECRET_KEY = os.environ.get('SECRET_KEY') or SECRET_KEY
 
 # Set allowed hosts from environment variable, defaulting to localhost if not provided
 ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,[::1]').split(',')
