@@ -1,18 +1,17 @@
 # SPA routing and the frontend
 
-> **Why this matters at the evaluation.** The subject requires a single-page application with working browser Back/Forward, and our Graphics (Three.js), Accessibility (responsive, browsers, languages, SSR) modules are all frontend. Staff will click around and then ask "how does the URL change without a reload?" and "where is the 3D?". Everything is in three hand-written files plus 🆕 `i18n.js`.
+> **Why this matters at the evaluation.** The subject requires a single-page application with working browser Back/Forward, and our Graphics (Three.js), AI opponent, stats dashboard and Accessibility (responsive, browsers, SSR) modules are all frontend. Staff will click around and then ask "how does the URL change without a reload?" and "where is the 3D?". Everything is in three hand-written files.
 
 ## Files
 
 | File | Size | Role |
 |---|---|---|
-| `templates/frontend/index.html` | ~615 lines | The only HTML document. Server-rendered by Django (`{% static %}`, `{% csrf_token %}`). Contains **every page as a hidden `<div class="page">`** plus the OTP modal |
+| `templates/frontend/index.html` | ~612 lines | The only HTML document. Server-rendered by Django (`{% static %}`, `{% csrf_token %}`). Contains **every page as a hidden `<div class="page">`** plus the OTP modal |
 | `static/frontend/js/script.js` | ~2 300 lines | Router, auth, profile, settings, friends, tournament UI, avatar/data export, token refresh. Plain script (global functions), loaded first |
 | `static/frontend/js/pong.js` | ~1 190 lines | ES module: `GamePhysics`, `GameRenderer`, `InputHandler`, `PongAI`, `PongGame` (default export) |
-| `static/frontend/js/tictactoe.js` | ~325 lines | ES module: `TicTacToeGame` (default export) |
-| 🆕 `static/frontend/js/i18n.js` | ~220 lines | Translations + language switcher |
+| `static/frontend/js/tictactoe.js` | ~325 lines | ES module: `TicTacToeGame` (default export) — bonus feature, not a claimed module |
 | `static/frontend/css/styles.css` | ~2 200 lines | Retro neon theme (`--primary-color #00ff00`, `--secondary-color #ff00ff`, fonts Press Start 2P / Roboto / Orbitron), responsive breakpoints at 1100/920/768/480 px |
-| `templates/frontend/index.html:601-614` | | Script loading order: `i18n.js` → `script.js` → three.js r128 (CDN) → `<script type="module">` importing `pong.js` and `tictactoe.js` and exposing `window.PongGame` / `window.TicTacToeGame` → jQuery slim, Popper, Bootstrap JS |
+| `templates/frontend/index.html:599-611` | | Script loading order: `script.js` → three.js r128 (CDN) → `<script type="module">` importing `pong.js` and `tictactoe.js` and exposing `window.PongGame` / `window.TicTacToeGame` → jQuery slim, Popper, Bootstrap JS |
 
 ## The router (`script.js`)
 
@@ -40,7 +39,7 @@ Key points to say:
 * **Deep links work** because Django's catch-all route returns `index.html` for any path (`backend/urls.py:16`); the SPA then shows the page named by the path.
 * **Login state is client-side**: `localStorage.isLoggedIn === 'true'` (`checkLoginState :163`) switches between the two `<ul class="nav-links logged-in|logged-out">` and adds `body.is-logged-in`. Server-side, the session cookie/JWT decide whether API calls succeed; a stale `isLoggedIn` just leads to 401s and a redirect to login (`:1233-1237`).
 * Nav links have both `href="/x"` and `onclick="showPage('x'); return false;"` — belt and braces; the global click handler (`:154-161`) covers any other internal link.
-* Two `DOMContentLoaded`-time initialisations (`:546-974`): form handlers, hamburger menu, settings edit buttons, avatar upload, delete/anonymize account, OTP verify, OAuth button, PLAY NOW / TOURNAMENT gating, tournament forms, download data, TicTacToe gating.
+* Two `DOMContentLoaded`-time initialisations (`:546-973`): form handlers, hamburger menu, settings edit buttons, avatar upload, delete/anonymize account, OTP verify, OAuth button, PLAY NOW / TOURNAMENT gating, tournament forms, download data, TicTacToe gating.
 
 ## Page inventory and the API each one calls
 
@@ -89,38 +88,45 @@ All in `GameRenderer` (`pong.js:95-504`):
 
 If asked "why Three.js and not Babylon.js": the subject allows Three.js/WebGL for the Graphics module; Three.js was familiar, has a tiny API surface for what we need (geometries, Phong materials, one camera), and loads from a CDN with no build step, matching our no-bundler frontend.
 
-## 🆕 How i18n works (`i18n.js`)
+## The AI opponent (`PongAI`, `pong.js:585-676`) — AI-Algo Major module
 
-* `TRANSLATIONS` (`i18n.js:19`) — a `{ en, fr, ru }` table of ~75 keys covering nav, home, profile, settings, about headings, login/register, tournament, OTP modal, and two JS confirm/alert strings.
-* Every static string in `index.html` carries `data-i18n="key"` (or `data-i18n-placeholder="key"` for inputs) — 94 attributes.
-* `applyLanguage(lang)` (`:178`) writes `localStorage.lang`, sets `<html lang>`, replaces `textContent`/`placeholder` for every tagged element, and syncs the two `<select class="lang-select">` elements (one in each nav list, `index.html:34,43`; on mobile they are inside the hamburger menu).
-* `currentLanguage()` (`:163`) = saved choice → browser language → `en`; `t(key)` (`:172`) falls back to English for missing keys; exposed as `window.t` for `script.js`.
-* Runs on `DOMContentLoaded`; because pages are static divs in one document, one pass translates every page. Dynamic strings produced by `script.js` (e.g. "No matches played yet.", `alert()` messages) are still English — a known partial coverage.
-* Verified in the audit with headless Chrome: nav renders "Главная | О проекте | Войти | Регистрация" in RU; screenshots `presentation/screenshots/05-home-fr.jpg`, `06-home-ru.jpg`.
+* Created only in *Player vs AI* mode: `this.ai = gameMode === 'ai' ? new PongAI(this.renderer.paddle2) : null` (`pong.js:707`); called every frame from `PongGame.update` (`:1076`) with the ball mesh and the current velocity vector.
+* **It sees the ball once per second, not every frame** (`UPDATE_INTERVAL = 1000`, `:589,608-613`): on each tick it snapshots position/velocity and calls `decideNextMove` — this is the subject's "refreshes its view of the game once per second" constraint, and it is why the AI is beatable.
+* `decideNextMove` (`:618-639`): if the ball travels towards the AI (`ballVelocity.x > 0`) it linearly extrapolates the intercept `z` (`timeToIntercept = (paddle.x - ball.x) / vx`, `perfectZ = ball.z + vz * t`), then adds a prediction error scaled by `(1 - ACCURACY)` and, with probability `MISTAKE_CHANCE`, a large random offset; otherwise it drifts back towards the centre. The result is a target and a direction (`up`/`down`/`null`).
+* `executeMove` (`:641-650`) runs every frame and moves the paddle towards the target at `min(MAX_SPEED, distance/10)` — so the AI *simulates key presses* between its one-second observations instead of teleporting.
+* `updateDifficulty` (`:652-675`) is called every 5 s and is meant to adapt to the score difference, but `scoreDiff` is hard-coded to `0`, so the "close game" preset always applies (`ACCURACY 0.15`, `MISTAKE_CHANCE 0.10`, `MAX_SPEED 0.12`) — acknowledge this if asked; the constructor defaults (`ACCURACY 0.85`) are overwritten after the first 5 s.
+* No neural network / A* — the subject forbids A* and asks for a heuristic that can win occasionally and use power-ups if any; there are no power-ups here. Arrow keys are ignored in AI mode (`InputHandler.handleKeyDown :530-533`).
+
+## The stats dashboard (AI-Algo Minor module) — how the profile page is rendered
+
+* Data: `GET /api/auth/profile/` (`profile_view`, `userapp/views.py:74-142`) returns `stats {games_played, win_rate, best_score}` and the last five `match_history` entries, excluding tournament games.
+* `loadProfileData` (`script.js:1089-1245`): fills the three stat cards (`.stat-card .stat-value`, `:1141-1143`), builds one `.match-card` per match with game-type badge, opponent, score, WIN/LOSS colour and date (`:1157-1213`), then draws the **win-rate pie chart** — a hand-built inline SVG (`createWinratePieChart :1947-2057`): two arc paths (green wins / red losses, or a grey disc when no games) with centred text "WIN RATE x% / n GAMES".
+* The friends panel and the *Find Users* tab are loaded right after (`loadFriendsList :1730`, `loadAllUsers :1778`).
+* A JSON version of the same numbers (wins/losses/draws/win rate + full history) is exposed by `GET /api/auth/export-data/` (`export_user_data`) and downloaded from Settings.
 
 ## Token handling
 
 * After login the SPA stores `authToken` (access), `refreshToken`, `userData`, `isLoggedIn`. Most `fetch` calls add `Authorization: Bearer <authToken>`; tournament calls send `Token <authToken>` (wrong scheme, harmless because those views do not authenticate).
-* `getAccessToken()` (`:1438`) decodes the JWT payload (`atob` of the middle segment) and refreshes if `exp` passed; `refreshAccessToken()` (`:1459`) posts `{refresh}` to **🆕 `/api/auth/token/refresh/`** (`:1468`; it previously pointed at `/api/token/refresh/`, which the catch-all answered with HTML, and on failure called an undefined `logout()` — now `handleLogout()` `:1485`); `scheduleTokenRefresh()` (`:1490`) sets a timer 1 min before expiry — only wired in the OAuth path (`:1071`).
+* `getAccessToken()` (`:1437`) decodes the JWT payload (`atob` of the middle segment) and refreshes if `exp` passed; `refreshAccessToken()` (`:1458`) posts `{refresh}` to **🆕 `/api/auth/token/refresh/`** (`:1467`; it previously pointed at `/api/token/refresh/`, which the catch-all answered with HTML, and on failure called an undefined `logout()` — now `handleLogout()` `:1484`); `scheduleTokenRefresh()` (`:1489`) sets a timer 1 min before expiry — only wired in the OAuth path (`:1070`).
 * `handleLogout()` (`:378`) posts to `/api/auth/logout/` (clears the session) and wipes localStorage; the JWT itself simply expires (no blacklist).
 
 ## Avatars, friends, chart, export
 
-* `fixImageUrl()` (`:1509`) turns any `profile_pictures` URL into `/api/auth/avatar/<userData.id>/?t=<timestamp>` so avatars work without Django media serving and bypass browser caching; `updateNavAvatar` / `clearAvatarCache` keep the nav image fresh. Upload: file → `FileReader` data URL → `PUT /api/auth/profile/ {profile_picture: dataURL}` (`:704-783`); the backend decodes base64 into `media/profile_pictures/user_<id>.<ext>`.
-* Friends panel (`:1663-1946`): two tabs (My Friends / Find Users), client-side filtering, Add/Remove buttons calling the friends endpoints and re-rendering.
-* Win-rate pie chart is a hand-built inline **SVG** (`createWinratePieChart :1948-2057`): arc paths for wins (green) / losses (red), centre text "WIN RATE x% / n GAMES".
-* Download-my-data (`:1550-1660`): fetches the export JSON, fetches the avatar and embeds it as base64, adds `export_metadata`, and triggers a browser download via a Blob URL.
+* `fixImageUrl()` (`:1508`) turns any `profile_pictures` URL into `/api/auth/avatar/<userData.id>/?t=<timestamp>` so avatars work without Django media serving and bypass browser caching; `updateNavAvatar` / `clearAvatarCache` keep the nav image fresh. Upload: file → `FileReader` data URL → `PUT /api/auth/profile/ {profile_picture: dataURL}` (`:704-783`); the backend decodes base64 into `media/profile_pictures/user_<id>.<ext>`.
+* Friends panel (`:1662-1945`): two tabs (My Friends / Find Users), client-side filtering, Add/Remove buttons calling the friends endpoints and re-rendering.
+* Win-rate pie chart is a hand-built inline **SVG** (`createWinratePieChart :1947-2057`): arc paths for wins (green) / losses (red), centre text "WIN RATE x% / n GAMES".
+* Download-my-data (`:1549-1659`): fetches the export JSON, fetches the avatar and embeds it as base64, adds `export_metadata`, and triggers a browser download via a Blob URL.
 
 ## Responsive / browser notes
 
-* Breakpoints in `styles.css` (`@media (max-width: 1100px | 920px | 768px | 480px)`): at ≤768 px the nav collapses behind `#hamburger-menu` (`.hamburger` `:222` hidden on desktop, shown in the 768 px block), font size drops to 14 px, profile header stacks, settings field containers stack. Verified at 390×844 (screenshots `16-`, `17-`, `18-`).
+* Breakpoints in `styles.css` (`@media (max-width: 1100px | 920px | 768px | 480px)`): at ≤768 px the nav collapses behind `#hamburger-menu` (`.hamburger` `:206` hidden on desktop, shown in the 768 px block), font size drops to 14 px, profile header stacks, settings field containers stack. Verified at 390×844 (screenshots `16-`, `17-`, `18-`).
 * The Pong canvas keeps 4:3 inside `.game-container` (`height: 600px`, resize handler).
 * Browser compatibility: plain ES2017+ (async/await, modules, optional chaining `?.`), no transpiler; works in current Chrome, Edge, Firefox and Safari. Three.js r128 requires WebGL 1.
 
 ## Known frontend quirks (be ready to acknowledge)
 
-* Merge-conflict marker **comments** (`// <<<<<<< master`, `// =======`, `// >>>>>>> 8ec6d59`) remain at `script.js:23,49,56,139,149,151,1323,1392-1393,1437,2060,2089` — harmless (commented out) leftovers from a merge.
-* `loadTournamentData` is defined twice (`:239` and `:2159`); the later definition wins (function hoisting), which is the full one.
+* Merge-conflict marker **comments** (`// <<<<<<< master`, `// =======`, `// >>>>>>> 8ec6d59`) remain at `script.js:23,49,56,139,149,151,1322,1391-1392,1436,2059,2088` — harmless (commented out) leftovers from a merge.
+* `loadTournamentData` is defined twice (`:239` and `:2158`); the later definition wins (function hoisting), which is the full one.
 * Feedback is `alert()`-based; the OTP modal closes on outside click.
 * External CDN dependencies (Bootstrap, jQuery, Popper, Three.js, Google Fonts) — the demo machine needs internet, or these must be vendored.
 * `pong.js` `initializeMatch()`/`updateMatchState()` and `tictactoe.js` `updateMatchState()` post to non-existent or no-op endpoints; errors are swallowed.

@@ -67,7 +67,7 @@ For `profile_view` the DRF step differs: only `TokenAuthentication` and `Session
 
 **🆕 Changed in Aug-2026 audit:** `scripts/entrypoint.sh:52` runs `collectstatic --noinput` at every start (it was commented out), and `staticfiles/` was regenerated and committed. WhiteNoise serves from `staticfiles/` with immutable cache headers for hashed names, so browsers never see stale JS after a deploy.
 
-Media files (avatars) are **not** served by WhiteNoise nor by `static(MEDIA_URL…)` (no-op when `DEBUG=False`); the SPA rewrites `/media/profile_pictures/…` URLs to `/api/auth/avatar/<id>/` (`script.js:1509-1535`), a view that streams the file with `FileResponse`.
+Media files (avatars) are **not** served by WhiteNoise nor by `static(MEDIA_URL…)` (no-op when `DEBUG=False`); the SPA rewrites `/media/profile_pictures/…` URLs to `/api/auth/avatar/<id>/` (`script.js:1508-1534`), a view that streams the file with `FileResponse`.
 
 ## DRF defaults (`backend/settings.py:56-63`)
 
@@ -83,5 +83,5 @@ Media files (avatars) are **not** served by WhiteNoise nor by `static(MEDIA_URL�
 ## Timeline of one page load (for "how does SSR fit in")
 
 1. `GET /profile` → catch-all → `gameapp.views.index` renders `templates/frontend/index.html` **server-side** (Django template engine substitutes `{% static %}` hashed URLs and `{% csrf_token %}`) → full HTML with every page `<div>` present but hidden.
-2. Browser loads CSS/JS (WhiteNoise + CDNs). `i18n.js` then `script.js` run; on `load`, `showPage('profile')` (`script.js:132-152`) unhides `#profile`, and `loadProfileData()` fetches `/api/auth/profile/`.
+2. Browser loads CSS/JS (WhiteNoise + CDNs). `script.js` runs; on `load`, `showPage('profile')` (`script.js:132-152`) unhides `#profile`, and `loadProfileData()` fetches `/api/auth/profile/`.
 3. All later navigation is client-side (`history.pushState`), no further HTML from the server.

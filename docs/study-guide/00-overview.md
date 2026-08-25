@@ -4,7 +4,7 @@
 
 ## What the app is
 
-FAST_PONG is our 42 Abu Dhabi ft_transcendence capstone: a single-page web app where a registered user plays **3D Pong** (Three.js) against another person on the same keyboard or against an AI, plays a second game (**TicTacToe**), sees match history/statistics on a profile, manages friends, runs local **round-robin tournaments** with tiebreakers, logs in with **email/password + optional email 2FA** or with **42 OAuth**, and exercises **GDPR rights** (export, anonymize, delete). Branding in the UI is "FAST_PONG"; the repo/compose project is named `basta`.
+FAST_PONG is our 42 Abu Dhabi ft_transcendence capstone: a single-page web app where a registered user plays **3D Pong** (Three.js) against another person on the same keyboard or against an AI, (with a **Player-vs-Player** mode or an **AI opponent**), sees match history and a **stats dashboard** on a profile (plus a bonus TicTacToe mini-game that is *not* a claimed module), manages friends, runs local **round-robin tournaments** with tiebreakers, logs in with **email/password + optional email 2FA** or with **42 OAuth**, and exercises **GDPR rights** (export, anonymize, delete). Branding in the UI is "FAST_PONG"; the repo/compose project is named `basta`.
 
 ## The stack (as deployed by `docker-compose.yml`)
 
@@ -14,7 +14,7 @@ FAST_PONG is our 42 Abu Dhabi ft_transcendence capstone: a single-page web app w
 | Database | PostgreSQL 13 (`db` service), driver `psycopg2-binary` | `docker-compose.yml`, `backend/settings.py:88-97` |
 | App server / TLS | **Gunicorn, 3 sync workers, terminating HTTPS itself on port 443** with the self-signed `localhost.pem` / `localhost-key.pem` — there is no nginx and nothing listens on port 80 | `scripts/entrypoint.sh:56-66` |
 | Static files | WhiteNoise `CompressedManifestStaticFilesStorage` serving `staticfiles/` (hashed filenames) | `backend/settings.py:75,311` |
-| Frontend | One Django template (`templates/frontend/index.html`) rendered server-side, then a vanilla-JS SPA (`static/frontend/js/script.js`) with client-side routing; Bootstrap 4.5 CSS/JS, jQuery slim, Popper and Three.js r128 from CDNs; Google Fonts | `templates/frontend/index.html:10-14,601-614` |
+| Frontend | One Django template (`templates/frontend/index.html`) rendered server-side, then a vanilla-JS SPA (`static/frontend/js/script.js`) with client-side routing; Bootstrap 4.5 CSS/JS, jQuery slim, Popper and Three.js r128 from CDNs; Google Fonts | `templates/frontend/index.html:10-14,599-611` |
 | 3D graphics | Three.js (WebGL) in `static/frontend/js/pong.js` | see `SPA-routing-and-frontend.md` |
 | Auth | Django session (`login()`), JWT access/refresh (simplejwt) returned as JSON and stored in `localStorage`, DRF `Token` created on 2FA login, 42 OAuth authorization-code flow, email OTP 2FA | `userapp/views.py` |
 | Email | Django `send_mail` over Gmail SMTP (`transcendance.2fa@gmail.com`) | `backend/settings.py:220-231` |
@@ -65,7 +65,7 @@ Things to know before a demo:
 | `gameapp/` | Serves the SPA (`index` view) and holds unused `Game/Player/Score` models |
 | `tournaments/` | `Tournament/Player/Match` models, round-robin + tiebreaker logic, JSON API, tests |
 | `templates/frontend/index.html` | The single server-rendered page containing every SPA "page" `<div>` |
-| `static/frontend/` | `css/styles.css`, `js/script.js` (router + all API calls), `js/pong.js` (3D game), `js/tictactoe.js`, 🆕 `js/i18n.js`, `assets/man.png` (default avatar) |
+| `static/frontend/` | `css/styles.css`, `js/script.js` (router + all API calls), `js/pong.js` (3D game incl. `PongAI`), `js/tictactoe.js` (bonus mini-game), `assets/man.png` (default avatar) |
 | `staticfiles/` | `collectstatic` output (committed; **never edit by hand**) |
 | `scripts/entrypoint.sh` | Container start sequence (used); `scripts/init_db.sh` (unused, daphne-based) |
 | `docker-compose.yml`, `Dockerfile`, `Makefile` | Two services: `web`, `db` |
@@ -103,6 +103,24 @@ Key facts to say out loud:
 3. State lives in PostgreSQL only — no Redis, no message broker, no Celery. **🆕** The 2FA code also lives in PostgreSQL now (`django_cache` table) so that all 3 Gunicorn workers see it.
 4. TLS is terminated by Gunicorn itself; the app therefore runs with `DEBUG=False` and WhiteNoise serves static files.
 
+## Selected modules (the list the evaluation is scored against)
+
+| # | Module | Weight | Deep dive |
+|---|---|---|---|
+| 1 | Web — use a framework as backend (Django) | Major | `modules/01-web-django-backend.md` |
+| 2 | Web — front-end framework or toolkit (Bootstrap) | Minor | `modules/02-web-frontend-bootstrap.md` |
+| 3 | Web — database for the backend (PostgreSQL) | Minor | `modules/03-web-postgresql.md` |
+| 4 | User Management — standard user management, authentication, users across tournaments | Major | `modules/04-user-management.md` |
+| 5 | User Management — remote authentication (42 OAuth) | Major | `modules/05-remote-authentication-42-oauth.md` |
+| 6 | AI-Algo — introduce an AI opponent | Major | `modules/06-ai-opponent.md` |
+| 7 | AI-Algo — user and game stats dashboards | Minor | `modules/07-stats-dashboards.md` |
+| 8 | Cybersecurity — GDPR compliance: anonymization, local data management, account deletion | Minor | `modules/08-cybersecurity-gdpr.md` |
+| 9 | Cybersecurity — 2FA and JWT | Major | `modules/09-cybersecurity-2fa-jwt.md` |
+| 10 | Graphics — advanced 3D techniques (Three.js) | Major | `modules/10-graphics-3d.md` |
+| 11 | Accessibility — support on all devices · expanding browser compatibility · SSR integration | 3 × Minor | `modules/11-accessibility.md` |
+
+6 Major + 7 Minor = 9.5 major-equivalents (7 are needed for 100 %). **Not** selected — do not claim them: another game with matchmaking (TicTacToe is just a bonus feature), microservices, multiple languages, live chat, remote players, blockchain.
+
 ## How to use this study guide
 
 | File | Read it to answer |
@@ -112,8 +130,8 @@ Key facts to say out loud:
 | `architecture/03-database-er.md` | "Show me your schema", "why is email the username field", "what cascades on delete" |
 | `architecture/04-request-lifecycle.md` | "Walk me through one request", "how does CSRF work with your SPA", "why collectstatic" |
 | `architecture/05-sequence-diagrams.md` | Login, OAuth, 2FA, game→history, tournament, GDPR — step by step |
-| `SPA-routing-and-frontend.md` | Router, games, Three.js scene, i18n, tokens, avatars |
-| `modules/*.md` | One file per selected module with evaluator Q&A |
+| `SPA-routing-and-frontend.md` | Router, games, Three.js scene, AI opponent, stats dashboard rendering, tokens, avatars |
+| `modules/01-web-django-backend.md` … `11-accessibility.md` | One file per selected module with evaluator Q&A (see list below) |
 | `quick-drill.md` | 30+ rapid-fire questions |
 | `../audit-report.md` | Everything found/fixed/deferred in Aug-2026, with severities |
 | `../FINAL-REPORT.md` | What changed, what the humans still have to do |

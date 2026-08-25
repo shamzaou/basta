@@ -31,9 +31,9 @@ sequenceDiagram
     end
 ```
 
-Token lifetimes: access 60 min, refresh 7 days (`backend/settings.py:65-71`). The frontend decodes `exp` from the access token to decide when to refresh (`script.js:1438-1507`).
+Token lifetimes: access 60 min, refresh 7 days (`backend/settings.py:65-71`). The frontend decodes `exp` from the access token to decide when to refresh (`script.js:1437-1506`).
 
-## (b) 42 OAuth (authorization-code flow)
+## (b) 42 OAuth (authorization-code flow) — *Remote authentication* Major module
 
 ```mermaid
 sequenceDiagram
@@ -43,15 +43,15 @@ sequenceDiagram
     participant I as api.intra.42.fr
     participant DB as PostgreSQL
 
-    U->>SPA: click "Sign in with 42" (initiate42OAuth :976)
+    U->>SPA: click "Sign in with 42" (initiate42OAuth :975)
     SPA->>API: POST /api/auth/redirect_uri/ (redirect_uri :481, csrf_exempt)
     API-->>SPA: {oauth_link: https://api.intra.42.fr/oauth/authorize?client_id=FORTYTWO_CLIENT_ID&redirect_uri=https://localhost/oauth/callback&response_type=code}
-    SPA->>I: window.location = oauth_link (:1008)
+    SPA->>I: window.location = oauth_link (:1007)
     U->>I: log in at 42, consent
     I-->>SPA: 302 https://localhost/oauth/callback?code=XYZ
     SPA->>API: GET /oauth/callback?code=XYZ → catch-all → index.html
-    SPA->>SPA: showPage('oauth/callback') (:25-40) → checkOAuthLogin() (:1019)
-    SPA->>SPA: history.replaceState to strip ?code (:1034)
+    SPA->>SPA: showPage('oauth/callback') (:25-40) → checkOAuthLogin() (:1018)
+    SPA->>SPA: history.replaceState to strip ?code (:1033)
     SPA->>API: POST /api/auth/get-token/ {code} (get_token :586, csrf_exempt)
     API->>I: POST /oauth/token grant_type=authorization_code, code, client_id, client_secret, redirect_uri (:601-613)
     I-->>API: {access_token}
@@ -60,8 +60,8 @@ sequenceDiagram
     API->>DB: User.get_or_create(email=…, defaults{username=login, is_42_user, intra_id}) (:639-642)
     API->>API: login(request, user) (:650); RefreshToken.for_user
     API-->>SPA: 200 {access_token, refresh_token, user}
-    SPA->>SPA: localStorage tokens + isLoggedIn (:1056-1069); scheduleTokenRefresh()
-    SPA->>SPA: setTimeout → window.location.href='/' (:1078)
+    SPA->>SPA: localStorage tokens + isLoggedIn (:1055-1068); scheduleTokenRefresh()
+    SPA->>SPA: setTimeout → window.location.href='/' (:1077)
 ```
 
 Notes: no `state` parameter is sent/verified (CSRF protection on the OAuth callback is absent — audit limitation; `OAUTH_STATE_SECRET` exists in `.env` but is unused). The **registered redirect URI in the 42 app must be exactly `https://localhost/oauth/callback`**. `oauth_callback` (`views.py:515`) is an older server-side variant that is never reached. The 42 client key expired in 2026; the code path is verified up to the authorize URL; final verification needs the rotated key in `.env` (`FORTYTWO_CLIENT_ID/SECRET`).
@@ -123,7 +123,7 @@ sequenceDiagram
 
 Additional pre-fix causes: a second click on Sign In generated a *new* code, so the first email became stale; TTL was 5 min while email delivery was slow; comparison was exact (`cached_otp == otp`) with no trimming. Regression tests: `userapp/tests.py` `TwoFactorLoginTests`.
 
-## (d) Game → match history (Pong and TicTacToe)
+## (d) Game → match history (Pong; AI opponent; TicTacToe as an extra feature)
 
 ```mermaid
 sequenceDiagram
@@ -133,7 +133,7 @@ sequenceDiagram
     participant API as userapp.views
     participant DB as PostgreSQL
 
-    U->>SPA: PLAY NOW (checkAuthAndRedirect :894 → showPage('game') :917)
+    U->>SPA: PLAY NOW (checkAuthAndRedirect :893 → showPage('game') :916)
     SPA->>SPA: initializeGameIfNeeded('game') (:199) → PongGame.initializeGame(container, null) (pong.js:1123)
     P-->>U: mode selection: Player vs Player / Player vs AI
     U->>P: choose → PongGame.startGame(container, mode) (:1175) → new PongGame
@@ -147,14 +147,14 @@ sequenceDiagram
     API->>DB: INSERT userapp_matchhistory (save_match_view views.py:775)
     API-->>P: 201 {"status":"success"}
     P-->>U: Restart button
-    U->>SPA: Profile → loadProfileData (:1090) → GET /api/auth/profile/ (session auth)
+    U->>SPA: Profile → loadProfileData (:1089) → GET /api/auth/profile/ (session auth)
     API->>DB: last 5 matches, count, wins, best score (profile_view :76-142)
-    API-->>SPA: stats + match_history → cards + SVG pie chart (createWinratePieChart :1948)
+    API-->>SPA: stats + match_history → cards + SVG pie chart (createWinratePieChart :1947)
 ```
 
-TicTacToe differs only at the edges: `new TicTacToeGame(container)` (`script.js:221`) → constructor calls `initializeMatch()` → `POST /api/auth/match/create/` (`tictactoe.js:138`, returns a UUID `match_id` from `create_match views.py:826`); on win/draw `finishMatch()` (`tictactoe.js:192`) posts `game_type:'TICTACTOE', opponent:'Player 2', score '1-0'|'0-1'|'0-0'` to `/api/auth/save-match/` (`:222`). (`updateMatchState` posts to `/api/game/match/<id>/state`, a URL that does not exist — the failure is caught and ignored.)
+**TicTacToe (bonus feature, not a claimed module)** differs only at the edges: `new TicTacToeGame(container)` (`script.js:221`) → constructor calls `initializeMatch()` → `POST /api/auth/match/create/` (`tictactoe.js:138`, returns a UUID `match_id` from `create_match views.py:826`); on win/draw `finishMatch()` (`tictactoe.js:192`) posts `game_type:'TICTACTOE', opponent:'Player 2', score '1-0'|'0-1'|'0-0'` to `/api/auth/save-match/` (`:222`). (`updateMatchState` posts to `/api/game/match/<id>/state`, a URL that does not exist — the failure is caught and ignored.)
 
-**"Matchmaking" in this project** is local: the player picks PvP (two people on one keyboard: W/S vs ↑/↓) or vs AI (`PongAI`, `pong.js:585`, predicts intercept with deliberate error/mistake chance, refreshes its view once per second). There is no online queue or WebSocket. Say this plainly.
+**Game modes / the AI opponent (AI-Algo Major module).** The mode screen offers *Player vs Player* (two people on one keyboard: W/S vs ↑/↓) or *Player vs AI*. In AI mode `PongAI` (`pong.js:585-676`) controls the right paddle: it samples the ball **once per second** (`UPDATE_INTERVAL = 1000`), extrapolates the intercept point with a deliberate prediction error and a 10 % "mistake" chance, and then moves the paddle towards that target frame by frame at a capped speed — i.e. it simulates key presses between observations rather than tracking the ball perfectly (see `SPA-routing-and-frontend.md` → *The AI opponent*). There is no online play, queue or WebSocket; say this plainly if asked about "remote players" (not a selected module).
 
 ## (e) Tournament flow
 

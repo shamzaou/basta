@@ -1,6 +1,6 @@
 # 01 — System & container architecture
 
-> **Why this matters at the evaluation.** The DevOps module claims a "backend designed as microservices". Staff will ask you to draw the deployment and explain each box. You must be able to say exactly what runs where, what the container does at boot, and be honest about what is *not* a separate service. This file is also where the 2FA bug story starts (3 Gunicorn workers).
+> **Why this matters at the evaluation.** Staff will ask you to draw the deployment and explain each box. You must be able to say exactly what runs where, what the container does at boot, and be honest about what is *not* a separate service. This file is also where the 2FA bug story starts (3 Gunicorn workers).
 
 ## Container diagram
 
@@ -72,6 +72,6 @@ A second effect of sync workers: while a worker waited on Gmail SMTP during logi
 | `gameapp` models `Game/Player/Score` | Migrated, unused | Frontend uses `userapp.MatchHistory` instead |
 | `sendgrid-django`, `Werkzeug`, `pyOpenSSL`, `daphne` in `requirements.txt` | Installed, unused at runtime | `runserver_plus` (django-extensions + Werkzeug) only in the unused `init_db.sh` dev path |
 
-## Is this "microservices"? (say this honestly)
+## Is this "microservices"? (no — and it is not a selected module)
 
-The runtime is **one Django process group + one PostgreSQL service**. The backend is *modular* — three Django apps with clear boundaries (`userapp` = identity & GDPR, `tournaments` = tournament engine, `gameapp` = SPA host), each with its own models/urls/tests, communicating only through the ORM/DB — but they are deployed as a single container and share one database. Do not call the Django apps "microservices" if pressed; call it a **modular monolith with containerised services (web, db)** and explain how it *would* split (see `modules/devops-microservices.md` and the presentation's Limitations slide).
+The runtime is **one Django process group + one PostgreSQL service**. The backend is *modular* — three Django apps with clear boundaries (`userapp` = identity & GDPR, `tournaments` = tournament engine, `gameapp` = SPA host), each with its own models/urls/tests, communicating only through the ORM/DB — but they are deployed as a single container and share one database. Do not call the Django apps "microservices" if pressed; call it a **modular monolith with containerised services (web, db)**. *Designing the backend as microservices* is **not** one of our selected modules, so nothing is claimed or lost here — just do not use the word by accident.

@@ -1,7 +1,7 @@
 # FAST_PONG (ft_transcendence) — Audit Report, 24 Aug 2026
 
 Scope: full audit of the application one week before the staff evaluation — every page,
-API endpoint, auth flow, both games, tournaments, GDPR features, language switcher and
+API endpoint, auth flow, both games, tournaments, GDPR features and
 responsive layout — using the running stack (`make build && make up`, https://localhost),
 the Django test suite, scripted API flows (curl), a headless-Chrome walkthrough of the SPA
 (desktop 1280×800 and mobile 390×844), and code review.
@@ -86,7 +86,7 @@ No Celery/broker introduced.
 | 3 | 🔴 | `make test`, `make migrate`, `make shell`, `make static` all crashed with `ImproperlyConfigured: SECRET_KEY must not be empty` | `docker-compose.yml` set `DJANGO_SETTINGS_MODULE=production_settings` for `exec` commands; `production_settings.py:33` overwrote `SECRET_KEY` with an unset env var. Gunicorn only worked because `entrypoint.sh` re-exports `backend.settings`. | Compose now uses `backend.settings` (what the server actually runs); `production_settings.py` falls back to the `.env` key. ✅ `make test` runs. |
 | 4 | 🔴 | Browser was served a **stale `script.js`** (OTP modal button/timeout code from the last commit was missing) | WhiteNoise serves hashed files from `staticfiles/` via the manifest; `entrypoint.sh` skipped `collectstatic` ("causing issues" — it isn't), so `staticfiles/` drifted from `static/`. | `collectstatic` restored in the entrypoint; `staticfiles/` regenerated and committed. |
 | 5 | 🟠 | Existing test suite failed (2/2 tournament tests) | Tests asserted tiebreaker matches without calling `Tournament.get_winner()`, the only place they are created; second test also miscounted the `setUp` match. | Tests corrected + one added; 3/3 pass. |
-| 6 | 🔴 | **Module "Multiple language support" had no implementation** (no i18n code anywhere) | Never built. | New `static/frontend/js/i18n.js` (EN/FR/RU), `data-i18n` attributes on all static UI strings in `index.html`, `<select class="lang-select">` in both nav lists, persisted in `localStorage`. Verified in headless Chrome (RU nav: Главная / О проекте / Войти / Регистрация). |
+| 6 | ⚪ | Language switcher added then **removed** | During the audit a three-language (EN/FR/RU) switcher was implemented on the assumption that *Multiple language support* was a selected module. The team's actual module list does not include it, so the feature was reverted (template, CSS, `i18n.js`). No trace remains in the code. |
 | 7 | 🟠 | **GDPR "anonymization" not implemented** (only hard delete + export) | Never built. | `POST /api/auth/anonymize-account/` + "Anonymize My Account" button in Settings → Danger Zone; strips username/email/display name/avatar/42 link, disables login, keeps non-personal match stats. Tests in `GdprTests`. |
 | 8 | 🟠 | Silent token refresh never worked | `script.js` posted to `/api/token/refresh/` (falls into the SPA catch-all → HTML) instead of `/api/auth/token/refresh/`; on failure it called an undefined `logout()` → `ReferenceError`. | Both corrected. |
 | 9 | 🟡 | GDPR cleanup cron never runs | `gdpr_cleanup_crontab` exists but no cron daemon is installed in the image. | `make gdpr-cleanup` (dry run) / `make gdpr-cleanup-run` targets; command covered by a test. Still needs a host scheduler (documented). |
@@ -100,7 +100,7 @@ recognisable minimal fix. All are listed in the presentation's *Limitations* sli
 
 | # | Sev | Finding | Detail / recommendation |
 |---|-----|---------|-------------------------|
-| 10 | 🟠 | **"Backend as microservices" is a modular monolith** | Three Django apps in one Gunicorn process + one Postgres container. App boundaries (userapp / gameapp / tournaments) are the only "service" boundaries. Weakest module — prepare the honest framing in `docs/study-guide/modules/08-devops-microservices.md`. |
+| 10 | ⚪ | Backend is a modular monolith | Three Django apps in one Gunicorn process + one Postgres container. Not a problem: *Designing the backend as microservices* is **not** a selected module. Mentioned only so nobody claims it at the evaluation. |
 | 11 | 🟠 | Tournament API is unauthenticated | `tournaments/views.py` endpoints only require a CSRF token; any visitor with the cookie can create/finish matches. Frontend sends `Authorization: Token …` (a *JWT*), which these plain Django views ignore. |
 | 12 | 🟠 | Mixed auth model | `profile_view`/`user_settings_view` use `@authentication_classes([TokenAuthentication, SessionAuthentication])` → the browser succeeds via the **session cookie**, not the JWT. Other DRF endpoints accept the JWT Bearer through DRF defaults. Django views (`login`, `verify-otp`, tournaments) use sessions/CSRF only. JWTs live in `localStorage` (XSS-readable). |
 | 13 | 🟠 | No rate limiting / lockout on `/login/` and `/verify-otp/` | A 6-digit code with a 10-min TTL and no attempt limit is brute-forceable by script. Codes are single-use; recommend attempt counter in the cache + lockout. |
@@ -120,25 +120,25 @@ recognisable minimal fix. All are listed in the presentation's *Limitations* sli
 
 ---
 
-## 4. Module verification matrix (post-fix)
+## 4. Module verification matrix (post-fix, team's actual selection)
 
 | Module | Type | Status | Verified how |
 |--------|------|--------|--------------|
-| Django backend | Major | ✅ | Site serves; 19 tests; API flow script (register→login→profile→matches→friends→export→tournament→delete) all 2xx. |
-| Bootstrap front-end toolkit | Minor | ✅ (light use) | CDN include + `container`/`btn`/`btn-group`/`text-center` classes; most styling is custom `styles.css`. |
-| PostgreSQL | Minor | ✅ | postgres:13 container, migrations applied, `django_cache` table created. |
-| Standard user management / auth / tournaments | Major | ✅ | Register, login, logout, profile GET/PUT, display name, avatar endpoint, friends add/remove/list, stats; tournament round-robin verified live. |
-| Second game + history + matchmaking | Major | ✅ (local matchmaking) | TicTacToe played headlessly; `MatchHistory` rows created for both games; shown on profile. |
-| GDPR | Minor | ✅ | Export JSON, anonymize (🆕), delete, inactivity command — all tested. |
+| Use a framework as backend (Django) | Major | ✅ | Site serves; 19 tests; scripted API flow (register→login→profile→matches→friends→export→tournament→delete) all 2xx. |
+| Front-end framework/toolkit (Bootstrap) | Minor | ✅ (light use) | CDN include + `container`/`btn`/`btn-group`/`text-center` classes; most styling is custom `styles.css`. |
+| Database for the backend (PostgreSQL) | Minor | ✅ | postgres:13 container, migrations applied, `django_cache` table created. |
+| Standard user management / auth / users across tournaments | Major | ✅ | Register, login, logout, profile GET/PUT, display name, avatar endpoint, friends add/remove/list, stats; tournament round-robin verified live. |
+| Remote authentication (42 OAuth) | Major | ✅ code / 🔒 key | Authorize URL generated correctly; SPA callback route + `get-token` exchange verified by code review; end-to-end login needs the rotated 42 key (§5). |
+| AI opponent (Pong vs AI) | Major | ✅ | `PongAI` decides once per second from ball position/velocity (no A*); vs-AI game rendered and scored in headless Chrome; match saved with opponent "AI". |
+| User and game stats dashboards | Minor | ✅ | Profile stat cards (games played, win rate, best score), SVG win-rate pie chart, recent-match list, JSON export with statistics; tournament page shows per-player scores. |
+| GDPR (anonymization, local data management, deletion) | Minor | ✅ | Export JSON, anonymize (🆕 — was missing), delete, inactivity command — all tested. |
 | 2FA + JWT | Major | ✅ (delivery blocked by Gmail creds) | Both bugs fixed with regression tests; JWT issuance/refresh verified. |
-| Microservices | Major | ⚠️ | Monolith — see #10. |
 | Advanced 3D (Three.js) | Major | ✅ | WebGL Pong rendered in headless Chrome (screenshot `11-pong-3d-vs-ai.jpg`). |
-| Responsive | Minor | ✅ | 390×844 walkthrough, hamburger menu works (screenshot 17). |
-| Browser compatibility | Minor | ✅ (untested on Firefox here) | Standard ES modules/WebGL/fetch; no Chrome-only APIs found. |
-| Multiple languages | Minor | ✅ 🆕 | EN/FR/RU switcher verified. |
+| Support on all devices (responsive) | Minor | ✅ | 390×844 walkthrough, hamburger menu works (screenshot 17). |
+| Expanding browser compatibility | Minor | ✅ (untested on Firefox here) | Standard ES modules/WebGL/fetch; no Chrome-only APIs found. |
 | SSR integration | Minor | ✅ (template-level) | Django renders `index.html` with manifest static URLs and CSRF token; SPA takes over. |
 
----
+Extra features that are **not** claimed modules: TicTacToe (second game, hot-seat), friends list.
 
 ## 5. Blocked externally (🔒) — needs the humans
 
@@ -164,5 +164,5 @@ recognisable minimal fix. All are listed in the presentation's *Limitations* sli
 * `make test`: **19 tests, OK** (userapp 16, tournaments 3).
 * Headless-Chrome walkthrough of every page, both games, tournament creation, i18n and mobile
   layout: **0 JavaScript errors**; screenshots in `presentation/screenshots/`.
-* Commits (all on `master`): settings/test fix → 2FA fix → i18n/GDPR/frontend → staticfiles →
-  screenshots → docs.
+* Commits (all on `master`): settings/test fix → 2FA fix → GDPR anonymize/frontend fixes → staticfiles →
+  screenshots → docs → language-switcher removal after the team corrected the module list.

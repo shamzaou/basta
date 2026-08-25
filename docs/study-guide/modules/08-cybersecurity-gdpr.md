@@ -37,7 +37,7 @@ Users can request anonymization of their personal data, manage their local data 
 * Anonymization keeps `MatchHistory` rows so aggregate stats remain but no longer identify anyone; other users' friend lists lose the link (M2M cleared both directions).
 * The cleanup command uses the same `send_mail` path as 2FA, so it needs a working `EMAIL_BACKEND` (with Gmail down it logs the failure and skips that user).
 
-**🆕 Changed in Aug-2026 audit:** anonymization did not exist (only hard delete); the endpoint, button, three-language strings, tests and Makefile targets were added. Everything else in this module is original team code.
+**🆕 Changed in Aug-2026 audit:** anonymization did not exist (only hard delete); the endpoint, button, tests and Makefile targets were added. Everything else in this module is original team code.
 
 ## Status after audit
 Works ✅ (unit tests + curl + UI screenshot `09-settings`). Limitations to state: the crontab is not installed in the Docker image (no `cron` package in `Dockerfile`), so retention is enforced only when someone runs `make gdpr-cleanup-run`; e-mail notifications depend on Gmail credentials; export does not include friends list; no cookie banner (only first-party functional cookies are used).

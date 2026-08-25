@@ -20,7 +20,7 @@
 | Custom stylesheet (overrides Bootstrap) | `{% static 'frontend/css/styles.css' %}` | `templates/frontend/index.html:14` |
 | Bootstrap classes actually used | `.container` (37×), `.btn` (7×), `.btn-group` + `.text-center` (home CTA, `:72-73`), `.btn-primary` (`:232`), `.btn-secondary` (`:220`, `:238`), `.btn-danger` (`:245`) | `templates/frontend/index.html` |
 | Custom theme variables | `:root { --primary-color:#00ff00; --secondary-color:#ff00ff; --background-color:#000 }` | `static/frontend/css/styles.css:18-21` |
-| Hand-made components | header/nav `:81-135`, `.hamburger` `:222`, `.lang-select` `:206` 🆕, `.modal`/OTP, profile grid `:366`, tournament tables | `static/frontend/css/styles.css` |
+| Hand-made components | header/nav `:81-135`, `.hamburger` `:206`, `.modal`/OTP, profile grid `:366`, tournament tables | `static/frontend/css/styles.css` |
 | Responsive breakpoints | `@media (max-width: 768px)` ×8, `480px` ×2, `920px`, `1100px` | `static/frontend/css/styles.css:730-2166` |
 
 No `.row`/`.col-*` grid classes are used — layout is CSS Grid/Flexbox in `styles.css`.
@@ -28,7 +28,7 @@ No `.row`/`.col-*` grid classes are used — layout is CSS Grid/Flexbox in `styl
 ## How it interacts with the rest
 Bootstrap only affects presentation. The SPA router (`script.js` → `showPage`) toggles `.page` divs; Bootstrap's `.container` keeps content widths consistent across the eight pages; `.btn*` classes give the Settings/GDPR buttons their base box model before `styles.css` recolours them.
 
-**🆕 Changed in Aug-2026 audit:** a `<select class="lang-select">` was added to both nav lists (`index.html:34`, `:43`) with matching custom CSS (`styles.css:206-219`); the Danger Zone gained an "Anonymize My Account" `.btn.btn-secondary` (`index.html:238`).
+**🆕 Changed in Aug-2026 audit:** the Danger Zone gained an "Anonymize My Account" `.btn.btn-secondary` (`index.html:236`). (A language switcher was briefly added and then removed in the audit follow-up — it is not a selected module.)
 
 ## Status after audit
 Works ✅ visually on desktop and mobile (screenshots in `presentation/screenshots/`). Caveats: (1) all toolkit assets come from CDNs — the evaluation machine needs internet or the page loses Bootstrap CSS/JS, fonts and **Three.js**; (2) Bootstrap usage is shallow — be ready to justify it honestly.

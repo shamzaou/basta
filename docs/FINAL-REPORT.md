@@ -14,8 +14,7 @@ with headless Chrome (0 JavaScript errors).
 | `make test/migrate/shell` crashed | compose pointed `exec` at `production_settings`, which set `SECRET_KEY` to an unset env var | `docker-compose.yml`, `production_settings.py` |
 | Stale JS served to browsers | entrypoint skipped `collectstatic`; WhiteNoise serves `staticfiles/`, which had drifted | `scripts/entrypoint.sh`, `staticfiles/` regenerated |
 | Failing tournament tests | tests never called `get_winner()` (the only place tiebreakers are created) | `tournaments/tests.py` |
-| Missing module: multiple languages | not implemented | `static/frontend/js/i18n.js`, `templates/frontend/index.html`, `styles.css` |
-| Missing GDPR anonymization | not implemented | `userapp/views.py::anonymize_account`, `userapp/urls.py`, settings page + `script.js` |
+| Missing GDPR anonymization (the selected GDPR module requires it) | not implemented | `userapp/views.py::anonymize_account`, `userapp/urls.py`, settings page + `script.js` |
 | Silent token refresh broken | wrong URL + undefined `logout()` | `static/frontend/js/script.js` |
 | GDPR cron not runnable | no cron in the image | `Makefile` (`gdpr-cleanup`, `gdpr-cleanup-run`) |
 
@@ -35,8 +34,9 @@ Full details, severities and the deferred-issue list: `docs/audit-report.md`.
    `.env`, restart, and read the code with `grep "OTP for login" gunicorn-error.log | tail -1`.
 3. **Speaker names** — `presentation/index.html` uses *Speaker 1…4* placeholders on every section;
    the member-contribution slide is derived from git history and marked "team: adjust".
-4. **Review the two new features** (`i18n.js`, anonymize endpoint) so you can explain them as your
-   own; both are flagged 🆕 throughout the study guide.
+4. **Review the new anonymize endpoint** so you can explain it as your own; it is flagged 🆕
+   throughout the study guide. (A language switcher built during the audit was removed again after
+   the team confirmed *Multiple language support* is not a selected module.)
 5. Optional before the demo: pre-create the accounts listed on the demo cheat-sheet slide.
 
 ## 3. How to use each deliverable
@@ -46,8 +46,8 @@ Full details, severities and the deferred-issue list: `docs/audit-report.md`.
 | `docs/audit-report.md` | Read §1 for the two bug stories (staff will ask), §3 for the honest limitations, §5 for the external blockers. |
 | `docs/study-guide/00-overview.md` | Start here; 15-minute re-orientation on stack, run commands and request flow. |
 | `docs/study-guide/architecture/` | Mermaid diagrams (render in GitHub/VS Code): containers, backend apps + URL table, ER diagram, request lifecycle, sequence diagrams for login / 42 OAuth / 2FA / games / tournaments / GDPR. |
-| `docs/study-guide/modules/01…10` | One file per selected module: what it requires, where it is implemented (`path:line`), status, and 5–10 likely evaluator questions with answers. |
-| `docs/study-guide/SPA-routing-and-frontend.md` | Client-side router, games, Three.js, i18n, token handling. |
+| `docs/study-guide/modules/01…11` | One file per selected module (Web ×3, user management, remote auth/42 OAuth, AI opponent, stats dashboards, GDPR, 2FA+JWT, 3D, accessibility): what it requires, where it is implemented (`path:line`), status, and 5–10 likely evaluator questions with answers. |
+| `docs/study-guide/SPA-routing-and-frontend.md` | Client-side router, games, Three.js + AI opponent, stats dashboard rendering, token handling. |
 | `docs/study-guide/quick-drill.md` | 40+ rapid-fire Q&As ordered by likelihood, plus demo commands. Drill this the night before. |
 | `presentation/index.html` | Open in any browser; ← → / Space navigate, `Home`/`End` jump, `P` prints all slides. Sections in the staff's required order + "what we fixed" + demo cheat-sheet. |
 | `presentation/screenshots/` | Raw screenshots (also embedded in the deck). |
@@ -61,4 +61,4 @@ Full details, severities and the deferred-issue list: `docs/audit-report.md`.
   including cross-worker rounds; login latency ~80 ms (was 1.9 s / HTTP 500).
 * Scripted API flow (register → login → profile → save-match → history → users/friends → export →
   profile PUT → tournament create/add players/view/start/finish → logout → delete): all 2xx.
-* Headless-Chrome walkthrough: 19 screenshots, desktop + mobile, EN/FR/RU, 0 JS errors.
+* Headless-Chrome walkthrough: 17 screenshots, desktop + mobile, 0 JS errors.
