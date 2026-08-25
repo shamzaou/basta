@@ -831,8 +831,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	// GDPR anonymisation (added Aug 2026): keep statistics, strip personal data, disable login
 	async function anonymizeAccount() {
-		const confirmText = window.t ? window.t('js.confirm_anonymize') : 'Anonymize your account? You will be logged out and will not be able to log in again.';
-		if (!confirm(confirmText)) {
+		if (!confirm('Anonymize your account? You will be logged out and will not be able to log in again. Your statistics are kept without personal data.')) {
 			return;
 		}
 
@@ -851,7 +850,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				localStorage.removeItem('refreshToken');
 				localStorage.removeItem('userData');
 				localStorage.removeItem('isLoggedIn');
-				alert(window.t ? window.t('js.anonymized') : 'Your account has been anonymized.');
+				alert('Your account has been anonymized.');
 				window.location.href = '/login';
 			} else {
 				const data = await response.json();
