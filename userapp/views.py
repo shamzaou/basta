@@ -483,9 +483,10 @@ def register_view(request):
                     validate_password(password1, user=User(username=username, email=email))
                 except ValidationError as e:
                     # Return validation errors as a list
+                    # Tell the user exactly which rule(s) the password broke
                     return JsonResponse({
                         'status': 'error',
-                        'message': 'Password validation failed',
+                        'message': 'Password not accepted: ' + ' '.join(e.messages),
                         'errors': list(e.messages)
                     }, status=400)
                 

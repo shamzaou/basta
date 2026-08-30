@@ -464,3 +464,19 @@ class FortyTwoTwoFactorTests(TestCase):
         self.assertEqual(r.status_code, 200, r.content)
         u.refresh_from_db(); self.assertTrue(u.two_factor_enabled)
         self.assertFalse(c.get('/api/auth/profile/').json()['is_42_user'])
+
+
+class PasswordFeedbackTests(TestCase):
+    def test_weak_password_lists_every_broken_rule(self):
+        r = Client().post('/api/auth/register/', {'username': 'pwtester', 'email': 'pwtester@example.com',
+                                                  'password1': 'pwtester1', 'password2': 'pwtester1'},
+                          content_type='application/json')
+        self.assertEqual(r.status_code, 400)
+        body = r.json()
+        joined = ' '.join(body['errors'])
+        self.assertIn('too short', joined)                 # < 10 characters
+        self.assertIn('uppercase', joined)                 # custom strength validator
+        self.assertIn('special character', joined)
+        self.assertIn('too similar to the username', joined)
+        self.assertTrue(body['message'].startswith('Password not accepted:'))
+        self.assertFalse(User.objects.filter(username='pwtester').exists())

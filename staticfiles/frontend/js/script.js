@@ -474,6 +474,10 @@ async function handleRegister(event) {
             const contentType = response.headers.get("content-type");
             if (contentType && contentType.includes("application/json")) {
                 const data = await response.json();
+                // Password rules come back as a list - show every reason, one per line
+                if (Array.isArray(data.errors) && data.errors.length) {
+                    throw new Error('Password not accepted:\n- ' + data.errors.join('\n- '));
+                }
                 throw new Error(data.message || 'Registration failed');
             } else {
                 const text = await response.text();

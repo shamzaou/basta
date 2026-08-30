@@ -95,6 +95,7 @@ No Celery/broker introduced.
 | 9d | 🟠 | Profile picture stayed from the **previous account** after switching users in the SPA | `updateNavAvatar()` and the Settings avatar code in `script.js` only set `img.src` when the current account *has* an avatar; with no page reload the previous user's `/api/auth/avatar/<id>/` image simply stayed in the DOM (reproduced headlessly: user A uploads an avatar → logout → login as B → nav and settings still show A's picture). | Both now fall back to the default `man.png` when the account has no avatar, and `handleLogout()` resets the nav avatar. Also removed a doubled `?t=` cache-buster on the settings avatar. |
 | 9e | 🔴 | 42 OAuth login stopped exchanging the code (regression from fix #14) | The `load` handler called `history.replaceState(…, path)` with the bare pathname, stripping `?code=…` before `showPage()` ran; previously the duplicate `DOMContentLoaded` init had run first with the query intact and masked it. Found from the access log: `/oauth/callback?code=…` with no `get-token` call. | `replaceState` now keeps `window.location.search`; verified headlessly that `/oauth/callback?code=x` triggers `POST /api/auth/get-token/`. |
 | 9f | 🟡 | 2FA toggle offered to 42-OAuth accounts | Those accounts never use a password here, so the e-mail code protected nothing and could lock the account out of the password form. | Security section hidden for `is_42_user`; profile PUT refuses `two_factor_enabled=true` for them (400); tests added. |
+| 9g | 🟡 | Sign-up showed the same generic “Password validation failed” for every rejected password | The API returned the specific reasons in `errors` but the SPA only displayed `message`; the custom strength validator also stopped at the first broken rule. | `PasswordStrengthValidator` now reports all broken rules; the API message lists them; the register form shows every reason (one per line) and a rules hint under the password field. |
 
 ---
 
@@ -205,7 +206,7 @@ recognisable minimal fix. All are listed in the presentation's *Limitations* sli
 
 | Module | Type | Status | Verified how |
 |--------|------|--------|--------------|
-| Use a framework as backend (Django) | Major | ✅ | Site serves; 56 tests; scripted API flow (register→login→profile→matches→friends→export→tournament→delete) all 2xx. |
+| Use a framework as backend (Django) | Major | ✅ | Site serves; 57 tests; scripted API flow (register→login→profile→matches→friends→export→tournament→delete) all 2xx. |
 | Front-end framework/toolkit (Bootstrap) | Minor | ✅ (light use ⚠️) | CDN include + `container`/`btn`/`btn-group`/`text-center` classes; most styling is custom `styles.css`. |
 | Database for the backend (PostgreSQL) | Minor | ✅ | postgres:13 container, credentials from `.env`, migrations applied (incl. `gameapp 0002`), `django_cache` table created. |
 | Standard user management / auth / users across tournaments | Major | ✅ (⚠️ no online status, display name not unique) | Register (duplicate/invalid email → 400, case-insensitive email), login, logout, profile GET/PUT, display name, 2FA toggle, validated avatar upload, friends add/remove/list, stats; tournament round-robin with repeated tiebreak rounds, next-fight announcement, login-protected API, XSS-safe rendering — verified live. |
@@ -242,7 +243,7 @@ Features that are **not** claimed modules: responsive layout + Pong touch contro
 
 * `make build && make up` from the committed tree: web + db start, entrypoint runs
   migrate → createcachetable → collectstatic → Gunicorn TLS on 443. `curl -k https://localhost/` → 200.
-* `make test`: **56 tests, OK** (userapp 30, gameapp 14, tournaments 10).
+* `make test`: **57 tests, OK** (userapp 30, gameapp 14, tournaments 10).
 * Headless-Chrome walkthrough of every page, both games (incl. a two-browser online TicTacToe match), tournament creation and mobile
   layout: **0 JavaScript errors, 0 console warnings**; screenshots in `presentation/screenshots/`.
 * Commits (all on `master`): settings/test fix → 2FA fix → frontend fixes → staticfiles →

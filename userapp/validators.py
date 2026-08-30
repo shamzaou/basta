@@ -11,24 +11,26 @@ class PasswordStrengthValidator:
     """
     
     def validate(self, password, user=None):
+        # Report every broken rule at once so the user can fix the password in one go
+        errors = []
         if not re.search(r'[A-Z]', password):
-            raise ValidationError(
+            errors.append(ValidationError(
                 "Password must contain at least 1 uppercase letter.",
                 code='password_no_uppercase',
-            )
-        
-        if not re.search(r'[!@#$%^&*(),.?":{}|<>\[\]\\\/\-_+=;]', password):
-            raise ValidationError(
+            ))
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>\[\]\\/\-_+=;]', password):
+            errors.append(ValidationError(
                 "Password must contain at least 1 special character (!@#$%^&*(),.?\":{}|<>[]\\/-_+=;)",
                 code='password_no_special_char',
-            )
-            
+            ))
         if not re.search(r'[0-9]', password):
-            raise ValidationError(
+            errors.append(ValidationError(
                 "Password must contain at least 1 number.",
                 code='password_no_number',
-            )
-    
+            ))
+        if errors:
+            raise ValidationError(errors)
+
     def get_help_text(self):
         return (
             "Your password must contain at least: "

@@ -234,7 +234,7 @@ body.print .hud,body.print .progress,body.print .help{display:none}
   <li>Fixed the settings page saving the placeholder <b>“The Champion”</b> as display name when none was set.</li>
   <li>Fixed the Pong ball getting <b>stuck along the top/bottom wall</b>: the wall bounce re-flipped every frame without pushing the ball back; it now clamps to the wall and keeps a minimum angle.</li>
   <li>Fixed the <b>previous account's avatar</b> staying in the navbar/settings after switching users inside the SPA.</li>
-  <li>Second sweep on request: <b>30 more bugs</b> fixed — silent JWT expiry after 60 min (automatic refresh now), secrets written to logs, duplicate-registration errors, tournament lost on refresh, repeated tiebreaker rounds, Save Settings, 2FA toggle, Pong resize/touch/pause leaks, input validation. Test suite: <b>56 tests</b>.</li>
+  <li>Second sweep on request: <b>30 more bugs</b> fixed — silent JWT expiry after 60 min (automatic refresh now), secrets written to logs, duplicate-registration errors, tournament lost on refresh, repeated tiebreaker rounds, Save Settings, 2FA toggle, Pong resize/touch/pause leaks, input validation. Test suite: <b>57 tests</b>.</li>
   <li>Subject-compliance pass: stored <b>XSS</b> via tournament nicknames fixed, AI now <b>simulates keyboard input at player speed</b> and anticipates bounces, DB credentials moved to <code>.env</code>, tournament API requires login, “Next match” announcement, GDPR <b>anonymization</b> (42-safe), <b>online TicTacToe matchmaking</b>, real <b>SSR</b>.</li>
   <li>Token-refresh URL bug in the SPA fixed; stale <code>staticfiles/</code> now rebuilt at container start.</li>
   <li>A language switcher was built on a wrong module assumption and <b>removed again</b> once the module list was corrected.</li>
@@ -244,7 +244,7 @@ body.print .hud,body.print .progress,body.print .help{display:none}
 <div class="grid2 demo">
  <div class="card"><h3>Before the evaluation</h3><ul>
   <li><code>make build &amp;&amp; make up</code> → <b>https://localhost</b> (accept the self-signed cert)</li>
-  <li><code>make test</code> → “Ran 56 tests … OK”</li>
+  <li><code>make test</code> → “Ran 57 tests … OK”</li>
   <li>Pre-create: <b>demo1</b> / demo1@example.com (no 2FA) and <b>demo2fa</b> / demo2fa@example.com (2FA on) — password <code>Str0ng!Passw0rd</code></li>
   <li>Log in as demo1 and play 2–3 games (vs AI) so the stats dashboard has data</li>
   <li>Open a 2nd browser profile to show friends between demo1 &amp; demo2fa</li></ul></div>
