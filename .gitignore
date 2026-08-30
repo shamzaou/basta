@@ -4,4 +4,5 @@ backend/__pycache__/
 gameapp/__pycache__/
 userapp/__pycache__/
 media/
-gunicorn*.*presentation/pdf-deck.html
+gunicorn*.*
+presentation/pdf-deck.html
