@@ -829,42 +829,6 @@ document.addEventListener('DOMContentLoaded', () => {
 	// Add event listener to delete button
 	document.getElementById('delete-account').addEventListener('click', deleteAccount);
 
-	// GDPR anonymisation (added Aug 2026): keep statistics, strip personal data, disable login
-	async function anonymizeAccount() {
-		if (!confirm('Anonymize your account? You will be logged out and will not be able to log in again. Your statistics are kept without personal data.')) {
-			return;
-		}
-
-		try {
-			const response = await fetch('/api/auth/anonymize-account/', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-					'X-CSRFToken': getCookie('csrftoken')
-				}
-			});
-
-			if (response.ok) {
-				localStorage.removeItem('authToken');
-				localStorage.removeItem('refreshToken');
-				localStorage.removeItem('userData');
-				localStorage.removeItem('isLoggedIn');
-				alert('Your account has been anonymized.');
-				window.location.href = '/login';
-			} else {
-				const data = await response.json();
-				throw new Error(data.message || 'Failed to anonymize account');
-			}
-		} catch (error) {
-			alert('Failed to anonymize account: ' + error.message);
-		}
-	}
-
-	const anonymizeBtn = document.getElementById('anonymize-account');
-	if (anonymizeBtn) {
-		anonymizeBtn.addEventListener('click', anonymizeAccount);
-	}
 
     // OTP verification button
     const verifyOTPButton = document.getElementById('verify-otp');
@@ -1307,11 +1271,13 @@ async function loadSettingsData() {
             const displayNameDisplay = displayNameContainer.querySelector('.field-display');
             const displayNameInput = document.querySelector('#display-name');
             
-            if (displayNameDisplay && data.display_name) {
-                displayNameDisplay.textContent = data.display_name;
+            // Always sync from the server: an unset display name must show as empty,
+            // not keep whatever placeholder text the HTML shipped with.
+            if (displayNameDisplay) {
+                displayNameDisplay.textContent = data.display_name || '';
             }
-            if (displayNameInput && data.display_name) {
-                displayNameInput.value = data.display_name;
+            if (displayNameInput) {
+                displayNameInput.value = data.display_name || '';
             }
         }
     } catch (error) {

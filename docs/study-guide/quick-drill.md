@@ -26,7 +26,7 @@ Answers describe the code **as it is after the Aug-2026 audit**. Items marked �
 17. **Where is the JWT stored?** `localStorage` (`authToken`, `refreshToken`) and sent as `Authorization: Bearer`. Trade-off vs HttpOnly cookies: simpler for ES-module games, but XSS-readable. The unused `oauth_callback` view shows the cookie variant.
 18. **Why sessions AND JWT?** Session came with Django `login()` and protects `profile_view` (session auth + CSRF); JWT authenticates DRF views (matches, friends, GDPR). Honest: two mechanisms coexist.
 19. **Access/refresh lifetimes?** 60 min / 7 days; refresh at `/api/auth/token/refresh/` (🆕 URL fixed in the SPA), scheduled 1 min before expiry.
-20. **How does 42 OAuth (remote authentication) work?** Button → `POST /api/auth/redirect_uri/` builds the authorize URL (`client_id`, `redirect_uri=https://localhost/oauth/callback`, `response_type=code`) → user consents on 42 → redirected to the SPA route `/oauth/callback?code=` → `checkOAuthLogin` posts the code to `/api/auth/get-token/` → server exchanges it at `api.intra.42.fr/oauth/token` with the client secret, reads `/v2/me`, `get_or_create` the user by e-mail (`is_42_user`, `intra_id`), `login()`, returns JWTs → SPA stores them and reloads home. (`views.py:480`, `:583`; `script.js:975`, `:1018`.)
+20. **How does 42 OAuth (remote authentication) work?** Button → `POST /api/auth/redirect_uri/` builds the authorize URL (`client_id`, `redirect_uri=https://localhost/oauth/callback`, `response_type=code`) → user consents on 42 → redirected to the SPA route `/oauth/callback?code=` → `checkOAuthLogin` posts the code to `/api/auth/get-token/` → server exchanges it at `api.intra.42.fr/oauth/token` with the client secret, reads `/v2/me`, `get_or_create` the user by e-mail (`is_42_user`, `intra_id`), `login()`, returns JWTs → SPA stores them and reloads home. (`views.py:480`, `:583`; `script.js:939`, `:1018`.)
 21. **Why OAuth / why 42?** Every evaluator has a 42 account; OAuth delegates password handling to the identity provider; the authorization-code grant keeps the secret server-side.
 22. **Why does the 42 login fail today?** The 42 client key expired after a year. Rotate on the intra, set `FORTYTWO_CLIENT_ID`/`FORTYTWO_CLIENT_SECRET` (and `CLIENT_ID`/`CLIENT_SECRET`) in `.env`, `make restart`. The redirect URI on the 42 app must be exactly `https://localhost/oauth/callback`.
 23. **Is there a `state` parameter?** No — honest gap (login CSRF). `OAUTH_STATE_SECRET` exists in `.env` but is unused; the fix is to generate/store/verify a random `state` in `redirect_uri`/`get_token`.
@@ -46,7 +46,7 @@ Answers describe the code **as it is after the Aug-2026 audit**. Items marked �
 34. **Why no A\*?** Pong has no graph to search; the AI uses kinematic prediction (linear extrapolation). A* is forbidden by the subject anyway.
 35. **How is AI difficulty tuned?** Constants `ACCURACY`, `MISTAKE_CHANCE`, `MAX_SPEED`; `updateDifficulty()` runs every 5 s but its score-based branch is stubbed (`scoreDiff = 0`) — say it honestly; making it read the real score is a listed improvement.
 36. **Can the AI lose?** Yes — prediction error, random mistakes, the 1 s blind window and the ball speeding up 5 % per hit; games are first to 3 points.
-37. **Where is the stats dashboard?** `/profile`: Games Played, Win Rate (SVG pie chart), Best Score, last 5 matches with game badge/opponent/score/result/date, friends. Data from `profile_view` (`views.py:76`); chart is hand-drawn SVG (`createWinratePieChart`, `script.js:1947`), no library.
+37. **Where is the stats dashboard?** `/profile`: Games Played, Win Rate (SVG pie chart), Best Score, last 5 matches with game badge/opponent/score/result/date, friends. Data from `profile_view` (`views.py:76`); chart is hand-drawn SVG (`createWinratePieChart`, `script.js:1913`), no library.
 38. **How is win rate / best score computed?** `wins / total × 100` (integer) over non-tournament matches; best score = the win with the largest `user − opponent` margin (`views.py:85-111`). Full stats (wins/losses/draws, all matches) in the JSON export.
 39. **Why are tournament games excluded from personal stats?** Tournament players are nicknames, not accounts; tournaments have their own points table (`view_tournament`: 1 point per win).
 40. **Match history model?** `MatchHistory(user, game_type PONG/TICTACTOE, opponent, result WIN/LOSS/DRAW, score "a-b", date_played)` written by the games via `POST /api/auth/save-match/` (JWT). The client is trusted for the score — limitation.
@@ -57,7 +57,7 @@ Answers describe the code **as it is after the Aug-2026 audit**. Items marked �
 
 ## D. GDPR, front-end, DevOps
 
-45. **GDPR features?** Export JSON (`export-data/`), 🆕 anonymize (`anonymize-account/`: PII replaced, login disabled, stats kept), delete (`delete-account/`, cascades), inactivity warn 5 mo / delete 6 mo (`delete_inactive_users`, `make gdpr-cleanup`), privacy policy on About.
+45. **GDPR features?** Export JSON (`export-data/`, "local data management"), delete (`delete-account/`, hard delete that cascades to match history), inactivity warn 5 mo / delete 6 mo (`delete_inactive_users`, `make gdpr-cleanup`), privacy policy on About. **Why no anonymization?** The module title lists it, but the team chose full deletion: it removes *all* personal data, the strictest form of erasure. (An anonymize endpoint was prototyped during the audit and removed by the team's decision.)
 46. **Is the retention cron running?** Not inside the container (no cron in the image); `gdpr_cleanup_crontab` is provided for a host cron; run manually with `make gdpr-cleanup-run`.
 47. **How does the SPA router work?** `showPage(pageId)` (`script.js:13`) hides all `.page` divs and shows one, `history.pushState` updates the URL, `popstate` restores; global click handler intercepts `href="/..."` links; on load the path decides the initial page; Django's catch-all serves the same shell for any path. Login-gated pages redirect.
 48. **How are pages swapped without reload?** All pages are already in the server-rendered HTML; only `display` toggles. Games are created/destroyed by `initializeGameIfNeeded`.
@@ -68,7 +68,7 @@ Answers describe the code **as it is after the Aug-2026 audit**. Items marked �
 53. **Why Gunicorn directly on 443 without nginx?** Fewer moving parts for a local evaluation; WhiteNoise serves static files; a reverse proxy is the first production step.
 54. **Where do secrets live?** `.env` (git-ignored) read by python-decouple: Django secret, DB password, Gmail app password, 42 client id/secret, JWT secret. Not baked into the image (bind mount).
 55. **Does the site need internet?** Yes for Bootstrap, jQuery/Popper, Google Fonts and **Three.js** (CDN). Vendoring them is a recommended improvement.
-56. **How do you test?** `make test` → 19 Django tests (2FA regression, no-2FA login, GDPR export/anonymize/delete/cleanup, tournament tie-breakers). Audit also ran a curl API flow and a headless-Chrome UI walkthrough (0 JS errors).
+56. **How do you test?** `make test` → 17 Django tests (2FA regression, no-2FA login, GDPR export/delete/cleanup, tournament tie-breakers). Audit also ran a curl API flow and a headless-Chrome UI walkthrough (0 JS errors).
 57. **What would you improve?** Rate-limit OTP; `state` on OAuth; HttpOnly-cookie JWTs; server-authoritative game results; real AI difficulty adaptation and bounce-aware prediction; touch controls; vendor CDN assets; cron in the image; password reset; `renderer.dispose()`.
 58. **What does `production_settings.py` do?** Nothing at runtime — Gunicorn uses `backend.settings`; 🆕 compose now also points `exec` commands there, and the file has a `SECRET_KEY` fallback so it no longer crashes if used.
 59. **What is `gameapp` for?** Serves the SPA shell (`index`) and holds unused `Game/Player/Score` models reserved for server-side games.
@@ -79,7 +79,7 @@ Answers describe the code **as it is after the Aug-2026 audit**. Items marked �
 ```bash
 make build && make up            # https://localhost  (accept the self-signed cert)
 make logs                        # container logs (entrypoint output)
-make test                        # 19 tests
+make test                        # 17 tests
 make shell                       # Django shell
 make db                          # psql into basta_db  (\dt to list tables)
 make gdpr-cleanup                # dry-run inactivity cleanup
@@ -109,4 +109,4 @@ curl -sk -X POST https://localhost/api/auth/redirect_uri/
 # Prove the old cache bug (per-process) vs the fix: see docs/audit-report.md
 ```
 
-Test accounts to pre-create for the demo: one normal user, one with 2FA enabled, one throw-away for anonymize, one throw-away for delete; two users to demo friends. For the AI module: Play Now → Player vs AI, play one game to 3 points, then open Profile to show the `vs. AI` row and the win-rate chart.
+Test accounts to pre-create for the demo: one normal user, one with 2FA enabled, one throw-away for delete; two users to demo friends. For the AI module: Play Now → Player vs AI, play one game to 3 points, then open Profile to show the `vs. AI` row and the win-rate chart.

@@ -187,7 +187,7 @@ class NoTwoFactorLoginTests(TestCase):
 
 
 class GdprTests(TestCase):
-    """GDPR module: export (local data management), anonymisation, deletion."""
+    """GDPR module: export (local data management), deletion, inactive-account cleanup."""
     PASSWORD = 'Str0ng!Passw0rd'
 
     def setUp(self):
@@ -208,31 +208,6 @@ class GdprTests(TestCase):
         self.assertEqual(body['user_information']['email'], 'carol@example.com')
         self.assertEqual(body['statistics']['games_played'], 2)
         self.assertEqual(len(body['match_history']), 2)
-
-    def test_anonymize_strips_pii_keeps_stats_and_blocks_login(self):
-        from .models import MatchHistory
-        from django.contrib.auth import authenticate
-        r = self.client.post('/api/auth/anonymize-account/')
-        self.assertEqual(r.status_code, 200, r.content)
-        self.user.refresh_from_db()
-        self.assertTrue(self.user.username.startswith('anon_'))
-        self.assertNotIn('carol', self.user.email)
-        self.assertTrue(self.user.email.endswith('@anonymized.invalid'))
-        self.assertIsNone(self.user.display_name)
-        self.assertFalse(self.user.is_active)
-        self.assertFalse(self.user.has_usable_password())
-        self.assertEqual(self.user.friends.count(), 0)
-        self.assertEqual(self.friend.friends.count(), 0)
-        # statistics survive, without personal data
-        self.assertEqual(MatchHistory.objects.filter(user=self.user).count(), 2)
-        # cannot log in anymore
-        self.assertIsNone(authenticate(username=self.user.email, password=self.PASSWORD))
-        r = Client().post('/api/auth/login/', {'email': 'carol@example.com', 'password': self.PASSWORD},
-                          content_type='application/json')
-        self.assertEqual(r.status_code, 400)
-
-    def test_anonymize_requires_auth(self):
-        self.assertIn(Client().post('/api/auth/anonymize-account/').status_code, (401, 403))
 
     def test_delete_account_removes_user_and_history(self):
         from .models import MatchHistory

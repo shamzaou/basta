@@ -33,7 +33,7 @@ Q&A: *How do you handle phones?* Media queries at 768/480 px, hamburger nav, flu
 **Requirement:** support an additional web browser beyond the primary one, with consistent behaviour and fixes for browser-specific issues.
 
 * Primary: Chrome/Chromium (Edge). Additional: Firefox. The audit ran an automated headless-Chrome walkthrough (0 console errors); the code uses only standard APIs.
-* Features relied on and their support: ES modules `type="module"` (`index.html:601`), `fetch` + `AbortController` (`script.js:327`), `localStorage`, `history.pushState/popstate` (`script.js:67`, `:121`), CSS Grid/Flexbox/custom properties, `aspect-ratio` (TicTacToe cells — Firefox ≥ 89), WebGL 1 (Three.js r128), `FileReader.readAsDataURL` (`script.js:776`), `URL.createObjectURL` for the GDPR download (`script.js:1627`).
+* Features relied on and their support: ES modules `type="module"` (`index.html:601`), `fetch` + `AbortController` (`script.js:327`), `localStorage`, `history.pushState/popstate` (`script.js:67`, `:121`), CSS Grid/Flexbox/custom properties, `aspect-ratio` (TicTacToe cells — Firefox ≥ 89), WebGL 1 (Three.js r128), `FileReader.readAsDataURL` (`script.js:776`), `URL.createObjectURL` for the GDPR download (`script.js:1593`).
 * No transpilation or polyfills; no vendor prefixes needed for these features in current browsers.
 * Self-signed certificate: each browser must accept the `localhost.pem` warning once.
 * Known differences: Firefox may block CDN fonts more aggressively (falls back to `cursive`/sans-serif); `alert()`/`confirm()` dialogs look different; nothing functional.

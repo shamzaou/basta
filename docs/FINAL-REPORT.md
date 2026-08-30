@@ -2,7 +2,7 @@
 
 Everything below was done on `master` in small commits. `make build && make up` works from a
 clean checkout with a fresh database volume, the site serves at https://localhost, and
-`make test` passes (19 tests). Screenshots of every page were captured from the running site
+`make test` passes (17 tests). Screenshots of every page were captured from the running site
 with headless Chrome (0 JavaScript errors).
 
 ## 1. What was fixed (with root causes)
@@ -14,12 +14,13 @@ with headless Chrome (0 JavaScript errors).
 | `make test/migrate/shell` crashed | compose pointed `exec` at `production_settings`, which set `SECRET_KEY` to an unset env var | `docker-compose.yml`, `production_settings.py` |
 | Stale JS served to browsers | entrypoint skipped `collectstatic`; WhiteNoise serves `staticfiles/`, which had drifted | `scripts/entrypoint.sh`, `staticfiles/` regenerated |
 | Failing tournament tests | tests never called `get_winner()` (the only place tiebreakers are created) | `tournaments/tests.py` |
-| Missing GDPR anonymization (the selected GDPR module requires it) | not implemented | `userapp/views.py::anonymize_account`, `userapp/urls.py`, settings page + `script.js` |
+| Settings saved the placeholder display name "The Champion" | template hard-coded `value="The Champion"`; `loadSettingsData` only overwrote it when a display name already existed | `templates/frontend/index.html`, `static/frontend/js/script.js::loadSettingsData` |
+| Pong ball stuck gliding along a wall | wall bounce in `GamePhysics.updatePhysics` flipped `velocity.z` after the move without clamping the ball back inside, so an overshooting ball re-flipped every frame until its vertical speed decayed to 0; serves could also be nearly flat | `static/frontend/js/pong.js::GamePhysics` (`updatePhysics`, `resetBall`) |
 | Silent token refresh broken | wrong URL + undefined `logout()` | `static/frontend/js/script.js` |
 | GDPR cron not runnable | no cron in the image | `Makefile` (`gdpr-cleanup`, `gdpr-cleanup-run`) |
 
-Regression tests: `userapp/tests.py` (16 tests: 2FA flow, slow/failing email backends, GDPR
-export/anonymize/delete/cleanup command, plain login) and `tournaments/tests.py` (3).
+Regression tests: `userapp/tests.py` (14 tests: 2FA flow, slow/failing email backends, GDPR
+export/delete/cleanup command, plain login) and `tournaments/tests.py` (3).
 Full details, severities and the deferred-issue list: `docs/audit-report.md`.
 
 ## 2. What remains for the humans
@@ -34,9 +35,10 @@ Full details, severities and the deferred-issue list: `docs/audit-report.md`.
    `.env`, restart, and read the code with `grep "OTP for login" gunicorn-error.log | tail -1`.
 3. **Speaker names** — `presentation/index.html` uses *Speaker 1…4* placeholders on every section;
    the member-contribution slide is derived from git history and marked "team: adjust".
-4. **Review the new anonymize endpoint** so you can explain it as your own; it is flagged 🆕
-   throughout the study guide. (A language switcher built during the audit was removed again after
-   the team confirmed *Multiple language support* is not a selected module.)
+4. **Be ready for "the GDPR module says anonymization"** — the team chose full deletion; an anonymize
+   endpoint built during the audit was removed at the team's request (see `modules/08-cybersecurity-gdpr.md`, Q2).
+   A language switcher built during the audit was likewise removed after the team confirmed *Multiple
+   language support* is not a selected module.
 5. Optional before the demo: pre-create the accounts listed on the demo cheat-sheet slide.
 
 ## 3. How to use each deliverable

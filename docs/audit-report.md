@@ -87,9 +87,11 @@ No Celery/broker introduced.
 | 4 | 🔴 | Browser was served a **stale `script.js`** (OTP modal button/timeout code from the last commit was missing) | WhiteNoise serves hashed files from `staticfiles/` via the manifest; `entrypoint.sh` skipped `collectstatic` ("causing issues" — it isn't), so `staticfiles/` drifted from `static/`. | `collectstatic` restored in the entrypoint; `staticfiles/` regenerated and committed. |
 | 5 | 🟠 | Existing test suite failed (2/2 tournament tests) | Tests asserted tiebreaker matches without calling `Tournament.get_winner()`, the only place they are created; second test also miscounted the `setUp` match. | Tests corrected + one added; 3/3 pass. |
 | 6 | ⚪ | Language switcher added then **removed** | During the audit a three-language (EN/FR/RU) switcher was implemented on the assumption that *Multiple language support* was a selected module. The team's actual module list does not include it, so the feature was reverted (template, CSS, `i18n.js`). No trace remains in the code. |
-| 7 | 🟠 | **GDPR "anonymization" not implemented** (only hard delete + export) | Never built. | `POST /api/auth/anonymize-account/` + "Anonymize My Account" button in Settings → Danger Zone; strips username/email/display name/avatar/42 link, disables login, keeps non-personal match stats. Tests in `GdprTests`. |
+| 7 | ⚪ | GDPR "anonymization" prototyped then **removed** | The module title mentions anonymization but the app only had export + hard delete. An anonymize endpoint/button was implemented during the audit and later removed at the team's request — GDPR is delivered as JSON export, account deletion (cascade) and the inactive-account cleanup command, all covered by `GdprTests`. |
 | 8 | 🟠 | Silent token refresh never worked | `script.js` posted to `/api/token/refresh/` (falls into the SPA catch-all → HTML) instead of `/api/auth/token/refresh/`; on failure it called an undefined `logout()` → `ReferenceError`. | Both corrected. |
 | 9 | 🟡 | GDPR cleanup cron never runs | `gdpr_cleanup_crontab` exists but no cron daemon is installed in the image. | `make gdpr-cleanup` (dry run) / `make gdpr-cleanup-run` targets; command covered by a test. Still needs a host scheduler (documented). |
+| 9b | 🟠 | Editing an unset display name saved **"The Champion"** | `templates/frontend/index.html` hard-coded `value="The Champion"` in the Settings display-name input (and "nickname" in the read-only box); `loadSettingsData` only overwrote them when the user already had a display name, so *Edit → Save* stored the placeholder. | Template value emptied (placeholder instead); `loadSettingsData` always syncs both elements from the server (`data.display_name \|\| ''`). About page: Ali's role corrected to "Backend Developer". |
+| 9c | 🟠 | Pong ball got **stuck gliding along the top/bottom wall** in a straight line | `static/frontend/js/pong.js` `GamePhysics.updatePhysics`: the wall check ran *after* the move and only flipped `velocity.z` (×0.9) without moving the ball back inside. Whenever the ball overshot the ±2.9 wall by more than 0.9 × its z-speed it stayed outside, re-flipped every frame and its vertical speed decayed to 0 (Node harness with the real class: final z 3.05, vz 0.0000). Serves were also nearly flat ~25 % of the time (`resetBall` drew vz uniformly in ±0.02). | Clamp `ball.position.z` to the wall, set `velocity.z` explicitly *away* from the wall with a 0.01 minimum, and serve with \|vz\| in [0.01, 0.03] (`pong.js:35-45`, `:74-83`). Post-fix harness: 0 stuck rallies, 0 flat serves. |
 
 ---
 
@@ -124,14 +126,14 @@ recognisable minimal fix. All are listed in the presentation's *Limitations* sli
 
 | Module | Type | Status | Verified how |
 |--------|------|--------|--------------|
-| Use a framework as backend (Django) | Major | ✅ | Site serves; 19 tests; scripted API flow (register→login→profile→matches→friends→export→tournament→delete) all 2xx. |
+| Use a framework as backend (Django) | Major | ✅ | Site serves; 17 tests; scripted API flow (register→login→profile→matches→friends→export→tournament→delete) all 2xx. |
 | Front-end framework/toolkit (Bootstrap) | Minor | ✅ (light use) | CDN include + `container`/`btn`/`btn-group`/`text-center` classes; most styling is custom `styles.css`. |
 | Database for the backend (PostgreSQL) | Minor | ✅ | postgres:13 container, migrations applied, `django_cache` table created. |
 | Standard user management / auth / users across tournaments | Major | ✅ | Register, login, logout, profile GET/PUT, display name, avatar endpoint, friends add/remove/list, stats; tournament round-robin verified live. |
 | Remote authentication (42 OAuth) | Major | ✅ code / 🔒 key | Authorize URL generated correctly; SPA callback route + `get-token` exchange verified by code review; end-to-end login needs the rotated 42 key (§5). |
 | AI opponent (Pong vs AI) | Major | ✅ | `PongAI` decides once per second from ball position/velocity (no A*); vs-AI game rendered and scored in headless Chrome; match saved with opponent "AI". |
 | User and game stats dashboards | Minor | ✅ | Profile stat cards (games played, win rate, best score), SVG win-rate pie chart, recent-match list, JSON export with statistics; tournament page shows per-player scores. |
-| GDPR (anonymization, local data management, deletion) | Minor | ✅ | Export JSON, anonymize (🆕 — was missing), delete, inactivity command — all tested. |
+| GDPR (anonymization, local data management, deletion) | Minor | ✅ | Export JSON, account deletion (cascade), inactivity command — all tested. Team chose deletion over anonymization (an anonymize endpoint was prototyped and removed). |
 | 2FA + JWT | Major | ✅ (delivery blocked by Gmail creds) | Both bugs fixed with regression tests; JWT issuance/refresh verified. |
 | Advanced 3D (Three.js) | Major | ✅ | WebGL Pong rendered in headless Chrome (screenshot `11-pong-3d-vs-ai.jpg`). |
 | Support on all devices (responsive) | Minor | ✅ | 390×844 walkthrough, hamburger menu works (screenshot 17). |
@@ -161,8 +163,8 @@ Extra features that are **not** claimed modules: TicTacToe (second game, hot-sea
 
 * `make build && make up` from the committed tree: web + db start, entrypoint runs
   migrate → createcachetable → collectstatic → Gunicorn TLS on 443. `curl -k https://localhost/` → 200.
-* `make test`: **19 tests, OK** (userapp 16, tournaments 3).
+* `make test`: **17 tests, OK** (userapp 14, tournaments 3).
 * Headless-Chrome walkthrough of every page, both games, tournament creation, i18n and mobile
   layout: **0 JavaScript errors**; screenshots in `presentation/screenshots/`.
-* Commits (all on `master`): settings/test fix → 2FA fix → GDPR anonymize/frontend fixes → staticfiles →
-  screenshots → docs → language-switcher removal after the team corrected the module list.
+* Commits (all on `master`): settings/test fix → 2FA fix → frontend fixes → staticfiles →
+  screenshots → docs → language-switcher removal after the team corrected the module list → anonymize removal + display-name fix.

@@ -28,7 +28,7 @@ FAST_PONG is our 42 Abu Dhabi ft_transcendence capstone: a single-page web app w
 make build      # docker-compose build
 make up         # docker-compose up -d  -> https://localhost  (accept the self-signed cert)
 make logs       # follow container logs (note: Gunicorn stdout goes to gunicorn-error.log, see below)
-make test       # docker-compose exec web python manage.py test   (19 tests, all green)
+make test       # docker-compose exec web python manage.py test   (17 tests, all green)
 make migrate    # apply migrations inside the container
 make shell      # Django shell
 make down       # stop
@@ -61,7 +61,7 @@ Things to know before a demo:
 | Path | Purpose |
 |---|---|
 | `backend/` | Django project: `settings.py`, `urls.py` (root router), `wsgi.py`, `asgi.py` |
-| `userapp/` | Custom `User` model, auth (login/register/logout/2FA/OAuth), profile, friends, match history, GDPR (export/anonymize/delete, `delete_inactive_users` command), activity middleware, password validator, **tests** |
+| `userapp/` | Custom `User` model, auth (login/register/logout/2FA/OAuth), profile, friends, match history, GDPR (export/delete, `delete_inactive_users` command), activity middleware, password validator, **tests** |
 | `gameapp/` | Serves the SPA (`index` view) and holds unused `Game/Player/Score` models |
 | `tournaments/` | `Tournament/Player/Match` models, round-robin + tiebreaker logic, JSON API, tests |
 | `templates/frontend/index.html` | The single server-rendered page containing every SPA "page" `<div>` |

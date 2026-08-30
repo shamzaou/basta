@@ -10,11 +10,11 @@ erDiagram
         bigint id PK
         varchar username UK "max 150, unique"
         varchar email UK "EmailField unique - login identifier"
-        varchar password "PBKDF2 hash; unusable after anonymize"
+        varchar password "PBKDF2 hash"
         varchar first_name
         varchar last_name
         bool is_staff
-        bool is_active "False after anonymize"
+        bool is_active "Django default True"
         bool is_superuser
         datetime date_joined
         datetime last_login
@@ -98,10 +98,10 @@ Extends `AbstractUser`, so it keeps `password`, `first_name`, `last_name`, `is_s
 
 | Field | Type / constraint | Who writes it |
 |---|---|---|
-| `username` | CharField(150), **unique** (redeclared `:19`) | register, 42 login (`login` from intra), profile PUT, 🆕 anonymize (`anon_<10hex>`) |
-| `email` | EmailField, **unique**, `USERNAME_FIELD` | register, profile PUT, 🆕 anonymize (`anon_<10hex>@anonymized.invalid`) |
-| `display_name` | CharField(150) null | profile PUT (`display_name`), 🆕 anonymize → NULL |
-| `profile_picture` | ImageField → `media/profile_pictures/user_<id>.<ext>` | profile PUT with base64 data URL; 🆕 anonymize deletes file + clears |
+| `username` | CharField(150), **unique** (redeclared `:19`) | register, 42 login (`login` from intra), profile PUT |
+| `email` | EmailField, **unique**, `USERNAME_FIELD` | register, profile PUT |
+| `display_name` | CharField(150) null | profile PUT (`display_name`) |
+| `profile_picture` | ImageField → `media/profile_pictures/user_<id>.<ext>` | profile PUT with base64 data URL |
 | `is_42_user`, `intra_id` | bool / CharField(50) | `get_token` on first 42 login |
 | `two_factor_enabled` | bool | register checkbox only (no toggle in settings) |
 | `last_activity` | DateTimeField default `timezone.now` | `UserActivityMiddleware` every ≥15 min |
@@ -114,7 +114,7 @@ Helper methods: `get_display_name()`, `add_friend()` (no self-friend, no duplica
 
 ### `userapp_matchhistory` (`userapp/models.py:66-90`)
 
-One row per finished non-tournament game, written by `save_match_view`. `ordering = ['-date_played']`. `user` FK **CASCADE** → deleting the user deletes their history (the GDPR "delete" path); 🆕 anonymize keeps these rows (they hold no PII: opponent is "AI"/"Player 2"/a nickname).
+One row per finished non-tournament game, written by `save_match_view`. `ordering = ['-date_played']`. `user` FK **CASCADE** → deleting the user deletes their history (the GDPR "delete" path).
 
 `game_type` choices are `PONG`/`TICTACTOE`; `profile_view` and the frontend also filter out a `'TOURNAMENT'` value that is never actually written (tournament matches are deliberately not saved to history — `static/frontend/js/pong.js:866-867`).
 
@@ -134,7 +134,7 @@ One row per finished non-tournament game, written by `save_match_view`. `orderin
 | Table | From | Role here |
 |---|---|---|
 | `django_session` | `django.contrib.sessions` (`SESSION_ENGINE = db`, `backend/settings.py:179`) | Session created by `login()` in every login path; 24 h cookie; saved every request |
-| `authtoken_token` | `rest_framework.authtoken` | One token per user, (re)created only in `verify_otp` (`userapp/views.py:327-328`), deleted on anonymize |
+| `authtoken_token` | `rest_framework.authtoken` | One token per user, (re)created only in `verify_otp` (`userapp/views.py:327-328`) |
 | **`django_cache`** 🆕 | `DatabaseCache` (`backend/settings.py:296-301`, created by `createcachetable`) | Holds `otp_<user_id>` → 6-digit code with a 600 s expiry; shared by all Gunicorn workers |
 | `otp_totp_totpdevice`, `otp_static_*` | `django_otp` | Installed but unused — our 2FA is email OTP in the cache, not TOTP devices |
 | `auth_group`, `auth_permission`, `django_admin_log`, `django_content_type`, `django_migrations` | Django | Standard |

@@ -27,7 +27,7 @@ Dependency facts: `gameapp/models.py:3` imports `userapp.models.User`; `tourname
 | Component | Contents |
 |---|---|
 | Models (`userapp/models.py`) | `User(AbstractUser)` `:6-63` — `USERNAME_FIELD='email'`, `friends` M2M; `MatchHistory` `:66-90` |
-| Views (`userapp/views.py`) | `send_otp_email_async` `:46` (🆕 helper), `profile_view` `:76`, `update_profile` `:207` (not routed), `login_view` `:239`, `verify_otp` `:293`, `register_view` `:364`, `logout_view` `:465`, `check_auth` `:470`, `redirect_uri` `:481`, `oauth_callback` `:515`, `get_token` `:586`, `verify_otp_view` `:674` (not routed), `user_settings_view` `:702`, `match_history_view` `:746`, `save_match_view` `:775`, `create_match` `:826`, `anonymize_account` `:851` (🆕), `delete_account` `:891`, `get_avatar_image` `:901`, `debug_avatar_path` `:939`, `export_user_data` `:972`, `get_all_users` `:1033`, `get_friends` `:1063`, `add_friend` `:1088`, `remove_friend` `:1119` |
+| Views (`userapp/views.py`) | `send_otp_email_async` `:46` (🆕 helper), `profile_view` `:76`, `update_profile` `:207` (not routed), `login_view` `:239`, `verify_otp` `:293`, `register_view` `:364`, `logout_view` `:465`, `check_auth` `:470`, `redirect_uri` `:481`, `oauth_callback` `:515`, `get_token` `:586`, `verify_otp_view` `:674` (not routed), `user_settings_view` `:702`, `match_history_view` `:746`, `save_match_view` `:775`, `create_match` `:826`, `delete_account` `:851`, `get_avatar_image` `:861`, `debug_avatar_path` `:899`, `export_user_data` `:932`, `get_all_users` `:993`, `get_friends` `:1023`, `add_friend` `:1048`, `remove_friend` `:1079` |
 | URLs | `userapp/urls.py` (mounted at `/api/auth/`) — also mounts simplejwt's `TokenObtainPairView` and `TokenRefreshView` |
 | Middleware | `userapp/middleware.py` `UserActivityMiddleware` — after each response, if the user is authenticated and `last_activity` is older than `LAST_ACTIVITY_UPDATE_WINDOW` (15 min) it calls `user.update_last_activity()` (`:10-29`). Feeds the GDPR inactivity cleanup. |
 | Validators | `userapp/validators.py` `PasswordStrengthValidator` — ≥1 uppercase, ≥1 special char, ≥1 digit; registered in `AUTH_PASSWORD_VALIDATORS` together with min length **10**, common-password and numeric checks (`backend/settings.py:107-130`) |
@@ -83,7 +83,6 @@ Authentication legend — **Session**: Django session cookie set by `login()`; *
 | GET | `/api/auth/match-history/` | `match_history_view` | JWT / Token / Session / Basic (DRF defaults) | Last 10 matches |
 | POST | `/api/auth/save-match/`, `/api/auth/match/save` | `save_match_view` | DRF defaults; `@csrf_exempt` | Creates `MatchHistory` |
 | POST | `/api/auth/match/create/` | `create_match` | DRF defaults; `@csrf_exempt` | Returns a UUID `match_id` (TicTacToe) |
-| POST | `/api/auth/anonymize-account/` 🆕 | `anonymize_account` | DRF defaults; CSRF if session-authenticated | Strips PII, disables login, keeps stats |
 | DELETE | `/api/auth/delete-account/` | `delete_account` | DRF defaults | Hard delete, cascades `MatchHistory` |
 | GET | `/api/auth/avatar/<id>/` | `get_avatar_image` | none | Streams the file or `assets/man.png` |
 | GET | `/api/auth/debug-avatar/<id>/` | `debug_avatar_path` | none | Debug helper, leaks `MEDIA_ROOT` path |
@@ -104,7 +103,7 @@ Authentication legend — **Session**: Django session cookie set by `login()`; *
 ### Talking points on auth
 
 * **Three mechanisms coexist.** `login()` always creates a Django session; simplejwt access/refresh tokens are returned as JSON and kept in `localStorage`; the DRF `Token` is created only on 2FA login (`userapp/views.py:327-328`) and the SPA sends `Token <jwt>` (wrong scheme with a JWT value) only on tournament calls, which do not check auth anyway.
-* **Where the JWT is actually validated:** every `@api_view` without an explicit `authentication_classes` — match history, save-match, friends, users, export, anonymize, delete — via `REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES']` (`backend/settings.py:56-63`). Verified during the audit with curl + Bearer only (no cookies): 201/200 on those, 401 on `/profile/`.
+* **Where the JWT is actually validated:** every `@api_view` without an explicit `authentication_classes` — match history, save-match, friends, users, export, delete — via `REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES']` (`backend/settings.py:56-63`). Verified during the audit with curl + Bearer only (no cookies): 201/200 on those, 401 on `/profile/`.
 * **Where the session cookie is what works:** `profile_view` and `user_settings_view`.
 * `SIMPLE_JWT` (`backend/settings.py:65-71`): access 60 min, refresh 7 days, rotation on, blacklist-after-rotation on but the `token_blacklist` app is not installed, so rotation works and blacklisting is silently skipped.
 * Tournament endpoints have **no authentication** — a known limitation (see audit report).

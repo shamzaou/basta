@@ -55,10 +55,6 @@ class GamePhysics {
 
         this.ballVelocity.x = currentSpeed * (isLeftPaddle ? Math.abs(Math.cos(bounceAngle)) : -Math.abs(Math.cos(bounceAngle)));
         this.ballVelocity.z = currentSpeed * -Math.sin(bounceAngle);
-        // A dead-centre hit would return the ball perfectly flat; keep a small angle
-        if (Math.abs(this.ballVelocity.z) < 0.01) {
-            this.ballVelocity.z = (this.ballVelocity.z < 0 || (this.ballVelocity.z === 0 && Math.random() < 0.5)) ? -0.01 : 0.01;
-        }
         
         this.ballSpin.z = relativeIntersectZ * 0.1;
     }

@@ -17,17 +17,17 @@ Every finished Pong (PvP or vs AI) or TicTacToe game is written to `MatchHistory
 | User stats computation | `profile_view` GET: `total_matches` (excl. `TOURNAMENT`), `wins`, `win_rate = int(wins/total*100)`, `best_score` = the WIN with the largest `user − opponent` score difference (parsed from `"a-b"`), `match_history` = last 5 | `userapp/views.py:76-142` (`:82-87`, `:90-111`, `:114-123`) |
 | Longer history API | `match_history_view` — last 10 matches, `game_type`, `opponent`, `result`, `score`, `date` | `userapp/views.py:744-770`, route `urls.py:29` |
 | Dashboard markup | `#profile`: avatar, `#winrate-chart`, three `.stat-card`s (Games Played / Win Rate / Best Score), `.match-history`, friends panel | `templates/frontend/index.html:83-169` |
-| Dashboard rendering | `loadProfileData()`: fills the stat cards (`script.js:1141-1143`), builds each match card with a game-type badge, opponent, score, result class `win`/`loss`, localized date (`:1158-1213`), then loads friends/users | `static/frontend/js/script.js:1089-1244` |
-| Chart | `createWinratePieChart(wins, total)` — hand-written SVG: green win slice and red loss slice via arc paths (`A r r 0 largeArc 1 x y`), grey circle when no games, centre text `WIN RATE`, `NN%`, `N GAMES` | `script.js:1947-2056` |
+| Dashboard rendering | `loadProfileData()`: fills the stat cards (`script.js:1105-1107`), builds each match card with a game-type badge, opponent, score, result class `win`/`loss`, localized date (`:1158-1213`), then loads friends/users | `static/frontend/js/script.js:1053-1208` |
+| Chart | `createWinratePieChart(wins, total)` — hand-written SVG: green win slice and red loss slice via arc paths (`A r r 0 largeArc 1 x y`), grey circle when no games, centre text `WIN RATE`, `NN%`, `N GAMES` | `script.js:1913-2022` |
 | Chart styling | `.winrate-chart-container` | `static/frontend/css/styles.css` (grep `winrate`) |
-| Export (all stats) | `export_user_data`: games played, wins, losses, draws, win rate, full match list with ISO dates; SPA adds the avatar as base64 and downloads `user_data_<user>_<date>.json` | `userapp/views.py:970-1030`, `script.js:1549-1660` |
-| Game/tournament stats | `view_tournament` JSON: per-player `score` = wins (`Player.get_score`, `tournaments/models.py:95`), per-match scores/winner, `winner_ids`; rendered as players list + matches tables + winner banner | `tournaments/views.py:74-114`, `script.js:2158-2314` |
+| Export (all stats) | `export_user_data`: games played, wins, losses, draws, win rate, full match list with ISO dates; SPA adds the avatar as base64 and downloads `user_data_<user>_<date>.json` | `userapp/views.py:930-990`, `script.js:1515-1626` |
+| Game/tournament stats | `view_tournament` JSON: per-player `score` = wins (`Player.get_score`, `tournaments/models.py:95`), per-match scores/winner, `winner_ids`; rendered as players list + matches tables + winner banner | `tournaments/views.py:74-114`, `script.js:2124-2280` |
 | Excluding tournament games | `.exclude(game_type='TOURNAMENT')` in `profile_view`; `pong.js:866-867` deliberately does not save tournament matches to `MatchHistory` | `userapp/views.py:82-92` |
 
 ## How it interacts with the rest
 * Depends on JWT auth for `save-match`/`match-history`/`export-data` and on the session cookie for `profile_view` (module 09).
 * Games (module 10 for 3D Pong, module 06 for AI) only *write*; the dashboard only *reads*. No server-side validation of the reported score — the client is trusted (limitation).
-* GDPR (module 08): anonymization keeps `MatchHistory` rows (statistics without PII); deletion cascades them away.
+* GDPR (module 08): the JSON export includes the statistics block; account deletion cascades the `MatchHistory` rows away.
 
 ## Status after audit
 Verified live: four seeded matches → profile shows `4` games, `75%`, best score `3-0`, four match cards with PONG/TICTACTOE badges (screenshot `08-profile`); `export-data` JSON contains the same numbers; tournament table renders per-player scores (screenshot `14-tournament-view`). Unchanged by the audit except that the endpoints are now covered by tests (`GdprTests.test_export_contains_profile_and_history`).

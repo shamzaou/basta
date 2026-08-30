@@ -23,7 +23,7 @@ Use advanced 3D techniques (Three.js/WebGL) to render the Pong game, providing a
 | Ball | `SphereGeometry(0.2,32,32)`, `MeshPhongMaterial` with `map` = procedural `CanvasTexture`, emissive 0xff00aa | `pong.js:395-409`; texture painter `createBallTexture` `:411-441` |
 | Paddles | `BoxGeometry(0.2,0.8,1.4)`, emissive cyan Phong material, at x = ±4.9 | `pong.js:443-458` |
 | Net | `BoxGeometry(0.05,0.4,6)` | `pong.js:460-470` |
-| Physics | `GamePhysics.updatePhysics` — velocity + spin (`ballSpin.z` bends trajectory `:62`), mesh rotation `:68-69`, wall bounce damping `:72-75`, paddle hit-box `:78-85`, scoring `:88-89`; `handlePaddleCollision` computes bounce angle from hit offset (`bounceAngle = relativeIntersectZ·π/4`) and speeds up 5 % per hit | `pong.js:27-92` |
+| Physics | `GamePhysics.updatePhysics` — velocity + spin (`ballSpin.z` bends trajectory `:64`), mesh rotation `:70-71`, wall bounce with clamp-back 🆕 `:77-83`, paddle hit-box `:86-93`, scoring `:96-97`; `handlePaddleCollision` computes bounce angle from hit offset (`bounceAngle = relativeIntersectZ·π/4`) and speeds up 5 % per hit; `resetBall` serves with |vz| ∈ [0.01, 0.03] 🆕 `:35-45` | `pong.js:27-100` |
 | Input | `InputHandler` — W/S and ↑/↓ via a `Set` of pressed keys, arrow keys ignored in AI mode, cleanup removes listeners | `pong.js:507-582` |
 | AI | `PongAI` — samples ball once per second (`UPDATE_INTERVAL`), predicts intercept with error (`ACCURACY`) and `MISTAKE_CHANCE`, speed-limited moves | `pong.js:585-676` |
 | Game loop | `animate()` → `requestAnimationFrame`, `update()` only when `playing`, `render()` each frame | `pong.js:1111-1121`, `:1071-1098` |
@@ -33,6 +33,8 @@ Use advanced 3D techniques (Three.js/WebGL) to render the Pong game, providing a
 | Resize | `window 'resize'` → `handleResize` (note: two definitions; the later one at `:472` overrides and resizes to the window) | `pong.js:117`, `:352-357`, `:472-476` |
 | Result persistence | `finishMatch` → tournament `finish/` or `saveMatchHistory` → `/api/auth/save-match/` | `pong.js:826-957` |
 | Cleanup on route change | `cleanup()` cancels the animation frame and removes key listeners | `pong.js:1100-1109`; called from `script.js:100-103` |
+
+**🆕 Fixed in Aug-2026 audit — ball stuck on the wall:** the original wall check ran after the ball had moved and only flipped `ballVelocity.z` (×0.9 damping) without pushing the ball back inside the ±2.9 table. If the ball overshot the wall by more than 0.9 × its z-speed it was still outside on the next frame, flipped again, and so on — the vertical speed decayed to zero and the ball glided along the wall in a straight line (a Node harness driving the real `GamePhysics` reproduced it: final z 3.05, vz 0.0000). Serves were also nearly flat about a quarter of the time (vz drawn uniformly in ±0.02). The fix clamps `ball.position.z` to the wall, sets `ballVelocity.z` explicitly away from it with a 0.01 minimum, and serves with |vz| between 0.01 and 0.03 (`pong.js:35-45`, `:74-83`). Post-fix harness: 0 stuck rallies, 0 flat serves.
 
 ## How it interacts with the rest
 * The router creates/destroys the game (`script.js:199-224`); tournament matches pass nicknames through `window.currentMatchPlayers` (`pong.js:727-742`) and post scores to the tournament API (`:846`).

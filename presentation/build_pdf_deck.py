@@ -160,7 +160,7 @@ left("photo-devs.jpg", "Project Objectives",
             ("Secure authentication", "Email/password registration, 42 Intra OAuth for students, optional email-based 2FA and JWT tokens."),
             ("Persistent user profiles", "Display name, avatar, win/loss statistics, best score and complete match history."),
             ("Tournament mode", "Create a tournament of 3–8 nicknames, play a round-robin of matches and determine a winner."),
-            ("Application security &amp; GDPR", "Protection against SQL injection, XSS and CSRF; data export, anonymisation and deletion."),
+            ("Application security &amp; GDPR", "Protection against SQL injection, XSS and CSRF; data export and account deletion."),
             ("Collaborative development", "An Agile, feature-branch workflow with code reviews, Docker and a maintainable codebase.")], 3))
 left("photo-holo.jpg", "Scope of the Project",
      "The scope covers every essential aspect of a modern web application, from user management to gameplay and deployment:",
@@ -168,7 +168,7 @@ left("photo-holo.jpg", "Scope of the Project",
             ("Pong (3D)", "Local two-player mode on one keyboard and a single-player mode against the AI opponent."),
             ("Tournaments", "Creation, nickname registration, automatic match generation, tiebreakers, winner."),
             ("Profiles &amp; statistics", "Games played, win rate, best score, recent matches, JSON export of all data."),
-            ("Security &amp; privacy", "Hashed passwords, HTTPS, CSRF, 2FA + JWT, GDPR anonymisation / deletion."),
+            ("Security &amp; privacy", "Hashed passwords, HTTPS, CSRF, 2FA + JWT, GDPR data export / deletion."),
             ("Deployment", "Two containers (web, db) orchestrated with Docker Compose; one command to run."),
             ("Bonus feature", "A local Tic-Tac-Toe game whose results also appear in the match history."),
             ("Team process", "Agile iterations, Git feature branches, pull requests and peer review.")], 4))
@@ -211,7 +211,7 @@ mods = [("Web", "Use a framework as backend", "maj", "Major", "Django 4.2 + Djan
         ("User Management", "Implementing a remote authentication", "maj", "Major", "42 Intra OAuth 2.0 (authorize → callback → token exchange → JWT)"),
         ("AI-Algo", "Introduce an AI opponent", "maj", "Major", "PongAI: samples the ball once per second, predicts the intercept, tunable accuracy — no A*"),
         ("AI-Algo", "User and game stats dashboards", "min", "Minor", "Profile cards, win-rate chart, match history, tournament scoreboard, JSON export"),
-        ("Cybersecurity", "GDPR compliance: anonymization, local data management, account deletion", "min", "Minor", "Export, anonymize, delete, inactive-account cleanup"),
+        ("Cybersecurity", "GDPR compliance: anonymization, local data management, account deletion", "min", "Minor", "Data export, account deletion, inactive-account cleanup"),
         ("Cybersecurity", "Two-Factor Authentication (2FA) and JWT", "maj", "Major", "Email one-time code on login; SimpleJWT access / refresh tokens"),
         ("Graphics", "Use of advanced 3D techniques", "maj", "Major", "Three.js: perspective camera, lights, Phong materials, textured spinning ball"),
         ("Accessibility", "Support on all devices", "min", "Minor", "Responsive layout, media queries, hamburger menu"),
@@ -246,7 +246,7 @@ left("photo-nodes.jpg", "Database and API Design",
        '<tr><td>GET/PUT /api/auth/profile/</td><td>Profile, stats, avatar, display name</td></tr>'
        '<tr><td>/api/auth/save-match/ · match-history/</td><td>Record and list games</td></tr>'
        '<tr><td>/api/auth/friends/… · users/</td><td>Friends list management</td></tr>'
-       '<tr><td>/api/auth/export-data/ · anonymize-account/ · delete-account/</td><td>GDPR tools</td></tr>'
+       '<tr><td>/api/auth/export-data/ · delete-account/</td><td>GDPR tools</td></tr>'
        '<tr><td>/tournaments/api/tournaments/…</td><td>Create, add players, view, start / finish matches</td></tr>'
        '</table></div></div>')
 banner("banner-devices.jpg", "UI / UX Design",
@@ -280,7 +280,7 @@ shots("Features — Authentication and 2FA", "Email/password registration with a
       [("03-login.jpg", "Login page: email / password or “Sign in with 42”"), ("04-register.jpg", "Registration with optional two-factor authentication"),
        ("19-2fa-modal.jpg", "Second factor: 6-digit code sent by email, valid 10 minutes")], 3)
 shots("Features — Player Profile and Stats Dashboard", "Every finished game is recorded; the profile turns the history into a dashboard and the settings page holds the GDPR tools.",
-      [("08-profile.jpg", "Games played, win rate chart, best score, recent matches, friends panel"), ("09-settings.jpg", "Display name, avatar, Download my data, Anonymize, Delete account")], 2, tall=True)
+      [("08-profile.jpg", "Games played, win rate chart, best score, recent matches, friends panel"), ("09-settings.jpg", "Display name, avatar, Download my data, Delete account")], 2, tall=True)
 shots("Features — 3D Pong and the AI Opponent", "Three.js scene with a perspective camera, lit table and a spinning textured ball. In “Player vs AI” the PongAI samples the ball once per second, predicts where it will cross the paddle line and moves with a tunable error margin — no path-finding algorithm.",
       [("10-pong-mode-select.jpg", "Mode selection: Player vs Player (one keyboard) or Player vs AI"), ("11-pong-3d-vs-ai.jpg", "Game in progress against the AI — first to 3 points")], 2)
 shots("Features — Tournaments (and the bonus Tic-Tac-Toe)", "A logged-in user creates a tournament of 3–8 nicknames; every pair plays once, scores update the table, and tied leaders get automatic tiebreaker matches.",
@@ -299,9 +299,8 @@ banner("banner-lock.jpg", "Cybersecurity Features",
               ("CSRF &amp; XSS", "Django’s CSRF token is required on every state-changing request; user data is inserted with textContent."),
               ("Transport", "HTTPS everywhere — Gunicorn terminates TLS directly on port 443.")], 3))
 left("photo-shield.jpg", "GDPR Compliance",
-     "Users own their data: they can take it with them, remove their identity, or erase the account — and inactive accounts are cleaned up automatically.",
+     "Users own their data: they can take it with them or erase the account — and inactive accounts are cleaned up automatically.",
      cards([("Local data management", "“Download my data” exports profile, statistics and full match history as JSON."),
-            ("Anonymisation", "Replaces username, e-mail, display name and avatar with anonymous values, unlinks 42 and friends, disables login — statistics stay without personal data."),
             ("Account deletion", "Hard-deletes the account and everything attached to it in one click, after confirmation."),
             ("Inactive accounts", "A management command warns after 5 months of inactivity and deletes after 6 (last activity tracked by middleware).")], 2)
      + '<p class="note">The privacy policy on the About page describes the data collected, its use, retention and the user’s rights.</p>')
@@ -310,7 +309,7 @@ left("photo-shield.jpg", "GDPR Compliance",
 section("07", "Testing &amp; Evolution")
 banner("banner-team.jpg", "Testing Strategy",
        "Several levels of testing, each with its own focus, keep the application stable and secure.",
-       cards([("Unit tests", "Django test suite — 19 tests covering login and the whole 2FA flow, GDPR export / anonymise / delete, the inactive-account command and tournament tiebreakers (<code>make test</code>)."),
+       cards([("Unit tests", "Django test suite — 17 tests covering login and the whole 2FA flow, GDPR export / delete, the inactive-account command and tournament tiebreakers (<code>make test</code>)."),
               ("Integration tests", "Scripted end-to-end API flow: register → login → profile → matches → friends → export → tournament → delete."),
               ("Browser walkthrough", "Headless Chrome drives every page on desktop and phone, plays both games and checks for JavaScript errors."),
               ("Manual / acceptance", "Team members continuously tested each other’s features from an end-user perspective.")], 4))
@@ -318,8 +317,8 @@ left("photo-code.jpg", "Pre-Evaluation Audit (August 2026)",
      "Before the evaluation the codebase was audited end-to-end. Two bugs reported by users were traced to their root causes and fixed with regression tests:",
      cards([("“The 2FA code is sometimes rejected”", "The one-time code was kept in Django’s default in-memory cache, which is private to each process — and Gunicorn runs three workers. The verification request often reached a worker that had never seen the code. Fix: a database-backed cache shared by all workers."),
             ("“The 2FA e-mail is very slow”", "The e-mail was sent synchronously inside the login request with no timeout, so the response waited for the whole SMTP round-trip (and failed with 500 on any error). Fix: send in a background thread with a 10 s timeout — login now answers in ~80 ms."),
-            ("Also fixed", "<code>make test</code> configuration, stale static files, the token-refresh URL in the SPA, and the missing GDPR anonymisation endpoint."),
-            ("Result", "19/19 tests pass, clean build from scratch verified, 0 JavaScript errors across the full browser walkthrough.")], 2))
+            ("Also fixed", "<code>make test</code> configuration, stale static files, the token-refresh URL in the SPA, a settings-page bug that saved a placeholder display name, and the Pong ball getting stuck gliding along the top/bottom wall (wall bounce now clamps the ball and keeps a minimum angle)."),
+            ("Result", "17/17 tests pass, clean build from scratch verified, 0 JavaScript errors across the full browser walkthrough.")], 2))
 banner("banner-meeting.jpg", "Challenges and Lessons Learned",
        "Building a complete application from scratch provided technical and organisational hurdles — and lasting lessons.",
        cards([("Tournament logic", "Generating fair schedules and resolving ties correctly required careful data modelling and state management."),

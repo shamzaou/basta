@@ -37,9 +37,9 @@ Key points to say:
 * **One HTML document, many `<div class="page">`** (`#home #profile #settings #game #tictactoe #about #login #register #tournament`, plus `#otp-modal` outside `<main>`). `showPage` toggles `display` and `.active`.
 * **URL sync without reload**: `history.pushState({pageId}, '', '/profile')` (`script.js:67`). Back/Forward fire `popstate` (`:121-130`) → `showPage(event.state.pageId, false)` (no new history entry). On initial load the path is read (`:133-138`) and `replaceState` seeds the state object.
 * **Deep links work** because Django's catch-all route returns `index.html` for any path (`backend/urls.py:16`); the SPA then shows the page named by the path.
-* **Login state is client-side**: `localStorage.isLoggedIn === 'true'` (`checkLoginState :163`) switches between the two `<ul class="nav-links logged-in|logged-out">` and adds `body.is-logged-in`. Server-side, the session cookie/JWT decide whether API calls succeed; a stale `isLoggedIn` just leads to 401s and a redirect to login (`:1233-1237`).
+* **Login state is client-side**: `localStorage.isLoggedIn === 'true'` (`checkLoginState :163`) switches between the two `<ul class="nav-links logged-in|logged-out">` and adds `body.is-logged-in`. Server-side, the session cookie/JWT decide whether API calls succeed; a stale `isLoggedIn` just leads to 401s and a redirect to login (`:1197-1201`).
 * Nav links have both `href="/x"` and `onclick="showPage('x'); return false;"` — belt and braces; the global click handler (`:154-161`) covers any other internal link.
-* Two `DOMContentLoaded`-time initialisations (`:546-973`): form handlers, hamburger menu, settings edit buttons, avatar upload, delete/anonymize account, OTP verify, OAuth button, PLAY NOW / TOURNAMENT gating, tournament forms, download data, TicTacToe gating.
+* Two `DOMContentLoaded`-time initialisations (`:546-973`): form handlers, hamburger menu, settings edit buttons, avatar upload, delete account, OTP verify, OAuth button, PLAY NOW / TOURNAMENT gating, tournament forms, download data, TicTacToe gating.
 
 ## Page inventory and the API each one calls
 
@@ -49,7 +49,7 @@ Key points to say:
 | `#login` | `handleLogin :256`, `handleOTPVerification :310`, `initiate42OAuth :976` | `/api/auth/login/`, `/api/auth/verify-otp/`, `/api/auth/redirect_uri/` |
 | `#register` | `handleRegister :414` | GET+POST `/api/auth/register/` |
 | `#profile` | `loadProfileData :1090` → `loadFriendsList :1731`, `loadAllUsers :1779`, `createWinratePieChart :1948` | `/api/auth/profile/`, `/api/auth/friends/`, `/api/auth/users/`, `/api/auth/friends/add|remove/<id>/` |
-| `#settings` | `loadSettingsData :1248`, edit buttons `:645-701`, avatar upload `:704-783`, `handleDownloadUserData :1550`, `deleteAccount :795`, 🆕 `anonymizeAccount :833` | PUT `/api/auth/profile/`, `/api/auth/export-data/`, `/api/auth/avatar/<id>/`, DELETE `/api/auth/delete-account/`, 🆕 POST `/api/auth/anonymize-account/` |
+| `#settings` | `loadSettingsData :1211`, edit buttons `:645-701`, avatar upload `:704-783`, `handleDownloadUserData :1515`, `deleteAccount :795` | PUT `/api/auth/profile/`, `/api/auth/export-data/`, `/api/auth/avatar/<id>/`, DELETE `/api/auth/delete-account/` |
 | `#game` | `initializeGameIfNeeded :199` → `PongGame.initializeGame` | `/api/auth/save-match/` or `/tournaments/api/tournaments/<id>/finish/` |
 | `#tictactoe` | `new TicTacToeGame` | `/api/auth/match/create/`, `/api/auth/save-match/` |
 | `#tournament` | `handleTournamentCreation :1394`, `handleAddPlayers :2087`, `loadTournamentData :2159`, `startTournamentMatch :481` | `/tournaments/api/tournaments/…` |
@@ -100,22 +100,22 @@ If asked "why Three.js and not Babylon.js": the subject allows Three.js/WebGL fo
 ## The stats dashboard (AI-Algo Minor module) — how the profile page is rendered
 
 * Data: `GET /api/auth/profile/` (`profile_view`, `userapp/views.py:74-142`) returns `stats {games_played, win_rate, best_score}` and the last five `match_history` entries, excluding tournament games.
-* `loadProfileData` (`script.js:1089-1245`): fills the three stat cards (`.stat-card .stat-value`, `:1141-1143`), builds one `.match-card` per match with game-type badge, opponent, score, WIN/LOSS colour and date (`:1157-1213`), then draws the **win-rate pie chart** — a hand-built inline SVG (`createWinratePieChart :1947-2057`): two arc paths (green wins / red losses, or a grey disc when no games) with centred text "WIN RATE x% / n GAMES".
+* `loadProfileData` (`script.js:1053-1209`): fills the three stat cards (`.stat-card .stat-value`, `:1105-1107`), builds one `.match-card` per match with game-type badge, opponent, score, WIN/LOSS colour and date (`:1121-1177`), then draws the **win-rate pie chart** — a hand-built inline SVG (`createWinratePieChart :1947-2057`): two arc paths (green wins / red losses, or a grey disc when no games) with centred text "WIN RATE x% / n GAMES".
 * The friends panel and the *Find Users* tab are loaded right after (`loadFriendsList :1730`, `loadAllUsers :1778`).
 * A JSON version of the same numbers (wins/losses/draws/win rate + full history) is exposed by `GET /api/auth/export-data/` (`export_user_data`) and downloaded from Settings.
 
 ## Token handling
 
 * After login the SPA stores `authToken` (access), `refreshToken`, `userData`, `isLoggedIn`. Most `fetch` calls add `Authorization: Bearer <authToken>`; tournament calls send `Token <authToken>` (wrong scheme, harmless because those views do not authenticate).
-* `getAccessToken()` (`:1437`) decodes the JWT payload (`atob` of the middle segment) and refreshes if `exp` passed; `refreshAccessToken()` (`:1458`) posts `{refresh}` to **🆕 `/api/auth/token/refresh/`** (`:1467`; it previously pointed at `/api/token/refresh/`, which the catch-all answered with HTML, and on failure called an undefined `logout()` — now `handleLogout()` `:1484`); `scheduleTokenRefresh()` (`:1489`) sets a timer 1 min before expiry — only wired in the OAuth path (`:1070`).
+* `getAccessToken()` (`:1403`) decodes the JWT payload (`atob` of the middle segment) and refreshes if `exp` passed; `refreshAccessToken()` (`:1424`) posts `{refresh}` to **🆕 `/api/auth/token/refresh/`** (`:1433`; it previously pointed at `/api/token/refresh/`, which the catch-all answered with HTML, and on failure called an undefined `logout()` — now `handleLogout()` `:1450`); `scheduleTokenRefresh()` (`:1455`) sets a timer 1 min before expiry — only wired in the OAuth path (`:1034`).
 * `handleLogout()` (`:378`) posts to `/api/auth/logout/` (clears the session) and wipes localStorage; the JWT itself simply expires (no blacklist).
 
 ## Avatars, friends, chart, export
 
-* `fixImageUrl()` (`:1508`) turns any `profile_pictures` URL into `/api/auth/avatar/<userData.id>/?t=<timestamp>` so avatars work without Django media serving and bypass browser caching; `updateNavAvatar` / `clearAvatarCache` keep the nav image fresh. Upload: file → `FileReader` data URL → `PUT /api/auth/profile/ {profile_picture: dataURL}` (`:704-783`); the backend decodes base64 into `media/profile_pictures/user_<id>.<ext>`.
-* Friends panel (`:1662-1945`): two tabs (My Friends / Find Users), client-side filtering, Add/Remove buttons calling the friends endpoints and re-rendering.
+* `fixImageUrl()` (`:1474`) turns any `profile_pictures` URL into `/api/auth/avatar/<userData.id>/?t=<timestamp>` so avatars work without Django media serving and bypass browser caching; `updateNavAvatar` / `clearAvatarCache` keep the nav image fresh. Upload: file → `FileReader` data URL → `PUT /api/auth/profile/ {profile_picture: dataURL}` (`:704-783`); the backend decodes base64 into `media/profile_pictures/user_<id>.<ext>`.
+* Friends panel (`:1628-1911`): two tabs (My Friends / Find Users), client-side filtering, Add/Remove buttons calling the friends endpoints and re-rendering.
 * Win-rate pie chart is a hand-built inline **SVG** (`createWinratePieChart :1947-2057`): arc paths for wins (green) / losses (red), centre text "WIN RATE x% / n GAMES".
-* Download-my-data (`:1549-1659`): fetches the export JSON, fetches the avatar and embeds it as base64, adds `export_metadata`, and triggers a browser download via a Blob URL.
+* Download-my-data (`:1515-1625`): fetches the export JSON, fetches the avatar and embeds it as base64, adds `export_metadata`, and triggers a browser download via a Blob URL.
 
 ## Responsive / browser notes
 
@@ -126,7 +126,7 @@ If asked "why Three.js and not Babylon.js": the subject allows Three.js/WebGL fo
 ## Known frontend quirks (be ready to acknowledge)
 
 * Merge-conflict marker **comments** (`// <<<<<<< master`, `// =======`, `// >>>>>>> 8ec6d59`) remain at `script.js:23,49,56,139,149,151,1322,1391-1392,1436,2059,2088` — harmless (commented out) leftovers from a merge.
-* `loadTournamentData` is defined twice (`:239` and `:2158`); the later definition wins (function hoisting), which is the full one.
+* `loadTournamentData` is defined twice (`:239` and `:2124`); the later definition wins (function hoisting), which is the full one.
 * Feedback is `alert()`-based; the OTP modal closes on outside click.
 * External CDN dependencies (Bootstrap, jQuery, Popper, Three.js, Google Fonts) — the demo machine needs internet, or these must be vendored.
 * `pong.js` `initializeMatch()`/`updateMatchState()` and `tictactoe.js` `updateMatchState()` post to non-existent or no-op endpoints; errors are swallowed.

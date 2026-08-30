@@ -33,10 +33,12 @@ class GamePhysics {
     }
 
     resetBall() {
+        // Serve with a guaranteed vertical component so the ball never travels perfectly flat
+        const zSpeed = 0.01 + Math.random() * 0.02;
         this.ballVelocity.set(
             (Math.random() > 0.5 ? this.minBallSpeed : -this.minBallSpeed),
             0,
-            (Math.random() - 0.5) * 0.04
+            (Math.random() > 0.5 ? zSpeed : -zSpeed)
         );
         this.ballSpin.set(0, 0, 0);
         return new THREE.Vector3(0, 0.5, 0);
@@ -53,6 +55,10 @@ class GamePhysics {
 
         this.ballVelocity.x = currentSpeed * (isLeftPaddle ? Math.abs(Math.cos(bounceAngle)) : -Math.abs(Math.cos(bounceAngle)));
         this.ballVelocity.z = currentSpeed * -Math.sin(bounceAngle);
+        // A dead-centre hit would return the ball perfectly flat; keep a small angle
+        if (Math.abs(this.ballVelocity.z) < 0.01) {
+            this.ballVelocity.z = (this.ballVelocity.z < 0 || (this.ballVelocity.z === 0 && Math.random() < 0.5)) ? -0.01 : 0.01;
+        }
         
         this.ballSpin.z = relativeIntersectZ * 0.1;
     }
@@ -68,9 +74,15 @@ class GamePhysics {
         ball.rotation.x += this.ballVelocity.z * 0.2;
         ball.rotation.z -= this.ballVelocity.x * 0.2;
 
-        // Wall collisions
+        // Wall collisions. Push the ball back onto the wall and send it away explicitly:
+        // the old "flip the sign" version re-flipped on every frame the ball was still
+        // past the wall, so its vertical speed decayed to zero and the ball glided along
+        // the wall in a straight line.
         if (ball.position.z > 2.9 || ball.position.z < -2.9) {
-            this.ballVelocity.z = -this.ballVelocity.z * 0.9;
+            const wall = ball.position.z > 0 ? 2.9 : -2.9;
+            ball.position.z = wall;
+            const zSpeed = Math.max(Math.abs(this.ballVelocity.z) * 0.9, 0.01);
+            this.ballVelocity.z = wall > 0 ? -zSpeed : zSpeed;
             this.ballSpin.z *= 0.5;
         }
 

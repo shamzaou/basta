@@ -12,19 +12,19 @@ Implement a secure remote-authentication system (OAuth 2.0 with the 42 intranet)
 
 | Step | File → function | Ref |
 |---|---|---|
-| Button handler | `initiate42OAuth()` — clears `oauth_state`/`oauth_pending`, `POST /api/auth/redirect_uri/`, stores `oauth_pending`, `window.location.href = data.oauth_link` | `static/frontend/js/script.js:975-1015` |
+| Button handler | `initiate42OAuth()` — clears `oauth_state`/`oauth_pending`, `POST /api/auth/redirect_uri/`, stores `oauth_pending`, `window.location.href = data.oauth_link` | `static/frontend/js/script.js:939-979` |
 | Authorize URL builder | `redirect_uri` (POST, `@csrf_exempt`) builds `https://api.intra.42.fr/oauth/authorize?client_id=<FORTYTWO_CLIENT_ID>&redirect_uri=<FORTYTWO_REDIRECT_URI>&response_type=code` | `userapp/views.py:480-512`, route `userapp/urls.py:16` |
 | Settings | `FORTYTWO_CLIENT_ID`, `FORTYTWO_CLIENT_SECRET`, `FORTYTWO_REDIRECT_URI` from `.env`; legacy `JWT_SETTINGS['CLIENT_ID'/'REDIRECT_URI']` also read (`:238-240`) and must exist in `.env` | `backend/settings.py:274-276` |
 | Callback landing | 42 redirects to `https://localhost/oauth/callback` → Django catch-all (`backend/urls.py:16`) renders the SPA → `showPage('oauth/callback')` detects the path, reads `?code=`, calls `checkOAuthLogin()` and shows `home` | `script.js:25-46` |
-| Code exchange (client side) | `checkOAuthLogin()` strips the query string with `history.replaceState`, `POST /api/auth/get-token/ {code}`; stores `authToken`, `refreshToken`, `userData`, `isLoggedIn`; `scheduleTokenRefresh()`; hard-navigates to `/` | `script.js:1018-1086` |
+| Code exchange (client side) | `checkOAuthLogin()` strips the query string with `history.replaceState`, `POST /api/auth/get-token/ {code}`; stores `authToken`, `refreshToken`, `userData`, `isLoggedIn`; `scheduleTokenRefresh()`; hard-navigates to `/` | `script.js:982-1050` |
 | Code exchange (server side) | `get_token` (POST, `@csrf_exempt`): `requests.post('https://api.intra.42.fr/oauth/token', grant_type=authorization_code, client_id, client_secret, code, redirect_uri)` → `requests.get('https://api.intra.42.fr/v2/me', Bearer)` → `User.objects.get_or_create(email=…, defaults={username: login, is_42_user: True, intra_id: id})` → `login(request, user)` → `RefreshToken.for_user` → JSON `{access_token, refresh_token, user}` | `userapp/views.py:584-670`, route `urls.py:18` |
 | User model fields | `is_42_user`, `intra_id` | `userapp/models.py:10-11` |
 | Unused variant | `oauth_callback` view (GET, server-side redirect flow that sets `jwt_token`/`refresh_token` **HttpOnly cookies** and hard-codes `redirect_uri=https://localhost:443/home`) — not wired to the SPA; the 42 app redirect URI points to the SPA route, not to this view | `userapp/views.py:514-582`, route `urls.py:17` |
-| Error handling | non-200 from 42 → `401` with the provider's message (`:612-615`, `:625-628`); exceptions → `500` (`:668-670`); SPA falls back to `showPage('login')` (`script.js:1082-1084`) | |
+| Error handling | non-200 from 42 → `401` with the provider's message (`:612-615`, `:625-628`); exceptions → `500` (`:668-670`); SPA falls back to `showPage('login')` (`script.js:1046-1048`) | |
 
 ## How it interacts with the rest
 * Produces the same session + JWT pair as password login (`login()` → session cookie for `profile_view`; JWT for DRF endpoints) — see module 09.
-* 42 users share the `User` table: friends, match history, GDPR export/anonymize/delete all apply; `anonymize_account` clears `is_42_user`/`intra_id` (`views.py:872-873`).
+* 42 users share the `User` table: friends, match history, GDPR export/delete all apply (`delete_account` `views.py:851` cascades like for any other account).
 * A 42 user has `two_factor_enabled=False` and an unusable password (never set), so they cannot use the password form.
 
 ## Security notes (be ready for these)

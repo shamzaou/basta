@@ -67,7 +67,7 @@ For `profile_view` the DRF step differs: only `TokenAuthentication` and `Session
 
 **🆕 Changed in Aug-2026 audit:** `scripts/entrypoint.sh:52` runs `collectstatic --noinput` at every start (it was commented out), and `staticfiles/` was regenerated and committed. WhiteNoise serves from `staticfiles/` with immutable cache headers for hashed names, so browsers never see stale JS after a deploy.
 
-Media files (avatars) are **not** served by WhiteNoise nor by `static(MEDIA_URL…)` (no-op when `DEBUG=False`); the SPA rewrites `/media/profile_pictures/…` URLs to `/api/auth/avatar/<id>/` (`script.js:1508-1534`), a view that streams the file with `FileResponse`.
+Media files (avatars) are **not** served by WhiteNoise nor by `static(MEDIA_URL…)` (no-op when `DEBUG=False`); the SPA rewrites `/media/profile_pictures/…` URLs to `/api/auth/avatar/<id>/` (`script.js:1474-1500`), a view that streams the file with `FileResponse`.
 
 ## DRF defaults (`backend/settings.py:56-63`)
 

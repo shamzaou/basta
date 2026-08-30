@@ -30,11 +30,11 @@ Django is the *entire* server side: routing, ORM/migrations against PostgreSQL, 
 | Process manager | Gunicorn, 3 sync workers, TLS on 443 | `scripts/entrypoint.sh:56-59` |
 | Management command | `userapp/management/commands/delete_inactive_users.py` | `Command` `:12` |
 | Admin | `userapp/admin.py`, `gameapp/admin.py` | `User` registered with `UserAdmin`; Game/Player/Score registered |
-| Tests | `userapp/tests.py`, `tournaments/tests.py` | run via `make test` (19 tests) |
+| Tests | `userapp/tests.py`, `tournaments/tests.py` | run via `make test` (17 tests) |
 
 ### Two styles of view coexist
 * **Plain Django views** (`@require_POST`, `JsonResponse`, `json.loads(request.body)`): `login_view` `userapp/views.py:239`, `verify_otp` `:293`, `register_view` `:364`, `logout_view` `:465`, `redirect_uri` `:481`, `get_token` `:586`, and all of `tournaments/views.py`.
-* **DRF `@api_view` views** (`Response`, `request.data`, `IsAuthenticated`): `profile_view` `:76`, `user_settings_view` `:702`, `match_history_view` `:746`, `save_match_view` `:775`, `create_match` `:826`, `anonymize_account` `:851`, `delete_account` `:891`, `export_user_data` `:972`, friends views `:1033-1119`.
+* **DRF `@api_view` views** (`Response`, `request.data`, `IsAuthenticated`): `profile_view` `:76`, `user_settings_view` `:702`, `match_history_view` `:746`, `save_match_view` `:775`, `create_match` `:826`, `delete_account` `:851`, `export_user_data` `:932`, friends views `:993-1079`.
 
 ## How it interacts with the rest
 * Browser → Gunicorn (TLS) → Django middleware → URL resolver → view → ORM → PostgreSQL (`db` container).

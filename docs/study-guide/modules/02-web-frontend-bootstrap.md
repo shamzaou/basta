@@ -28,7 +28,7 @@ No `.row`/`.col-*` grid classes are used — layout is CSS Grid/Flexbox in `styl
 ## How it interacts with the rest
 Bootstrap only affects presentation. The SPA router (`script.js` → `showPage`) toggles `.page` divs; Bootstrap's `.container` keeps content widths consistent across the eight pages; `.btn*` classes give the Settings/GDPR buttons their base box model before `styles.css` recolours them.
 
-**🆕 Changed in Aug-2026 audit:** the Danger Zone gained an "Anonymize My Account" `.btn.btn-secondary` (`index.html:236`). (A language switcher was briefly added and then removed in the audit follow-up — it is not a selected module.)
+**🆕 Changed in Aug-2026 audit:** the display-name input in Settings no longer ships with a hard-coded `value="The Champion"` (`index.html:196`, now empty with a placeholder). (A language switcher and an "Anonymize My Account" button were briefly added and then removed at the team's request.)
 
 ## Status after audit
 Works ✅ visually on desktop and mobile (screenshots in `presentation/screenshots/`). Caveats: (1) all toolkit assets come from CDNs — the evaluation machine needs internet or the page loses Bootstrap CSS/JS, fonts and **Three.js**; (2) Bootstrap usage is shallow — be ready to justify it honestly.

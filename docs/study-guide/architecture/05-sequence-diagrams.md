@@ -31,7 +31,7 @@ sequenceDiagram
     end
 ```
 
-Token lifetimes: access 60 min, refresh 7 days (`backend/settings.py:65-71`). The frontend decodes `exp` from the access token to decide when to refresh (`script.js:1437-1506`).
+Token lifetimes: access 60 min, refresh 7 days (`backend/settings.py:65-71`). The frontend decodes `exp` from the access token to decide when to refresh (`script.js:1403-1472`).
 
 ## (b) 42 OAuth (authorization-code flow) — *Remote authentication* Major module
 
@@ -204,30 +204,19 @@ sequenceDiagram
     participant SPA as script.js (Settings page)
     participant API as userapp.views
     participant DB as PostgreSQL
-    participant FS as media/ (avatars)
 
     rect rgb(235,245,255)
     Note over U,DB: Export ("Download My Data")
-    U->>SPA: click → handleDownloadUserData (:1550)
-    SPA->>API: GET /api/auth/export-data/ Bearer (export_user_data :972)
+    U->>SPA: click → handleDownloadUserData (:1515)
+    SPA->>API: GET /api/auth/export-data/ Bearer (export_user_data :932)
     API->>DB: user fields + all MatchHistory + stats
     API-->>SPA: JSON; SPA also fetches /api/auth/avatar/<id>/ and embeds it as base64, then triggers a .json download
-    end
-
-    rect rgb(240,255,240)
-    Note over U,FS: 🆕 Anonymize ("Anonymize My Account")
-    U->>SPA: confirm dialog → anonymizeAccount (:833)
-    SPA->>API: POST /api/auth/anonymize-account/ Bearer + X-CSRFToken (anonymize_account :851)
-    API->>FS: delete profile picture file
-    API->>DB: username=anon_<hex>, email=anon_<hex>@anonymized.invalid, display_name NULL, names blank,<br/>is_42_user False, intra_id NULL, 2FA off, is_active False, unusable password,<br/>friends/friend_of cleared, authtoken deleted; MatchHistory KEPT
-    API->>API: logout(request)
-    API-->>SPA: 200 → clear localStorage → /login
     end
 
     rect rgb(255,240,240)
     Note over U,DB: Delete ("Delete My Account")
     U->>SPA: confirm → deleteAccount (:795)
-    SPA->>API: DELETE /api/auth/delete-account/ Bearer (delete_account :891)
+    SPA->>API: DELETE /api/auth/delete-account/ Bearer (delete_account :851)
     API->>DB: user.delete() → CASCADE MatchHistory, friends rows, authtoken; session row orphaned until expiry
     API-->>SPA: 200 → clear localStorage → /login
     end
