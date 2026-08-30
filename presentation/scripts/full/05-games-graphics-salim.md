@@ -4,7 +4,7 @@
 
 ## Slide 22 — Section divider
 
-Thanks, Nasser. Back to me for the games: the 3D Pong with its AI opponent — that's the Graphics and AI modules — and Tic-Tac-Toe with online matchmaking, the "another game" module.
+Thanks, Nasser. Back to me for the games: the 3D Pong with its AI opponent — that's the Graphics and AI modules — and Tic-Tac-Toe, the "another game" module.
 
 ---
 
@@ -36,17 +36,15 @@ And no A\*, which the subject forbids: A\* searches a graph, and Pong has no gra
 
 ---
 
-## Slide 25 — Tic-Tac-Toe with online matchmaking
+## Slide 25 — Tic-Tac-Toe: the second game, history and matchmaking
 
-The "add another game" module asks for a game distinct from Pong, user history, and a matchmaking system.
+The "add another game" module asks for three things: a game distinct from Pong, user history tracking, and a matchmaking system.
 
-**Local mode** — two players on one device; the result goes to the logged-in user's history.
+**The game.** Tic-Tac-Toe is turn-based, the opposite of Pong. Two players share one device; X and O alternate on the three-by-three board. Win lines and draws are detected in the browser, a move on an occupied cell or after the game is over is ignored, and "Reset game" starts over. Like Pong, it is local by design — there is no online play anywhere in the project.
 
-**Matchmaking.** "Online — find an opponent" posts to `/api/game/ttt/queue/`. Each waiting player carries a rating: their Tic-Tac-Toe win rate, fifty for new players. When someone joins, the server pairs them with the waiting player whose rating is **closest** — that's the "fair and balanced matches" the subject asks for. Queue entries older than sixty seconds are dropped, and the browser polls the queue every two seconds until it gets a match id.
+**User history.** When a game ends, the result is posted to `/api/auth/save-match/` with the JWT, and the server stores one `MatchHistory` row — game type TICTACTOE, win, loss or draw, and the date. It shows up in the profile's recent matches, in the win-rate chart and in the JSON export, exactly like a Pong game.
 
-**Online play with server-side rules.** The board lives in the database, not in the browser. Every move is `POST …/move/` with a cell index; the server takes a row lock and checks it's your turn and the cell is free, then detects win lines or a draw. Both clients poll the match state every second and redraw. Leaving is a forfeit: the other player wins.
-
-**History.** When a match finishes, the server writes one `MatchHistory` row **per player** — win, loss or draw with the opponent's real username — so it appears on both profiles, in both win-rate charts and in the JSON export.
+**Matchmaking.** Our matchmaking is the tournament system. A tournament of three to eight players is scheduled as a round-robin, the page announces the next pairing — "Next match: A versus B" — and if the leaders finish tied, the server creates tiebreaker matches until one winner remains. Nour presents it in the next section.
 
 Now Nour will present the tournament system.
 
@@ -54,9 +52,9 @@ Now Nour will present the tournament system.
 
 ## If they ask
 
-- *"Why polling instead of WebSockets?"* — Turn-based, so 1–2 seconds of latency is invisible; it's stateless and fits Gunicorn's sync workers with zero extra infrastructure. Django Channels is the upgrade path, and it's the same one we'd use for online Pong.
-- *"Can two users get the same match twice / play themselves?"* — The queue excludes yourself; if you already have an active match, `queue` returns it instead of creating another.
-- *"Why closest rating and not first-come?"* — Fairness. Ties on rating are broken by who waited longest.
+- *"Why is Tic-Tac-Toe not played online?"* — A project decision: no online play at all, for either game — the remote-players module is not selected. We did prototype a queue-based online mode and removed it again to keep the project consistent. The module asks for history and matchmaking; the tournament system is our matchmaking.
+- *"Where is the matchmaking?"* — The tournament: the server schedules every pairing, announces who plays next and creates tiebreakers. Nour shows it next.
+- *"Where does the Tic-Tac-Toe result go?"* — `POST /api/auth/save-match/` with the JWT, same endpoint as Pong; one MatchHistory row for the logged-in user.
 - *"Can the AI lose?"* — Yes: the one-second blind window plus prediction error and random mistakes, at human paddle speed. In a first-to-three game either side can win.
 - *"Does the AI adapt to the faster ball?"* — Yes, because it reads the current velocity at every snapshot.
 - *"Is the AI on the server?"* — No, in the browser inside the render loop; only the final result goes to the server.

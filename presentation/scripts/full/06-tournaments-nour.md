@@ -14,7 +14,7 @@ Thank you, Salim. I am Nour again. I made the tournament system. I will show you
 
 On the left, you create a tournament. First, you must be logged in. You choose the number of players: **from three to eight**.
 
-Then you type a **nickname** for each player. Every nickname must be different. An empty name is not allowed. A very long name is not allowed.
+Then you type a **nickname** for each player. Your own display name is already filled in for the first player. Every nickname must be different. An empty name is not allowed. A very long name is not allowed.
 
 On the right, this is the tournament page.
 
@@ -42,7 +42,7 @@ Here is the full flow in six steps.
 
 **Step four — Play.** "Start Match" opens Pong. Two players, one keyboard. The nicknames are on the screen.
 
-**Step five — Score.** When the game ends, the score goes to the server. The table updates. The next match is announced.
+**Step five — Score.** When the game ends, the score goes to the server. The table updates. The next match is announced. This is the **matchmaking** of our project: the server decides who plays next, and it tells the players.
 
 **Step six — Winner.** If two players have the same score at the end, the system creates extra matches. We call them **tiebreaker** matches. It continues until there is one winner.
 

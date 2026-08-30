@@ -14,7 +14,7 @@ Thank you, Nasser. I'm Ali. I will close the presentation with the team and the 
 
 Each member owned a group of modules from end to end — backend, frontend and tests — and reviewed the pull requests of the others.
 
-**Salim** — the Graphics module: 3D Pong with Three.js and the physics. The Gameplay module: the second game, Tic-Tac-Toe, with online matchmaking and history. And Cybersecurity and GDPR: anonymization, data export, account deletion, the retention cleanup and the privacy policy.
+**Salim** — the Graphics module: 3D Pong with Three.js and the physics. The Gameplay module: the second game, Tic-Tac-Toe, with match history and tournament matchmaking. And Cybersecurity and GDPR: anonymization, data export, account deletion, the retention cleanup and the privacy policy.
 
 **Nasser** — Authentication: registration, login and sessions. Remote authentication: the 42 OAuth flow. And the 2FA and JWT module: e-mail codes, SimpleJWT tokens and their automatic refresh in the SPA.
 
@@ -28,9 +28,9 @@ Each member owned a group of modules from end to end — backend, frontend and t
 
 Ft_transcendence is a complete, secure and fun web gaming platform. It satisfies all the modules we selected: **seven Major and six Minor — ten major-equivalents**, where seven are required.
 
-We learned full-stack development with Django, a JavaScript SPA, Three.js and PostgreSQL inside Docker. We learned online game logic, deployment and application security. Our Agile workflow with feature branches kept four developers productive, and the code reviewable.
+We learned full-stack development with Django, a JavaScript SPA, Three.js and PostgreSQL inside Docker. We learned game logic, deployment and application security. Our Agile workflow with feature branches kept four developers productive, and the code reviewable.
 
-The modular structure is a solid base for the next evolution: real-time online Pong, chat and a richer AI. And the pre-evaluation audit leaves the project with a green test suite and documented, root-caused fixes.
+The modular structure is a solid base for the next evolution: remote play, chat and a richer AI. And the pre-evaluation audit leaves the project with a green test suite and documented, root-caused fixes.
 
 ---
 

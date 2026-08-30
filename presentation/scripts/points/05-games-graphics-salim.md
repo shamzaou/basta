@@ -15,15 +15,15 @@
 - **AI rule 3 — simulated keyboard**: decision = hold ArrowUp/ArrowDown in the same InputHandler as a human → identical paddle speed. Every 5 s the score tunes judgement: 2 ahead → accuracy 0.6 / mistakes 15 %; 2 behind → 0.9 / 5 %.
 - **No A\***: Pong has no graph to search; it's kinematic prediction.
 
-## Slide 25 — Tic-Tac-Toe with online matchmaking (the "another game" module)
-- **Local**: two players, one device; result saved to the logged-in user's history.
-- **Matchmaking**: `POST /api/game/ttt/queue/` — rating = your Tic-Tac-Toe win rate (50 for new players); server pairs the two **closest ratings**; entries older than 60 s dropped; client polls every 2 s.
-- **Server-side rules**: board in the DB; `POST …/move/` validates turn + free cell under a row lock; win lines / draw detected on the server; both clients poll state every 1 s; `leave` = forfeit.
-- **History**: one `MatchHistory` row **per player** (WIN/LOSS/DRAW, opponent's name) → both profiles, win-rate chart, JSON export.
+## Slide 25 — Tic-Tac-Toe: the second game, history and matchmaking (the "another game" module)
+- **A game distinct from Pong**: turn-based, two players on one device; X and O alternate; win lines / draw detected in the browser; illegal moves ignored; "Reset game".
+- **User history**: result posted to `/api/auth/save-match/` with the JWT → one `MatchHistory` row (TICTACTOE, WIN/LOSS/DRAW) → profile, win-rate chart, JSON export.
+- **Matchmaking = the tournament system**: round-robin pairings, "Next match: A vs B" announced, tiebreaker rounds until one winner (Nour's section).
+- **Not online**: both games run on one device by design — the "remote players" module is not selected.
 
 ## Be ready for
-- Why polling, not WebSockets? Simple, stateless, fits Gunicorn sync workers; 1–2 s is fine for turn-based play; Channels is the upgrade.
-- Why closest rating? "Fair and balanced matches" from the subject.
+- Why is there no online Tic-Tac-Toe? Project decision: no online play at all. The module asks for history + matchmaking, and the tournament system is our matchmaking. (An online queue was prototyped and removed.)
+- Where is the matchmaking then? Tournament: the server schedules every pairing and announces who plays next.
 - Does the AI see bounces? Yes — the prediction folds the path at ±2.9 (the wall).
 - Can the AI lose? Yes — 1 s blind window + error + mistakes; it plays at human paddle speed.
 - Hand over to Nour: tournaments.

@@ -12,7 +12,7 @@ Thanks, Salim. Last technical section: how we test, what the pre-evaluation audi
 
 Four levels.
 
-**Unit tests** — the Django test suite, `make test`. Fifty-four tests across the three apps: thirty in `userapp`, fourteen in `gameapp`, ten in `tournaments`. They cover login and the whole 2FA flow — including a slow mail backend and a failing one — GDPR export, anonymize and delete, the inactive-account command, tournament tiebreaker rounds, Tic-Tac-Toe matchmaking and move validation, and server-side rendering.
+**Unit tests** — the Django test suite, `make test`. Fifty-four tests across the three apps: forty-one in `userapp`, ten in `tournaments`, three in `gameapp`. They cover login and the whole 2FA flow — including a slow mail backend and a failing one — the OAuth `state` check, the presence heartbeat, unique display names, rule-by-rule password feedback, the missing 2FA toggle for 42 accounts, JWT on the profile, GDPR export, anonymize and delete, the inactive-account command, tournament tiebreaker rounds, and server-side rendering.
 
 **Integration** — a scripted end-to-end API flow: register, login, profile, matches, friends, export, tournament, delete — every step expected 2xx.
 
@@ -34,13 +34,13 @@ Then the smaller items — `make test` configuration, stale static files, the to
 
 A second sweep found and fixed thirty more bugs — the silent JWT expiry after sixty minutes, secrets in logs, duplicate-registration errors, tournament persistence, Save Settings, the 2FA toggle, Pong resize, touch and pause leaks, input validation.
 
-And a third pass checked every module against the subject text: a stored XSS through tournament nicknames was fixed, the AI now presses simulated keys at player speed and anticipates bounces, database credentials moved to `.env`, the tournament API requires login, the next-match announcement was added, and GDPR anonymization, online Tic-Tac-Toe matchmaking and real SSR were completed. Fifty-four of fifty-four tests pass, zero JavaScript errors.
+And a third pass checked every module against the subject text: a stored XSS through tournament nicknames was fixed, the AI now presses simulated keys at player speed and anticipates bounces, database credentials moved to `.env`, the tournament API requires login, the next-match announcement was added, GDPR anonymization was made 42-safe, 42 accounts lost the 2FA toggle, password errors became rule-specific, and real SSR was completed. A final pass added the OAuth `state` parameter, the online/offline status of friends, unique display names and JWT on the profile — and removed an online Tic-Tac-Toe prototype again, because the project has no online play by design and matchmaking is the tournament system. Fifty-four of fifty-four tests pass, zero JavaScript errors.
 
 ---
 
 ## Slide 38 — Challenges and lessons learned
 
-Tournament logic — fair schedules and correct tie resolution needed careful modelling. State in vanilla JS — without a framework, login state, routing and views are managed by hand. Asynchronous flows — OAuth redirects, 2FA, matchmaking polling. Docker networking. And the one I'd underline: **multi-process bugs** — the 2FA cache bug does not exist with one worker; it only appears on the real deployment. Test on what you ship.
+Tournament logic — fair schedules and correct tie resolution needed careful modelling. State in vanilla JS — without a framework, login state, routing and views are managed by hand. Asynchronous flows — OAuth redirects, 2FA, the presence heartbeat. Docker networking. And the one I'd underline: **multi-process bugs** — the 2FA cache bug does not exist with one worker; it only appears on the real deployment. Test on what you ship.
 
 Lessons: a well-defined API, a mature framework, a disciplined Git workflow and security from day one all paid off.
 
@@ -50,9 +50,9 @@ Lessons: a well-defined API, a mature framework, a disciplined Git workflow and 
 
 I'd rather state these than have you find them.
 
-Pong is local multiplayer only — online play exists for Tic-Tac-Toe, not Pong. Matchmaking and online moves use one-to-two-second polling, not WebSockets. JWTs are in `localStorage`. The 42 OAuth flow has no `state` parameter. There is no rate limit on the 2FA code. Third-party assets come from CDNs. The 2FA mailbox needs a valid Gmail app password. Pong scores are reported by the client.
+Both games are local by design — the remote-players module is not selected, so there is no online play; friends only get an online status. JWTs are in `localStorage`. There is no rate limit on the 2FA code. Third-party assets come from CDNs. The 2FA mailbox needs a valid Gmail app password. Pong scores are reported by the client. The GDPR cleanup command is run by hand, not by a cron inside the image.
 
-Next steps, in order: real-time online Pong and live chat with WebSockets through Django Channels; the OAuth `state` parameter and rate limiting on login and 2FA; server-authoritative Pong scores; a selectable AI difficulty; and leaderboards, achievements and 2FA recovery codes.
+Next steps, in order: rate limiting on login and 2FA, plus recovery codes; server-authoritative Pong scores; a selectable AI difficulty; leaderboards and achievements; and — only if the remote-players module were added — real-time online play with WebSockets through Django Channels.
 
 Ali will close with the team and the conclusion.
 

@@ -7,8 +7,8 @@
 - Ft_transcendence = our capstone project at 42 Abu Dhabi.
 - It is a website for games.
 - Main game: **Pong in 3D**.
-- Second game: **Tic-Tac-Toe** — local, or online with matchmaking.
-- Also: accounts, login with 42, 2FA by e-mail, profile with statistics, friends, tournaments, GDPR tools.
+- Second game: **Tic-Tac-Toe** — two players on one computer. Every game is saved in the player's history.
+- Also: accounts, login with 42, 2FA by e-mail, profile with statistics, friends (with online status), tournaments, GDPR tools.
 - Technology: **Django** (Python) backend, **PostgreSQL** database, **Bootstrap** + JavaScript frontend, **Three.js** for 3D.
 - Runs in **Docker** with HTTPS.
 - The site is a Single Page Application: the server sends the first page, then JavaScript changes the views.

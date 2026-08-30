@@ -3,7 +3,7 @@
 ## Slide 35 — Section divider
 
 ## Slide 36 — Testing strategy
-- **Unit tests** — `make test`: 54 tests (userapp 30, gameapp 14, tournaments 10): 2FA flow incl. slow/failing mail backends, GDPR export/anonymize/delete, inactive-account command, tiebreaker rounds, matchmaking + moves, SSR.
+- **Unit tests** — `make test`: 54 tests (userapp 41, tournaments 10, gameapp 3): 2FA flow incl. slow/failing mail backends, OAuth `state`, presence, unique display name, password feedback, no 2FA for 42 accounts, JWT on profile, GDPR export/anonymize/delete, inactive-account command, tiebreaker rounds, SSR.
 - **Integration** — scripted API flow: register → login → profile → matches → friends → export → tournament → delete.
 - **Browser walkthrough** — headless Chrome on every page, desktop + phone, both games, 0 JS errors.
 - **Manual / acceptance** — cross-testing each other's features in Chrome and Firefox.
@@ -13,13 +13,14 @@
 - **"2FA e-mail very slow"** → `send_mail` synchronous in the request, no timeout, 500 on SMTP error. Fix: background thread + `EMAIL_TIMEOUT=10` → login ~80 ms.
 - Also fixed: `make test` settings, stale static files, refresh URL, "The Champion" display-name bug, ball gliding on the wall, stale avatar after switching users.
 - Second sweep: 30 bugs (silent JWT expiry, secrets in logs, duplicate registration, tournament persistence, Save Settings, 2FA toggle, Pong resize/touch/pause, validation).
-- Third pass vs the subject: stored XSS via nicknames, AI simulated keys at player speed + bounce prediction, DB creds in `.env`, tournament API login, next-match, anonymization, matchmaking, real SSR. 54/54 green.
+- Third pass vs the subject: stored XSS via nicknames, AI simulated keys at player speed + bounce prediction, DB creds in `.env`, tournament API login, next-match, anonymization (42-safe), real SSR, no 2FA toggle for 42 accounts, rule-by-rule password errors.
+- Final pass: OAuth `state` (signed, single use), online/offline status of friends, unique display name, JWT on profile/settings; the online Tic-Tac-Toe prototype removed — no online play by design, matchmaking = tournaments. 54/54 green.
 
 ## Slide 38 — Challenges and lessons
-- Tournament logic; state management in vanilla JS; async flows (OAuth, 2FA, polling); Docker networking; multi-process bugs only visible on the real deployment.
+- Tournament logic; state management in vanilla JS; async flows (OAuth, 2FA, heartbeat); Docker networking; multi-process bugs only visible on the real deployment.
 - Lessons: clear API, mature framework, disciplined Git, security from day one.
 
 ## Slide 39 — Limitations and next steps (say them before they are asked)
-- Pong local only (online exists for Tic-Tac-Toe); polling not WebSockets; JWT in localStorage; no OAuth `state`; no OTP rate limit; CDN assets; Gmail app password needed; client-reported Pong scores.
-- Next: WebSockets (Channels) for online Pong + chat; OAuth state + rate limiting; server-authoritative scores; AI difficulty selector; leaderboards, achievements, 2FA recovery codes.
+- Both games local by design (no remote-players module); JWT in localStorage; no OTP rate limit; CDN assets; Gmail app password needed; client-reported Pong scores; GDPR cleanup run by hand.
+- Next: rate limiting + 2FA recovery codes; server-authoritative scores; AI difficulty selector; leaderboards, achievements; only if remote players were added — WebSockets (Channels).
 - Hand over to Ali for the team and conclusion.

@@ -29,9 +29,3 @@ class Score(models.Model):
 
     class Meta:
         ordering = ['-recorded_at']
-
-
-# ---------------------------------------------------------------------------
-# Online TicTacToe matchmaking (Gameplay module: "Another game with user history
-# and matchmaking"). Added Aug 2026.
-# ---------------------------------------------------------------------------

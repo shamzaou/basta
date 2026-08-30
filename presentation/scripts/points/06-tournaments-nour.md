@@ -5,7 +5,7 @@
 
 ## Slide 27 — Tournament screenshots
 - Left picture: create a tournament. Choose the number of players: **3 to 8**.
-- Type a **nickname** for each player. Nicknames must be different. Empty names are not allowed.
+- Type a **nickname** for each player. Your own display name is filled in for player 1. Nicknames must be different. Empty names are not allowed.
 - Right picture: the tournament page.
   - List of players with their score.
   - List of matches. Every pair plays **one time** (round-robin).
@@ -18,7 +18,7 @@
 2. **Register** — every player writes a nickname.
 3. **Schedule** — the server makes all the matches.
 4. **Play** — "Start Match" opens Pong; two players, one keyboard; nicknames on the screen.
-5. **Score** — the result goes to the server; the table updates; "next match" is announced.
+5. **Score** — the result goes to the server; the table updates; "next match" is announced. This is the **matchmaking** of our project: the server decides who plays next.
 6. **Winner** — if two players have the same score, the system creates **tiebreaker** matches until one winner.
 
 - Three extra cards:

@@ -169,7 +169,7 @@ add(f'''<section class="slide title"><img class="photo" src="{A("photo-city.jpg"
 <h1>Capstone Project:<br>Ft_Transcendence</h1><div class="rule"></div>
 <div class="team"><div><b>Salim Hamzaoui</b> · shamzaou</div><div><b>Nasser Alzaabi</b> · naalzaab</div>
 <div><b>Alisher Abdullaev</b> · alabdull</div><div><b>Nour Murat</b> · nurmurat</div></div>
-<div class="meta">FAST_PONG — a web platform for 3D Pong and Tic-Tac-Toe with online matchmaking, tournaments, player statistics, 42 login, 2FA and GDPR tools<br>
+<div class="meta">FAST_PONG — a web platform for 3D Pong and Tic-Tac-Toe, tournaments with matchmaking, player statistics, 42 login, 2FA and GDPR tools<br>
 7 Major + 6 Minor modules = 10 major-equivalents · Evaluation date: ____ / ____ / 2026</div>
 </div></section>''')
 
@@ -181,7 +181,7 @@ add('<section class="slide"><div class="full" style="text-align:center"><h2 styl
 sec("01")
 banner("banner-tech.jpg", "Project Overview",
        "Ft_transcendence is a web-based multiplayer gaming platform developed as the capstone project of the 42 Abu Dhabi curriculum. "
-       "Its core is a modern 3D implementation of the classic Pong, joined by a second game — Tic-Tac-Toe with online matchmaking — and a complete user experience: "
+       "Its core is a modern 3D implementation of the classic Pong, joined by a second game — Tic-Tac-Toe — and a complete user experience: "
        "secure accounts, 42 Intra login, email two-factor authentication, player profiles with statistics and match history, a friends list, a tournament system and GDPR tools.",
        '<p class="intro">The application is a Single Page Application: Django renders the first page on the server, then JavaScript swaps views without full reloads. '
        'The backend is Django (Python) with a PostgreSQL database; Gunicorn serves the site over HTTPS, and the whole stack runs in Docker Compose. '
@@ -191,7 +191,7 @@ banner("banner-tech.jpg", "Project Overview",
                 ("Data &amp; Ops", "PostgreSQL 13, Docker Compose, Git/GitHub feature-branch workflow")], 3))
 left("photo-devs.jpg", "Project Objectives",
      "The goal was to design, develop and deploy a fully functional and secure web application centred on a Pong game. The objectives set at the outset were:",
-     cards([("Functional gaming platform", "A fully operational website with 3D Pong (two players or versus AI) and a second game, Tic-Tac-Toe, playable locally or online."),
+     cards([("Functional gaming platform", "A fully operational website with 3D Pong (two players or versus AI) and a second game, Tic-Tac-Toe, played locally on one device; every game is recorded in the player's history."),
             ("Secure authentication", "Email/password registration, 42 Intra OAuth for students, optional email-based 2FA and JWT tokens."),
             ("Persistent user profiles", "Display name, avatar, friends, win/loss statistics, best score and a complete match history for both games."),
             ("Tournament mode", "Create a tournament of 3–8 nicknames, play a round-robin of Pong matches and determine a winner."),
@@ -201,7 +201,7 @@ left("photo-holo.jpg", "Scope of the Project",
      "The scope covers every essential aspect of a modern web application, from user management to gameplay and deployment:",
      cards([("User management", "Registration, login, 42 OAuth, profile editing, avatar upload, friends list."),
             ("Pong (3D)", "Local two-player mode on one keyboard and a single-player mode against the AI opponent."),
-            ("Tic-Tac-Toe", "Second game: local mode, or online against another logged-in user found by matchmaking."),
+            ("Tic-Tac-Toe", "Second game, played locally on one device; each result is saved to the user's match history."),
             ("Tournaments", "Creation, nickname registration, automatic match generation, tiebreakers, winner."),
             ("Profiles &amp; statistics", "Games played, win rate, best score, recent matches, JSON export of all data."),
             ("Security &amp; privacy", "Hashed passwords, HTTPS, CSRF, 2FA + JWT, GDPR anonymize / export / delete."),
@@ -243,8 +243,8 @@ mods = [("Web", "Use a framework as backend", "maj", "Major", "Django 4.2 + Djan
         ("Web", "Use a front-end framework or toolkit", "min", "Minor", "Bootstrap 4.5 + custom CSS; vanilla-JS SPA router"),
         ("Web", "Use a database for the backend", "min", "Minor", "PostgreSQL 13 via the Django ORM and migrations"),
         ("User Management", "Standard user management, authentication, users across tournaments", "maj", "Major", "Register / login, profiles, avatars, friends, stats, match history; tournaments of nicknames"),
-        ("User Management", "Implementing a remote authentication", "maj", "Major", "42 Intra OAuth 2.0 (authorize → callback → server-side code exchange → JWT)"),
-        ("Gameplay &amp; UX", "Add another game with user history and matchmaking", "maj", "Major", "Tic-Tac-Toe: local or online — the queue pairs players by win rate, turn-based play, history for both"),
+        ("User Management", "Implementing a remote authentication", "maj", "Major", "42 Intra OAuth 2.0 (signed state → authorize → callback → state check + server-side code exchange → JWT)"),
+        ("Gameplay &amp; UX", "Add another game with user history and matchmaking", "maj", "Major", "Tic-Tac-Toe (local, one device) with per-user match history; matchmaking = the tournament system (round-robin pairings, next-match announcement, tiebreakers)"),
         ("AI-Algo", "Introduce an AI opponent", "maj", "Major", "PongAI: looks once per second, predicts the intercept incl. wall bounces, presses simulated arrow keys at player speed — no A*"),
         ("AI-Algo", "User and game stats dashboards", "min", "Minor", "Profile cards, win-rate chart, match history, tournament scoreboard, JSON export"),
         ("Cybersecurity", "GDPR compliance: anonymization, local data management, account deletion", "min", "Minor", "Anonymization (42-safe), data export, edit data, account deletion, inactive-account cleanup"),
@@ -270,7 +270,7 @@ full("System Architecture",
      '<div><p class="intro">The application is a monolith with a clear separation between frontend and backend, running in containers:</p>'
      '<ul><li>The browser loads one server-rendered page and then runs the SPA.</li>'
      '<li>Gunicorn (3 workers) terminates HTTPS on port 443 and runs the Django app; WhiteNoise serves static files.</li>'
-     '<li>Django exposes the REST API — accounts, games, Tic-Tac-Toe matchmaking, tournaments — and talks to PostgreSQL only through the ORM.</li>'
+     '<li>Django exposes the REST API — accounts, presence, match history, tournaments (matchmaking) — and talks to PostgreSQL only through the ORM.</li>'
      '<li>External services: the 42 API for OAuth and Gmail SMTP for 2FA codes.</li>'
      '<li>Docker Compose defines the two services, the network and the database volume.</li></ul></div>'
      f'<figure><img src="{A("architecture.jpg", max_w=1300)}" style="width:100%;border:1px solid #c5d6f2;border-radius:6px;background:#fff"><figcaption class="cap" style="text-align:center">Figure 2: System architecture diagram</figcaption></figure></div>')
@@ -278,16 +278,16 @@ left("photo-nodes.jpg", "Database and API Design",
      "The schema is defined with Django models, grouped into three apps; the frontend consumes a RESTful JSON API.",
      '<div class="two">'
      + cards([("userapp", "<b>User</b> (custom, email login, 2FA flag, avatar, friends M2M, last activity) and <b>MatchHistory</b> (game type, opponent, result, score, date)."),
-              ("gameapp", "<b>TicTacToeQueue</b> (waiting player + rating) and <b>TicTacToeMatch</b> (both players, 9-cell board, turn, status, winner)."),
+              ("gameapp", "the <b>index</b> view that server-renders the requested page (SSR); both games run in the browser and post their results to MatchHistory. Legacy Game / Player / Score models."),
               ("tournaments", "<b>Tournament</b>, <b>Player</b> (nickname per tournament) and <b>Match</b> (scores, winner, tiebreaker flag).")], 1)
      + '<div><table><tr><th>Endpoint</th><th>Purpose</th></tr>'
        '<tr><td>POST /api/auth/register/ · login/ · logout/</td><td>Accounts and sessions (login starts 2FA)</td></tr>'
        '<tr><td>POST /api/auth/verify-otp/ · token/refresh/</td><td>Check the emailed code, issue / refresh JWT</td></tr>'
        '<tr><td>POST /api/auth/redirect_uri/ · get-token/</td><td>42 OAuth link and code exchange</td></tr>'
-       '<tr><td>GET/PUT /api/auth/profile/ · friends/… · users/</td><td>Profile, stats, avatar, display name, friends</td></tr>'
+       '<tr><td>GET/PUT /api/auth/profile/ · friends/… · users/</td><td>Profile, stats, avatar, unique display name, friends + online status</td></tr>'
        '<tr><td>/api/auth/save-match/ · match-history/</td><td>Record and list games</td></tr>'
        '<tr><td>/api/auth/export-data/ · anonymize-account/ · delete-account/</td><td>GDPR tools</td></tr>'
-       '<tr><td>/api/game/ttt/queue/ · match/&lt;id&gt;/ · move/ · leave/</td><td>Tic-Tac-Toe matchmaking and online play</td></tr>'
+       '<tr><td>POST /api/auth/heartbeat/</td><td>Presence: friends show online / offline (seen within 2 min)</td></tr>'
        '<tr><td>/tournaments/api/tournaments/…</td><td>Create, add players, view, start / finish matches</td></tr>'
        '</table></div></div>')
 banner("banner-devices.jpg", "UI / UX Design",
@@ -301,8 +301,8 @@ banner("banner-devices.jpg", "UI / UX Design",
 
 # ================================================================ 04 Authentication & Security — Nasser
 sec("04")
-shots("Features — Registration, Login and 2FA", "Email/password registration with a strong-password policy, “Sign in with 42”, and an emailed one-time code when 2FA is enabled (it can be switched on or off in Settings).",
-      [("03-login.jpg", "Login page: email / password or “Sign in with 42”"), ("04-register.jpg", "Registration with optional two-factor authentication"),
+shots("Features — Registration, Login and 2FA", "Email/password registration with a strong-password policy (every failing rule is reported separately), “Sign in with 42”, and an emailed one-time code when 2FA is enabled — password accounts switch it on or off in Settings; 42 accounts have no 2FA toggle.",
+      [("03-login.jpg", "Login page: email / password or “Sign in with 42”"), ("04-register.jpg", "Registration: rule-by-rule password feedback, optional two-factor authentication"),
        ("19-2fa-modal.jpg", "Second factor: 6-digit code sent by email, valid 10 minutes, single use")], 3)
 full("How a Login Works — 42 OAuth, 2FA and JWT",
      '<div class="cards c3">'
@@ -311,21 +311,21 @@ full("How a Login Works — 42 OAuth, 2FA and JWT",
      '<li>If 2FA is on: a 6-digit code is stored in a <b>shared database cache</b> for 10 min and emailed from a background thread; the response is <i>requires_2fa</i>.</li>'
      '<li>POST /verify-otp/ → code compared and deleted (single use) → session + JWT pair returned.</li></ol></div>'
      '<div class="card"><h3><span class="num">2</span>Remote authentication (42)</h3><ol>'
-     '<li>“Sign in with 42” → the backend builds the authorize URL (client id, redirect URI, <i>response_type=code</i>).</li>'
-     '<li>The student consents on the 42 Intra; 42 redirects to <code>/oauth/callback?code=…</code> in our SPA.</li>'
-     '<li>The SPA posts the code; the <b>server</b> exchanges it with the client secret (never in the browser), reads <code>/v2/me</code>, creates or links the user by email, logs in, returns JWTs.</li></ol></div>'
+     '<li>“Sign in with 42” → the backend builds the authorize URL (client id, redirect URI, <i>response_type=code</i>) plus a signed, time-limited <i>state</i> kept in the session.</li>'
+     '<li>The student consents on the 42 Intra; 42 redirects to <code>/oauth/callback?code=…&amp;state=…</code> in our SPA.</li>'
+     '<li>The SPA posts code + state; the <b>server</b> checks the state (single use, 10 min — CSRF protection), exchanges the code with the client secret (never in the browser), reads <code>/v2/me</code>, creates or links the user by email, logs in, returns JWTs.</li></ol></div>'
      '<div class="card"><h3><span class="num">3</span>JSON Web Tokens</h3><ol>'
      '<li>SimpleJWT: access token 60 min, refresh token 7 days, signed HS256 with the Django secret; claims <i>user_id, exp, iat, jti</i>.</li>'
-     '<li>The SPA sends <code>Authorization: Bearer</code> on every API call (games, friends, matchmaking, GDPR).</li>'
+     '<li>The SPA sends <code>Authorization: Bearer</code> on every API call (games, profile, friends, GDPR).</li>'
      '<li><code>authFetch</code> refreshes the token one minute before expiry and retries once after a 401, so a session survives the 60-minute limit.</li></ol></div>'
      '</div>'
      '<p class="note">Both paths end in the same state: a Django session cookie (HttpOnly) plus a JWT pair — 42 users and password users are indistinguishable afterwards.</p>',
      intro="Three flows share one outcome: a logged-in user with a session and a JWT pair.")
 banner("banner-lock.jpg", "Cybersecurity Features",
        "Security was a fundamental requirement, addressed in layers from the database to the browser.",
-       cards([("Password storage", "Django hashes and salts every password (PBKDF2); a validator enforces length, upper-case, digit and symbol."),
+       cards([("Password storage", "Django hashes and salts every password (PBKDF2); validators enforce length, upper-case, digit and symbol and report each failing rule."),
               ("2FA + JWT", "Optional emailed one-time code as a second factor; SimpleJWT access (60 min) and refresh (7 days) tokens."),
-              ("42 OAuth", "Students log in through the 42 Intra; the server exchanges the code and never sees a password."),
+              ("42 OAuth", "Students log in through the 42 Intra; the server verifies the signed <i>state</i>, exchanges the code and never sees a password."),
               ("SQL injection", "All database access goes through the ORM, which parameterises every query."),
               ("CSRF &amp; XSS", "Django’s CSRF token is required on every state-changing request; user data (names, nicknames) is inserted with textContent, never as HTML."),
               ("Transport &amp; access control", "HTTPS everywhere — Gunicorn terminates TLS on port 443; every game, tournament and profile API requires login; secrets live in .env.")], 3))
@@ -342,14 +342,13 @@ full("Inside the Graphics and the AI Opponent",
               ("AI — predict, with errors", "It extrapolates where the ball will cross its paddle line, folding the path at the walls so bounces are anticipated; then adds a small prediction error and, 10 % of the time, a big “mistake”."),
               ("AI — simulated keyboard", "The decision becomes a held ArrowUp / ArrowDown key fed into the same InputHandler as a human, so the AI paddle moves at exactly human speed. Every 5 s the score adjusts its judgement: it eases off when 2 points ahead, tries harder when behind. No A* — Pong has no graph to search.")], 1)
      + '</div>')
-full("Features — Tic-Tac-Toe with Online Matchmaking",
+full("Features — Tic-Tac-Toe: the Second Game, History and Matchmaking",
      f'<div class="two" style="grid-template-columns:1fr 1.15fr;align-items:start">'
-     f'<div class="figs" style="grid-template-columns:1fr"><figure><img src="{S("12b-tictactoe-modes.jpg", max_w=1100)}" style="max-height:2.2in;object-fit:cover;object-position:top"><figcaption>Mode selector: Local (2 players, one keyboard) or Online — find an opponent</figcaption></figure>'
-     f'<figure><img src="{S("12-tictactoe.jpg", max_w=1100)}" style="max-height:2.2in;object-fit:cover;object-position:top"><figcaption>The 3 × 3 board during a game</figcaption></figure></div>'
-     + cards([("Local mode", "Two players on one keyboard/mouse; the result is saved to the match history of the logged-in user."),
-              ("Matchmaking", "“Find an opponent” puts the user in a queue with a rating = their Tic-Tac-Toe win rate. The server pairs the two closest ratings (fair matches); entries older than 60 s are dropped; the browser polls every 2 s."),
-              ("Online play, server-side rules", "The board lives in the database. Every move is validated on the server — your turn, free cell — win lines and draws are detected there, and both players poll the state every second. Leaving a match is a forfeit."),
-              ("User history", "When a match ends the server writes one MatchHistory row per player (WIN / LOSS / DRAW, opponent’s name), so it appears on both profiles, in the win-rate chart and in the JSON export.")], 1)
+     f'<div class="figs" style="grid-template-columns:1fr"><figure><img src="{S("12-tictactoe.jpg", max_w=1100)}" style="max-height:4.6in;object-fit:contain;object-position:top"><figcaption>The 3 × 3 board: two players on one device, X and O alternate, “Reset game” starts over</figcaption></figure></div>'
+     + cards([("A game distinct from Pong", "Turn-based Tic-Tac-Toe played locally on one device — like Pong, no online play by design. Win lines and draws are detected in the browser; moves on an occupied cell or after the end are ignored."),
+              ("User history tracking", "Every finished game is posted to /api/auth/save-match/ with the JWT and stored as a MatchHistory row (TICTACTOE, WIN / LOSS / DRAW, date), so it appears in the profile’s recent matches, the win-rate chart and the JSON export."),
+              ("Matchmaking", "Matchmaking is the tournament system: a tournament of 3–8 players is scheduled as a round-robin, the next pairing is announced (“Next match: A vs B”) and tied leaders are matched again in tiebreaker rounds until one winner remains."),
+              ("Not online", "Both games run in the browser on one device; there is no online or remote play in the project — the “remote players” module is not selected.")], 1)
      + '</div>',
      intro="The “Add another game” module: a new game distinct from Pong, with user history tracking and a matchmaking system.")
 
@@ -373,13 +372,13 @@ full("Tournament Flow",
 
 # ================================================================ 07 Profiles, Statistics & Friends — Ali
 sec("07")
-shots("Features — Player Profile and Stats Dashboard", "Every finished game — Pong, Pong vs AI, Tic-Tac-Toe local or online — is recorded; the profile turns the history into a dashboard and the settings page holds the account and GDPR tools.",
-      [("08-profile.jpg", "Games played, win-rate chart, best score, recent matches with game type and date, friends panel"), ("09-settings.jpg", "Display name, e-mail, avatar, 2FA switch, Download my data, Anonymize, Delete account")], 2, tall=True)
+shots("Features — Player Profile and Stats Dashboard", "Every finished game — Pong, Pong vs AI, Tic-Tac-Toe — is recorded; the profile turns the history into a dashboard and the settings page holds the account and GDPR tools.",
+      [("08-profile.jpg", "Games played, win-rate chart, best score, recent matches with game type and date, friends panel with online / offline dots"), ("09-settings.jpg", "Display name, e-mail, avatar, 2FA switch (password accounts), Download my data, Anonymize, Delete account")], 2, tall=True)
 full("Features — Friends, Match History and User Data",
      f'<div class="two" style="grid-template-columns:1.1fr 1fr;align-items:start">'
      f'<figure class="figs"><img src="{S("15-find-users.jpg", max_w=1100)}" style="max-height:4.6in;object-fit:contain;object-position:top"><figcaption>“Find Users” lists every active player with an Add / Remove friend button</figcaption></figure>'
-     + cards([("User information", "Custom Django user: e-mail is the login, unique username, optional display name, avatar (default picture if none, max 2 MB, image type checked), 2FA flag, 42 link."),
-              ("Friends", "Add or remove friends from the Find Users list; the friends panel on the profile shows their names and avatars."),
+     + cards([("User information", "Custom Django user: e-mail is the login, unique username, optional display name (unique, case-insensitive), avatar (default picture if none, max 2 MB, image type checked), 2FA flag, 42 link."),
+              ("Friends", "Add or remove friends from the Find Users list; the friends panel shows names, avatars and an online / offline dot — the SPA sends a heartbeat every minute, a user counts as online when seen in the last 2 minutes, and logging out sets offline at once. Presence only: there is no online play."),
               ("Match history", "One row per game: type (PONG / TICTACTOE), opponent, score, result, date. Last five on the profile, full list in the JSON export."),
               ("Statistics", "Games played, win rate (hand-drawn SVG pie chart), best score = the win with the largest margin. Tournament games are kept separate because their players are nicknames, not accounts.")], 1)
      + '</div>',
@@ -405,7 +404,7 @@ full("Accessibility — Browser Compatibility and Server-Side Rendering",
 sec("09")
 banner("banner-team.jpg", "Testing Strategy",
        "Several levels of testing, each with its own focus, keep the application stable and secure.",
-       cards([("Unit tests", "Django test suite (<code>make test</code>) — 62 tests across userapp, gameapp and tournaments: login and the whole 2FA flow, GDPR export / anonymize / delete, the inactive-account command, tournament tiebreakers, Tic-Tac-Toe matchmaking and moves, server-side rendering."),
+       cards([("Unit tests", "Django test suite (<code>make test</code>) — 54 tests (userapp 41, tournaments 10, gameapp 3): login and the whole 2FA flow, the OAuth <i>state</i> check, presence, unique display names, rule-by-rule password feedback, GDPR export / anonymize / delete, the inactive-account command, tournament tiebreakers, server-side rendering."),
               ("Integration tests", "Scripted end-to-end API flow: register → login → profile → matches → friends → export → tournament → delete."),
               ("Browser walkthrough", "Headless Chrome drives every page on desktop and phone, plays both games and checks for JavaScript errors."),
               ("Manual / acceptance", "Team members continuously tested each other’s features from an end-user perspective, in Chrome and Firefox.")], 4))
@@ -414,27 +413,27 @@ left("photo-code.jpg", "Pre-Evaluation Audit (August 2026)",
      cards([("“The 2FA code is sometimes rejected”", "The one-time code was kept in Django’s default in-memory cache, which is private to each process — and Gunicorn runs three workers. The verification request often reached a worker that had never seen the code. Fix: a database-backed cache shared by all workers."),
             ("“The 2FA e-mail is very slow”", "The e-mail was sent synchronously inside the login request with no timeout, so the response waited for the whole SMTP round-trip (and failed with 500 on any error). Fix: send in a background thread with a 10 s timeout — login now answers in ~80 ms."),
             ("Also fixed", "<code>make test</code> configuration, stale static files, the token-refresh URL in the SPA, a settings-page bug that saved a placeholder display name, the Pong ball gliding along a wall (bounce now clamps the ball and keeps a minimum angle), and the previous account's avatar remaining visible after switching users."),
-            ("Result", "A second sweep found and fixed 30 more bugs (silent JWT expiry after 60 min, secrets in logs, duplicate-registration errors, tournament persistence and repeated tiebreakers, Save Settings, 2FA toggle, Pong resize / touch / pause leaks, input validation). A third pass checked every module against the subject: stored XSS via tournament nicknames fixed, AI presses simulated keys at player speed and anticipates bounces, DB credentials moved to .env, tournament API requires login, next-match announcement, GDPR anonymization, online Tic-Tac-Toe matchmaking, real SSR. 54/62 tests pass, 0 JavaScript errors.")], 2))
+            ("Result", "A second sweep found and fixed 30 more bugs (silent JWT expiry after 60 min, secrets in logs, duplicate-registration errors, tournament persistence and repeated tiebreakers, Save Settings, 2FA toggle, Pong resize / touch / pause leaks, input validation). A third pass checked every module against the subject: stored XSS via tournament nicknames fixed, AI presses simulated keys at player speed and anticipates bounces, DB credentials moved to .env, tournament API requires login, next-match announcement, GDPR anonymization (42-safe), no 2FA toggle for 42 accounts, rule-by-rule password feedback, unique display names, online / offline status of friends, the OAuth <i>state</i> parameter, real SSR — and an online Tic-Tac-Toe prototype was removed again: no online play by design, matchmaking is the tournament system. 54/54 tests pass, 0 JavaScript errors.")], 2))
 banner("banner-meeting.jpg", "Challenges and Lessons Learned",
        "Building a complete application from scratch provided technical and organisational hurdles — and lasting lessons.",
        cards([("Tournament logic", "Generating fair schedules and resolving ties correctly required careful data modelling and state management."),
               ("State in vanilla JS", "Without a framework, login state, routing and views had to be managed by hand with disciplined code structure."),
-              ("Asynchronous flows", "OAuth redirects, 2FA, matchmaking polling and API calls demanded a solid grasp of Promises and loading states."),
+              ("Asynchronous flows", "OAuth redirects, 2FA, the presence heartbeat and API calls demanded a solid grasp of Promises and loading states."),
               ("Docker networking", "Getting the web and database containers, volumes and environment variables to cooperate took iteration."),
               ("Multi-process bugs", "The 2FA cache bug only appears with several Gunicorn workers — a lesson in testing on the real deployment."),
               ("Lessons", "A well-defined API, a mature framework, a disciplined Git workflow and security from day one all paid off.")], 3))
 left("photo-future.jpg", "Limitations and Future Enhancements",
      "The current version meets every selected module; the following points are known limitations and the improvements we would make next.",
-     '<div class="two">' + cards([("Known limitations", "Pong is local multiplayer only (online play exists for Tic-Tac-Toe); matchmaking and online moves use 1–2 s polling rather than WebSockets; JWT stored in localStorage; "
-                                    "the 42 OAuth flow has no <i>state</i> parameter; no rate limit on the 2FA code; third-party assets load from CDNs; the 2FA mailbox needs a valid Gmail app password; Pong scores are reported by the client.")], 1)
-     + cards([("Next steps", "1. Real-time online Pong and live chat with WebSockets (Django Channels). 2. OAuth <i>state</i> parameter and rate limiting on login / 2FA. "
-                             "3. Server-authoritative Pong scores. 4. Selectable AI difficulty. 5. Leaderboards, achievements and 2FA recovery codes.")], 1) + '</div>')
+     '<div class="two">' + cards([("Known limitations", "Both games are local by design — no online or remote play (the remote-players module is not selected); JWT stored in localStorage; "
+                                    "no rate limit on the 2FA code; third-party assets load from CDNs; the 2FA mailbox needs a valid Gmail app password; Pong scores are reported by the client; the GDPR cleanup command is run by hand, not by a cron inside the image.")], 1)
+     + cards([("Next steps", "1. Rate limiting on login / 2FA and 2FA recovery codes. 2. Server-authoritative Pong scores. "
+                             "3. Selectable AI difficulty. 4. Leaderboards and achievements. 5. Only if the remote-players module were added: real-time online Pong and chat with WebSockets (Django Channels).")], 1) + '</div>')
 
 # ================================================================ 10 Team & Conclusion — Ali
 sec("10")
 left("photo-team-table.jpg", "Contribution of Each Member",
      "Each member owned a group of modules end-to-end — backend, frontend and tests — and reviewed the others’ pull requests.",
-     cards([("Salim Hamzaoui", "<b>Graphics</b> — 3D Pong with Three.js and its physics; <b>Gameplay</b> — the second game, Tic-Tac-Toe, with online matchmaking and history; <b>Cybersecurity &amp; GDPR</b> — anonymization, data export, account deletion, retention cleanup, privacy policy."),
+     cards([("Salim Hamzaoui", "<b>Graphics</b> — 3D Pong with Three.js and its physics; <b>Gameplay</b> — the second game, Tic-Tac-Toe, with match history and tournament matchmaking; <b>Cybersecurity &amp; GDPR</b> — anonymization, data export, account deletion, retention cleanup, privacy policy."),
             ("Nasser Alzaabi", "<b>Authentication</b> — registration, login, sessions; <b>Remote authentication</b> — the 42 OAuth 2.0 flow; <b>2FA and JWT</b> — emailed one-time codes, SimpleJWT access / refresh tokens and their automatic renewal in the SPA."),
             ("Alisher Abdullaev", "<b>User history and statistics</b> — match history, stats dashboard, win-rate chart; <b>user information</b> — username, avatar, display name, e-mail, friends; <b>Database module</b> — PostgreSQL, models and migrations."),
             ("Nour Murat", "<b>Mandatory part</b> — the tournament system with round-robin scheduling and tiebreakers; <b>Front end</b> — the SPA and the Bootstrap toolkit module; <b>Backend framework module</b> — the Django project structure and REST API.")], 2))
@@ -443,8 +442,8 @@ banner("banner-conclusion.jpg", "Conclusion",
        "7 Major and 6 Minor, 10 major-equivalents against the 7 required.",
        '<div class="two">'
        '<p class="intro">Using Django, a vanilla-JavaScript SPA with Bootstrap, Three.js and PostgreSQL inside Docker, the team gained hands-on experience in full-stack development, '
-       'online game logic, deployment and application security. The Agile, feature-branch workflow kept four developers productive and the codebase reviewable.</p>'
-       '<p class="intro">The modular structure is a solid base for the next evolution — real-time online Pong, chat and richer AI — '
+       'game logic, deployment and application security. The Agile, feature-branch workflow kept four developers productive and the codebase reviewable.</p>'
+       '<p class="intro">The modular structure is a solid base for the next evolution — remote play, chat and a richer AI — '
        'while the pre-evaluation audit leaves the project with a green test suite and documented, root-caused fixes.</p></div>')
 add(f'<section class="slide sec"><img class="bg" src="{A("bg-end.jpg", max_w=1600, q=70)}"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><h1 style="font-size:64px">Thank You</h1></div></section>')
 

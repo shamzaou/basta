@@ -19,13 +19,13 @@ It is a website for games.
 
 The main game is **Pong**. But it is not the old flat Pong — it is **Pong in 3D**. You can play with a friend on one keyboard, or you can play against the computer.
 
-We also have a **second game**: **Tic-Tac-Toe**. You can play it on one computer, or **online**. For online play, the system finds an opponent for you. This is called **matchmaking**.
+We also have a **second game**: **Tic-Tac-Toe**. Two players play on one computer. Every game is saved in the player's history.
 
 Around the games, the website has everything a real platform needs:
 - You can create an account, or you can log in with your **42 account**.
 - You can turn on **two-factor authentication**. Then you get a code by e-mail when you log in.
 - Every player has a **profile** with statistics and a list of all the matches.
-- You can add **friends**.
+- You can add **friends**, and you can see if a friend is online.
 - You can create **tournaments**.
 - And you can control your data: download it, make it anonymous, or delete your account. This is for **GDPR**.
 
@@ -61,7 +61,7 @@ This slide shows the full scope. I will go quickly.
 
 - **User management** — register, login, 42 login, edit your profile, upload an avatar, friends.
 - **Pong 3D** — two players on one keyboard, or one player against the AI.
-- **Tic-Tac-Toe** — local, or online with matchmaking.
+- **Tic-Tac-Toe** — two players on one computer; results saved in the history.
 - **Tournaments** — create, add nicknames, automatic matches, tiebreakers, winner.
 - **Profiles and statistics** — games played, win rate, best score, recent matches, and export as JSON.
 - **Security and privacy** — hashed passwords, HTTPS, CSRF, 2FA, JWT, and GDPR tools.

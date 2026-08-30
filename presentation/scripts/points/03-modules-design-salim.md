@@ -6,8 +6,8 @@
 - **7 Major + 6 Minor = 10 major-equivalents**; 7 required for 100 %.
 - Walk down the table by category:
   - **Web**: Django backend (Major) · Bootstrap toolkit (Minor) · PostgreSQL (Minor).
-  - **User Management**: standard user management (Major) · remote authentication = 42 OAuth (Major).
-  - **Gameplay**: another game with history + matchmaking = Tic-Tac-Toe online (Major).
+  - **User Management**: standard user management (Major) · remote authentication = 42 OAuth with a signed `state` (Major).
+  - **Gameplay**: another game with history + matchmaking = Tic-Tac-Toe (local) + match history + tournament matchmaking (Major).
   - **AI-Algo**: AI opponent (Major) · stats dashboards (Minor).
   - **Cybersecurity**: GDPR — anonymize / export / delete (Minor) · 2FA + JWT (Major).
   - **Graphics**: advanced 3D with Three.js (Major).
@@ -28,15 +28,15 @@
 - Monolith, clear frontend/backend split, two containers (web, db).
 - Browser → one server-rendered page → SPA takes over.
 - Gunicorn (3 workers) terminates HTTPS on 443, runs Django; WhiteNoise serves static files.
-- Django REST API: accounts, games, Tic-Tac-Toe matchmaking, tournaments; PostgreSQL only via ORM.
+- Django REST API: accounts, presence, match history, tournaments (= matchmaking); PostgreSQL only via ORM.
 - External: 42 API (OAuth), Gmail SMTP (2FA codes).
 
 ## Slide 16 — Database and API design
 - Three apps:
   - `userapp`: **User** (custom, e-mail login, 2FA flag, avatar, friends M2M, last activity), **MatchHistory**.
-  - `gameapp`: **TicTacToeQueue** (player + rating), **TicTacToeMatch** (players, board, turn, status, winner).
+  - `gameapp`: the SSR `index` view; both games run in the browser and post results to **MatchHistory** (legacy Game / Player / Score models).
   - `tournaments`: **Tournament**, **Player** (nickname per tournament), **Match**.
-- API groups: auth (register/login/logout/verify-otp/token refresh), 42 OAuth (redirect_uri/get-token), profile & friends, save-match/match-history, GDPR (export/anonymize/delete), `/api/game/ttt/…`, `/tournaments/api/…`.
+- API groups: auth (register/login/logout/verify-otp/token refresh), 42 OAuth (redirect_uri/get-token), profile & friends (+ online status), heartbeat, save-match/match-history, GDPR (export/anonymize/delete), `/tournaments/api/…`.
 
 ## Slide 17 — UI / UX design
 - Clarity, one colour scheme (retro arcade), immediate feedback, app-like SPA.

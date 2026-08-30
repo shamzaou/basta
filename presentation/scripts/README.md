@@ -43,5 +43,5 @@ Questions can come at any time. If a question lands on the wrong person, say "Go
 2. `make test` → "Ran 54 tests … OK".
 3. 42 OAuth: the new client key must be in `.env` (`FORTYTWO_CLIENT_ID/SECRET`, redirect URI exactly `https://localhost/oauth/callback`).
 4. 2FA e-mail: a valid Gmail app password in `.env`, or `EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend` and read the code from `gunicorn-error.log`.
-5. Two browser profiles logged in as two accounts for the online Tic-Tac-Toe demo.
+5. Two browser profiles logged in as two accounts, to show friends and the online / offline status (there is no online play).
 6. Fill in the evaluation date on the title slide (`build_pdf_deck.py`, first slide) and rebuild.
