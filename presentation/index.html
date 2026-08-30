@@ -5,22 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FAST_PONG — ft_transcendence evaluation</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;600;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;background:#000;color:#e8ffe8;font-family:Inter,Roboto,"Segoe UI",Arial,sans-serif;font-size:clamp(16px,1.75vw,24px);line-height:1.35}
-.deck{position:relative;height:100vh;overflow:hidden}
-.slide{position:absolute;inset:0;padding:3.2vh 4vw 6vh;display:none;flex-direction:column;overflow:auto}
-.slide.active{display:flex;animation:fade .25s ease}
-@keyframes fade{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:none}}
-h1{font-family:'Press Start 2P',monospace;color:#00ff00;text-shadow:.12em .12em #ff00ff;font-size:clamp(28px,5vw,64px);line-height:1.25;margin:.3em 0}
-h2{font-family:'Press Start 2P',monospace;color:#00ff00;text-shadow:.08em .08em #ff00ff;font-size:clamp(15px,1.8vw,26px);line-height:1.4;margin:.2em 0 .8em;border-bottom:2px solid #00ff00;padding-bottom:.4em}
-h3{color:#00ff00;font-size:1.05em;margin-bottom:.3em}h3 small{color:#ff00ff;font-weight:400;font-size:.75em;margin-left:.5em}
-ul,ol{padding-left:1.2em}li{margin:.35em 0}li b{color:#00ff00}
+html,body{height:100%;background:#e9edf2;color:#1f2937;font-family:"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;font-size:clamp(16px,1.7vw,23px);line-height:1.4}
+.deck{position:relative;height:100vh;overflow:hidden;background:#fff}
+.slide{position:absolute;inset:0;padding:3.2vh 4.5vw 7vh;display:none;flex-direction:column;overflow:auto;background:#fff}
+.slide.active{display:flex;animation:fade .2s ease}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+h1{color:#1e3a5f;font-size:clamp(34px,5vw,66px);font-weight:700;line-height:1.15;margin:.2em 0;letter-spacing:-.01em}
+h2{color:#1e3a5f;font-size:clamp(20px,2.4vw,34px);font-weight:700;line-height:1.25;margin:.1em 0 .7em;padding-bottom:.35em;border-bottom:3px solid #2563eb}
+h3{color:#1e3a5f;font-size:1.05em;margin-bottom:.3em}h3 small{color:#6b7280;font-weight:400;font-size:.75em;margin-left:.5em}
+ul,ol{padding-left:1.25em}li{margin:.35em 0}li b{color:#1e3a5f}
 ul.tight li{margin:.25em 0;font-size:.95em}
-code{font-family:Consolas,Menlo,monospace;background:#0c1a0c;color:#8dff8d;padding:.05em .3em;border-radius:3px;font-size:.9em}
-em{color:#ffb3ff}
+code{font-family:Consolas,Menlo,monospace;background:#f3f4f6;color:#111827;padding:.05em .35em;border-radius:3px;font-size:.88em;border:1px solid #e5e7eb}
+em{color:#374151}
+b{color:#111827}
 .cols{display:grid;grid-template-columns:1.25fr 1fr;gap:2vw;align-items:center}
-.shot{max-width:100%;border:2px solid #00ff00;border-radius:6px;box-shadow:0 0 18px rgba(0,255,0,.25)}
+.shot{max-width:100%;border:1px solid #d1d5db;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
 .shot.side{width:100%}
 .gallery{display:grid;gap:1.5vw;align-items:start;align-content:center;flex:1}
 .gallery.two{grid-template-columns:1fr 1fr}.gallery.three{grid-template-columns:repeat(3,1fr)}.gallery.four{grid-template-columns:1.4fr 1.4fr .7fr .7fr}
@@ -28,36 +28,49 @@ em{color:#ffb3ff}
 .gallery .shot{width:100%;max-height:62vh;object-fit:contain;object-position:top}
 .gallery .shot.tall{max-height:66vh;object-fit:cover}
 .gallery .shot.phone{max-height:62vh;width:auto}
-figcaption{font-size:.8em;color:#bfffbf;margin-top:.5em;text-align:center}
+figcaption{font-size:.8em;color:#4b5563;margin-top:.5em;text-align:center}
 table.mods{border-collapse:collapse;width:100%;font-size:.82em}
-table.mods th,table.mods td{border:1px solid #1f5f1f;padding:.35em .6em;vertical-align:top;text-align:left}
-table.mods th{background:#062d06;color:#00ff00}
-td.maj{color:#00ff00;font-weight:700;white-space:nowrap}td.min{color:#ff00ff;font-weight:700;white-space:nowrap}
-.arith{margin-top:1em;font-size:1.05em;text-align:center;border:2px solid #ff00ff;padding:.5em;border-radius:6px}
-.speaker{align-self:flex-end;margin-bottom:-.6em;font-size:.65em;color:#000;background:#00ff00;padding:.25em .8em;border-radius:20px;font-weight:600}
-.speaker .name{color:#5a005a}
+table.mods th,table.mods td{border:1px solid #d1d5db;padding:.35em .6em;vertical-align:top;text-align:left}
+table.mods th{background:#f3f4f6;color:#1e3a5f}
+table.mods tr:nth-child(even) td{background:#fafafa}
+td.maj{color:#1d4ed8;font-weight:700;white-space:nowrap}td.min{color:#0f766e;font-weight:700;white-space:nowrap}
+.arith{margin-top:1em;font-size:1.05em;text-align:center;border:1px solid #93c5fd;background:#eff6ff;color:#1e3a5f;padding:.5em;border-radius:6px}
+.speaker{align-self:flex-end;margin-bottom:-.6em;font-size:.65em;color:#1e40af;background:#dbeafe;padding:.25em .8em;border-radius:20px;font-weight:600}
+.speaker .name{color:#1e3a5f}
 .title{justify-content:center;align-items:center;text-align:center}
-.title-block .kicker{color:#ff00ff;letter-spacing:.15em;text-transform:uppercase;font-size:.8em}
-.title-block .sub{font-size:1.15em;color:#bfffbf;margin:.5em 0 1.2em}
+.title-block .kicker{color:#6b7280;letter-spacing:.15em;text-transform:uppercase;font-size:.8em}
+.title-block .sub{font-size:1.15em;color:#374151;margin:.5em 0 1.2em}
 .team{display:flex;gap:2vw;justify-content:center;flex-wrap:wrap;margin:1em 0}
-.team div{border:2px solid #00ff00;padding:.6em 1em;border-radius:6px;min-width:12em}.team b{display:block;color:#00ff00}.team small{color:#bfffbf}
-.speaker-map{font-size:.72em;color:#bfffbf;margin-top:1em}.speaker-map span{display:inline-block;margin:0 .6em;padding:.15em .5em;border:1px solid #ff00ff;border-radius:4px}.speaker-map em{display:block;margin-top:.5em;color:#ffb3ff}
-.date{margin-top:1.2em;color:#8dff8d;font-size:.8em}
+.team div{border:1px solid #d1d5db;padding:.6em 1em;border-radius:6px;min-width:12em;background:#f9fafb}.team b{display:block;color:#1e3a5f}.team small{color:#6b7280}
+.team em{color:#b45309}
+.speaker-map{font-size:.72em;color:#4b5563;margin-top:1em}.speaker-map span{display:inline-block;margin:0 .6em;padding:.15em .5em;border:1px solid #93c5fd;background:#eff6ff;border-radius:4px}.speaker-map em{display:block;margin-top:.5em;color:#6b7280}
+.date{margin-top:1.2em;color:#6b7280;font-size:.8em}
 .timeline{width:100%;max-height:26vh;margin-top:1vh}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.2vw}
-.card{border:2px solid #00ff00;border-radius:8px;padding:.8em 1em;background:#050f05;font-size:.85em}
-.warn{border:2px dashed #ff00ff;color:#ffb3ff;padding:.4em .8em;border-radius:6px;margin-bottom:.8em;font-size:.85em}
-ol.ranked li{margin:.4em 0}ol.ranked li::marker{color:#ff00ff;font-weight:700}
+.card{border:1px solid #d1d5db;border-radius:8px;padding:.8em 1em;background:#f9fafb;font-size:.85em}
+.warn{border-left:4px solid #f59e0b;background:#fffbeb;color:#78350f;padding:.4em .8em;border-radius:4px;margin-bottom:.8em;font-size:.85em}
+ol.ranked li{margin:.4em 0}ol.ranked li::marker{color:#2563eb;font-weight:700}
 .demo .card{font-size:.8em}
 .demo-table{font-size:.74em}
-.hud{position:fixed;bottom:1.6vh;right:2vw;font-size:.7em;color:#8dff8d;z-index:10;font-family:'Press Start 2P',monospace}
-.progress{position:fixed;left:0;bottom:0;height:5px;background:#ff00ff;width:0;transition:width .25s;z-index:10}
-.help{position:fixed;bottom:1.6vh;left:2vw;font-size:.6em;color:#3c7a3c;z-index:10}
+.hud{position:fixed;bottom:1.6vh;right:2vw;font-size:.7em;color:#6b7280;z-index:10}
+.progress{position:fixed;left:0;bottom:0;height:4px;background:#2563eb;width:0;transition:width .25s;z-index:10}
+.help{position:fixed;bottom:1.6vh;left:2vw;font-size:.6em;color:#9ca3af;z-index:10}
+.slide::after{display:none}
 body.print .deck{height:auto;overflow:visible}
-body.print .slide{display:flex;position:relative;inset:auto;min-height:100vh;border-bottom:4px dashed #ff00ff;page-break-after:always;animation:none}
+body.print .slide{display:flex;position:relative;inset:auto;min-height:100vh;border-bottom:2px solid #d1d5db;page-break-after:always;animation:none}
 body.print .hud,body.print .progress,body.print .help{display:none}
 @media (max-width:900px){.cols,.grid2,.gallery.two,.gallery.three,.gallery.four{grid-template-columns:1fr}.gallery .shot{max-height:none}}
-@media print{body{background:#000}}
+@page{size:13.333in 7.5in;margin:0}
+@media print{
+  html,body{background:#fff;font-size:17px;height:auto}
+  .deck{height:auto;overflow:visible}
+  .slide{display:flex !important;position:relative;inset:auto;width:13.333in;height:7.5in;min-height:0;overflow:hidden;padding:.45in .6in .55in;page-break-after:always;break-after:page;animation:none}
+  .slide:last-child{page-break-after:auto;break-after:auto}
+  .hud,.progress,.help{display:none}
+  .slide::after{display:block;content:attr(data-n);position:absolute;right:.6in;bottom:.3in;font-size:.7em;color:#6b7280}
+  .gallery .shot{max-height:4.6in}.gallery .shot.tall{max-height:4.9in}.gallery .shot.phone{max-height:4.6in}
+  .timeline{max-height:1.9in}
+}
 </style>
 </head>
 <body>
@@ -125,14 +138,14 @@ body.print .hud,body.print .progress,body.print .help{display:none}
 </ul>
 </div>
 <svg class="timeline" viewBox="0 0 1200 190" role="img" aria-label="Project timeline">
- <line x1="40" y1="110" x2="1160" y2="110" stroke="#00ff00" stroke-width="4"/>
- <g font-family="Inter, Arial, sans-serif" font-size="19" fill="#e8ffe8" text-anchor="middle">
-  <circle cx="80" cy="110" r="10" fill="#ff00ff"/><text x="80" y="150">10 Feb</text><text x="80" y="80">Docker + DB</text>
-  <circle cx="300" cy="110" r="10" fill="#ff00ff"/><text x="300" y="150">15–16 Feb</text><line x1="300" y1="100" x2="300" y2="55" stroke="#00ff00" stroke-width="2"/><text x="300" y="45">Games in SPA · JWT · 2FA · OAuth</text>
-  <circle cx="540" cy="110" r="10" fill="#ff00ff"/><text x="540" y="150">17–19 Feb</text><text x="540" y="80">Tournaments · Profile · HTTPS</text>
-  <circle cx="760" cy="110" r="10" fill="#ff00ff"/><text x="760" y="150">20–27 Feb</text><line x1="760" y1="100" x2="760" y2="55" stroke="#00ff00" stroke-width="2"/><text x="760" y="45">Settings · OAuth redirect</text>
-  <circle cx="960" cy="110" r="10" fill="#ff00ff"/><text x="960" y="150">5–8 Mar</text><text x="960" y="80">Stats · Friends · GDPR · UI</text>
-  <circle cx="1130" cy="110" r="10" fill="#ff00ff"/><text x="1130" y="150">2 Apr</text><line x1="1130" y1="100" x2="1130" y2="55" stroke="#00ff00" stroke-width="2"/><text x="1130" y="45">Final polish</text>
+ <line x1="40" y1="110" x2="1160" y2="110" stroke="#2563eb" stroke-width="4"/>
+ <g font-family="Inter, Arial, sans-serif" font-size="19" fill="#1f2937" text-anchor="middle">
+  <circle cx="80" cy="110" r="10" fill="#1e3a5f"/><text x="80" y="150">10 Feb</text><text x="80" y="80">Docker + DB</text>
+  <circle cx="300" cy="110" r="10" fill="#1e3a5f"/><text x="300" y="150">15–16 Feb</text><line x1="300" y1="100" x2="300" y2="55" stroke="#2563eb" stroke-width="2"/><text x="300" y="45">Games in SPA · JWT · 2FA · OAuth</text>
+  <circle cx="540" cy="110" r="10" fill="#1e3a5f"/><text x="540" y="150">17–19 Feb</text><text x="540" y="80">Tournaments · Profile · HTTPS</text>
+  <circle cx="760" cy="110" r="10" fill="#1e3a5f"/><text x="760" y="150">20–27 Feb</text><line x1="760" y1="100" x2="760" y2="55" stroke="#2563eb" stroke-width="2"/><text x="760" y="45">Settings · OAuth redirect</text>
+  <circle cx="960" cy="110" r="10" fill="#1e3a5f"/><text x="960" y="150">5–8 Mar</text><text x="960" y="80">Stats · Friends · GDPR · UI</text>
+  <circle cx="1130" cy="110" r="10" fill="#1e3a5f"/><text x="1130" y="150">2 Apr</text><line x1="1130" y1="100" x2="1130" y2="55" stroke="#2563eb" stroke-width="2"/><text x="1130" y="45">Final polish</text>
  </g>
 </svg></section>
 <section class="slide " data-section="Features"><div class="speaker">Speaker 4 — <span class="name">&lt;name&gt;</span> · Features</div><h2>Features — landing, authentication, 2FA</h2>
@@ -293,5 +306,6 @@ body.print .hud,body.print .progress,body.print .help{display:none}
   show(i);
 })();
 </script>
+<script>document.addEventListener('DOMContentLoaded',function(){var s=document.querySelectorAll('.slide');s.forEach(function(el,i){el.setAttribute('data-n',(i+1)+' / '+s.length);});});</script>
 </body>
 </html>

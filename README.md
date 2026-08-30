@@ -24,7 +24,8 @@ from `gunicorn-error.log`.
 | `docs/FINAL-REPORT.md` | What was fixed, what remains for the team, how to use everything |
 | `docs/audit-report.md` | Full issue log (root causes, severity, fixed/deferred) |
 | `docs/study-guide/` | Revision guide: overview, architecture + Mermaid diagrams, per-module deep dives, `quick-drill.md` |
-| `presentation/index.html` | Slide deck for the staff evaluation (open in a browser, arrow keys) |
+| `presentation/FAST_PONG-presentation.pdf` | Slide deck for the staff evaluation (PDF) |
+| `presentation/index.html` | Same deck as an HTML slideshow (arrow keys) |
 
 ## Repository layout (original notes)
 
