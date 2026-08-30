@@ -28,7 +28,7 @@ FAST_PONG is our 42 Abu Dhabi ft_transcendence capstone: a single-page web app w
 make build      # docker-compose build
 make up         # docker-compose up -d  -> https://localhost  (accept the self-signed cert)
 make logs       # follow container logs (note: Gunicorn stdout goes to gunicorn-error.log, see below)
-make test       # docker-compose exec web python manage.py test   (62 tests, all green)
+make test       # docker-compose exec web python manage.py test   (54 tests, all green)
 make migrate    # apply migrations inside the container
 make shell      # Django shell
 make down       # stop
@@ -62,10 +62,10 @@ Things to know before a demo:
 |---|---|
 | `backend/` | Django project: `settings.py`, `urls.py` (root router), `wsgi.py`, `asgi.py` |
 | `userapp/` | Custom `User` model, auth (login/register/logout/2FA/OAuth), profile, friends, match history, GDPR (export/anonymize/delete, `delete_inactive_users` command), activity middleware, password validator, **tests** |
-| `gameapp/` | SPA host view with SSR context (`index`), online TicTacToe matchmaking (`TicTacToeQueue`/`TicTacToeMatch`, `/api/game/ttt/*`), tests |
+| `gameapp/` | SPA host view with SSR context (`index`, `gameapp/views.py:31`); `Game/Player/Score` models present but unused; no API routes (`gameapp/urls.py` is empty); SSR tests |
 | `tournaments/` | `Tournament/Player/Match` models, round-robin + tiebreaker logic, JSON API, tests |
 | `templates/frontend/index.html` | The single server-rendered page containing every SPA "page" `<div>` |
-| `static/frontend/` | `css/styles.css`, `js/script.js` (router + all API calls), `js/pong.js` (3D game incl. `PongAI`), `js/tictactoe.js` (bonus mini-game), `assets/man.png` (default avatar) |
+| `static/frontend/` | `css/styles.css`, `js/script.js` (router + all API calls), `js/pong.js` (3D game incl. `PongAI`), `js/tictactoe.js` (second game, local hot-seat), `assets/man.png` (default avatar) |
 | `staticfiles/` | `collectstatic` output (committed; **never edit by hand**) |
 | `scripts/entrypoint.sh` | Container start sequence (used); `scripts/init_db.sh` (unused, daphne-based) |
 | `docker-compose.yml`, `Dockerfile`, `Makefile` | Two services: `web`, `db` |
@@ -112,7 +112,7 @@ Key facts to say out loud:
 | 3 | Web — database for the backend (PostgreSQL) | Minor | `modules/03-web-postgresql.md` |
 | 4 | User Management — standard user management, authentication, users across tournaments | Major | `modules/04-user-management.md` |
 | 5 | User Management — remote authentication (42 OAuth) | Major | `modules/05-remote-authentication-42-oauth.md` |
-| 5b | Gameplay & UX — add another game with user history and **matchmaking** (TicTacToe, local + online) | Major | `modules/12-another-game-matchmaking.md` |
+| 5b | Gameplay & UX — add another game with user history and **matchmaking** (local TicTacToe; matchmaking = the tournament system) | Major | `modules/12-another-game-matchmaking.md` |
 | 6 | AI-Algo — introduce an AI opponent | Major | `modules/06-ai-opponent.md` |
 | 7 | AI-Algo — user and game stats dashboards | Minor | `modules/07-stats-dashboards.md` |
 | 8 | Cybersecurity — GDPR compliance: anonymization, local data management, account deletion | Minor | `modules/08-cybersecurity-gdpr.md` |

@@ -23,7 +23,7 @@ flowchart TD
     Prog[programmatic showPage('x') from handlers] --> SP
     SP{"showPage(pageId, pushState=true) :13"}
     SP --> Gate["auth gating :14-21<br/>logged in & login/register → home<br/>logged out & profile/settings → login"]
-    Gate --> OAuth["oauth/callback special case :25-46<br/>?code= → checkOAuthLogin()"]
+    Gate --> OAuth["oauth/callback special case :25-46<br/>?code=&state= → checkOAuthLogin()"]
     OAuth --> Exists{"#pageId exists? :57-62"}
     Exists -- no --> Home[pageId = 'home']
     Exists -- yes --> Push["history.pushState({pageId}, '', '/'+pageId) :65-68"]
@@ -137,7 +137,7 @@ If asked "why Three.js and not Babylon.js": the subject allows Three.js/WebGL fo
 * **XSS rule** — user-controlled strings (nicknames, usernames, display names, opponents) are only ever inserted with `textContent`/`createElement`; `loadTournamentData` (`script.js:2215-2360`) was rewritten that way and `#next-match` is filled with `textContent`.
 * **Tournament API is login-protected** — 401 → "Please log in" (`script.js:2224`, `startTournamentMatch`).
 * **Anonymize** button handler (`script.js:858-885`) → `authFetch POST /api/auth/anonymize-account/` → `clearLocalSession()`.
-* **TicTacToe online UI** (`tictactoe.js:125-166`, `:352-556`) — mode selector; *Online* polls `POST /api/game/ttt/queue/` every 2 s (Cancel = `DELETE`), then renders the board from `GET /api/game/ttt/match/<id>/` every 1 s, gates clicks on `turn === you`, posts moves, shows "You won / You lost / Draw" + *Play again*; `cleanup()` stops timers and forfeits/dequeues. All requests go through `window.authFetch`.
+* **TicTacToe** (`tictactoe.js:3-305`) — local hot-seat only; the online mode built during the audit was removed at the team's request (no online play). Results go through `initializeMatch()`/`finishMatch()` with `window.authFetch`.
 
 ## Known frontend quirks (be ready to acknowledge)
 
@@ -145,3 +145,5 @@ If asked "why Three.js and not Babylon.js": the subject allows Three.js/WebGL fo
 * Feedback is `alert()`-based (the OTP modal now has a form + Cancel button, **🆕**).
 * External CDN dependencies (Bootstrap, jQuery, Popper, Three.js, Google Fonts) — the demo machine needs internet, or these must be vendored.
 * `check-auth` is never called; auth state is inferred from localStorage plus API 401s.
+
+* **🆕 OAuth `state`:** `redirect_uri` (`userapp/views.py:586-618`) signs a random value (`signing.dumps({'n': secrets.token_hex(8)}, key=settings.OAUTH_STATE_SECRET, salt='oauth-state')`, `:604`), keeps it in `request.session['oauth_state']` (`:605`) and appends `&state=` to the authorize URL (`:612`). 42 echoes it back on the callback; `checkOAuthLogin()` reads it (`script.js:1069`) and posts `{code, state}` (`:1089`). `get_token` (`views.py:679-704`) pops the session value, requires an exact match and verifies the signature with `max_age=JWT_SETTINGS['STATE_TTL']` (600 s) — otherwise 400 "Invalid OAuth state" and 42 is never contacted; the state is single-use. Setting `OAUTH_STATE_SECRET` (`backend/settings.py:275`, from `.env`, defaults to `SECRET_KEY`). Tests: `OAuthStateTests` (`userapp/tests.py:548`).

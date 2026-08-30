@@ -10,7 +10,7 @@ flowchart LR
     urls["backend/urls.py<br/>admin/ · api/auth/ · tournaments/ · catch-all"]
     userapp["<b>userapp</b><br/>User, MatchHistory<br/>auth, 2FA, OAuth, profile, friends, GDPR"]
     tournaments["<b>tournaments</b><br/>Tournament, Player, Match<br/>round-robin + tiebreakers"]
-    gameapp["<b>gameapp</b><br/>index view (SPA host + SSR)<br/>TicTacToeQueue / TicTacToeMatch<br/>/api/game/ttt/* (matchmaking)"]
+    gameapp["<b>gameapp</b><br/>index view (SPA host + SSR)<br/>Game/Player/Score (unused)"]
     drf["rest_framework · simplejwt · authtoken"]
     urls --> userapp
     urls --> tournaments
@@ -48,15 +48,13 @@ Dependency facts: `gameapp/models.py:3` imports `userapp.models.User`; `tourname
 | Tests | `tournaments/tests.py` — 3 tests (🆕 corrected to call `get_winner()`; they previously always failed) |
 | Comments | Written in Russian — the author (Nour) wrote the docstrings; they describe exactly what the views do |
 
-### `gameapp` — SPA host, SSR and online TicTacToe 🆕
+### `gameapp` — SPA host and SSR 🆕
 
 | Item | Where |
 |---|---|
-| `index` view — resolves the page from the URL, builds the SSR context (`ssr_page/title/description/logged_in/profile`) | `gameapp/views.py:24-61` |
-| Models `TicTacToeQueue`, `TicTacToeMatch` (+ `check_winner`, `symbol_of`) | `gameapp/models.py:39-85` |
-| `ttt_queue` (POST pair/enqueue, DELETE leave), `ttt_match` (GET state), `ttt_move` (POST), `ttt_leave` (POST forfeit) — DRF `IsAuthenticated`, JWT or session | `gameapp/views.py:112-213` |
-| URLs mounted at `/api/game/` | `gameapp/urls.py`, `backend/urls.py:13` |
-| Tests (14) | `gameapp/tests.py` |
+| `index` view — resolves the page from the URL, builds the SSR context (`ssr_page/title/description/logged_in/profile` via `build_profile_summary`) | `gameapp/views.py:31` |
+| API routes | none — `gameapp/urls.py` is an empty list (the online TicTacToe endpoints were removed; migration `0003` drops their tables) |
+| Tests (3, SSR) | `gameapp/tests.py` |
 
 (The original `Game/Player/Score` models remain unused.)
 
@@ -67,7 +65,7 @@ Dependency facts: `gameapp/models.py:3` imports `userapp.models.User`; `tourname
 | View | `gameapp/views.py:4` `index` → `render(request, 'frontend/index.html')`; mounted as the catch-all in `backend/urls.py:16` |
 | URLs | `gameapp/urls.py` — empty list (`app_name='gameapp'`), not included anywhere |
 | Models | `Game`, `Player`(OneToOne User), `Score` — migrated, registered in admin, **not used by any view or JS** |
-| Tests | `gameapp/tests.py` — empty |
+| Tests | `gameapp/tests.py` — SSR tests only |
 
 ### `backend` — project
 

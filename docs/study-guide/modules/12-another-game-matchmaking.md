@@ -1,44 +1,36 @@
 # Module — Gameplay & UX: Add Another Game with User History and Matchmaking (Major)
 
-**Verdict: Works end-to-end ✅** — TicTacToe is the second game: playable locally (two players, one keyboard) and **online** through a matchmaking queue; every finished game is written to the user's match history and counted in the profile statistics. 🆕 The online part was added in the Aug-2026 subject-compliance pass.
+**Verdict: Works end-to-end ✅** — TicTacToe is the second game (local, two players on one keyboard); every finished game lands in the user's match history and statistics; **matchmaking is provided by the tournament system**, which pairs the registered players, announces the next fight and resolves ties. There is **no online play anywhere — by design** (the *Remote players* module was not selected).
 
 ## What the module requires (42 subject wording)
-Introduce a new game distinct from Pong; implement user history tracking to record and display each user's gameplay statistics; create a matchmaking system to allow users to find opponents and participate in fair and balanced matches; store history and matchmaking data securely and keep it up to date; keep the game responsive.
+Introduce a new game distinct from Pong; implement user history tracking to record and display each user's gameplay statistics; create a matchmaking system to allow users to find opponents and participate in fair and balanced matches; store history and matchmaking data securely and keep them up to date.
 
 ## What it does in FAST_PONG
-* **Game** — 3×3 TicTacToe rendered as a CSS grid with a status line and a reset button (`tictactoe.js:41-210`).
-* **Local mode** — hot-seat X/O on one keyboard; the result is saved with `POST /api/auth/save-match/` (`tictactoe.js:245-284`) as `TICTACTOE` / opponent "Player 2".
-* **Online mode** — *Online — find an opponent* joins a server-side queue; when paired, both browsers play the same match turn by turn and the **server** records the result for both accounts.
-* **History & stats** — `MatchHistory` rows (`userapp/models.py`) feed the profile (games played, win rate, best score, recent matches) and the JSON export.
+* **New game** — 3×3 TicTacToe rendered as a CSS grid with a status line and a reset button (`static/frontend/js/tictactoe.js:3-305`); X and O alternate on the same keyboard/mouse, win/draw detection over the 8 lines.
+* **User history** — the game creates a match id (`initializeMatch()` → `POST /api/auth/match/create/`, `tictactoe.js:141`) and saves the outcome (`finishMatch()` → `POST /api/auth/save-match/`, `:175`) as `game_type='TICTACTOE'`, opponent "Player 2", result WIN/LOSS/DRAW, score `1-0`/`0-1`/`0-0`. `MatchHistory` rows (`userapp/models.py`) feed the profile dashboard (games played, win rate, best score, recent matches) and the JSON export.
+* **Matchmaking** — the tournament system: a logged-in user registers 3–8 aliases (the first one is prefilled with their unique display name), `add_players` generates every pairing with `itertools.combinations` (`tournaments/views.py:54-93`), the tournament page shows the schedule, highlights and announces the **next match** (`#next-match`, `script.js:2400-2405`), and `Tournament.get_winner` creates tiebreaker rounds until one player leads (`tournaments/models.py:18-99`). Fairness = everyone plays everyone; results are stored server-side (`Match` rows) and the view refreshes after each game.
+
+## 🆕 Changed in Aug-2026 audit
+* An **online TicTacToe queue** (server-side pairing by win-rate, turn-based play by polling) was implemented during the subject-compliance pass and then **removed at the team's request**: the project deliberately has no online functionality. `gameapp` migration `0003_remove_tictactoequeue_user_delete_tictactoematch_and_more` drops the tables; `gameapp/urls.py` has no routes; `tictactoe.js` is the local version with the earlier bug-sweep fixes (bound handlers, single style injection, `authFetch`).
+* TicTacToe results are saved through `window.authFetch` (auto-refreshing JWT) when available (`tictactoe.js:144-150`, `:204-212`).
 
 ## Exactly where it is implemented
 | Piece | File / lines |
 |---|---|
-| Models `TicTacToeQueue` (user 1:1, rating, joined_at auto_now) and `TicTacToeMatch` (player_x, player_o, 9-char `board`, `turn`, `status`, `winner`, timestamps; `check_winner()` over the 8 lines) | `gameapp/models.py:39-85`, migration `gameapp/migrations/0002_tictactoequeue_tictactoematch.py` |
-| Rating = TicTacToe win-rate % from `MatchHistory` (50 when no games) | `gameapp/views.py:66-73` |
-| `POST /api/game/ttt/queue/` — returns the active match if one exists, else pairs with the closest-rating waiter (stale >60 s dropped) inside `transaction.atomic()` + `select_for_update()`, else enqueues/refreshes and returns `{status:'waiting', queued:n}`; `DELETE` leaves | `gameapp/views.py:112-137` |
-| `GET /api/game/ttt/match/<id>/` — state for a participant (`you`, `players`, `board`, `turn`, `status`, `winner`); 403 otherwise | `gameapp/views.py:141-149`, `match_state :79-90` |
-| `POST …/move/ {cell}` — validates participant / turn / empty cell / active; applies; detects win or draw; writes `MatchHistory` for both players | `gameapp/views.py:153-192`, `_record_result :96-108` |
-| `POST …/leave/` — forfeit (opponent wins, history written) | `gameapp/views.py:196-213` |
-| Routes mounted at `/api/game/` | `gameapp/urls.py`, `backend/urls.py:13` |
-| Frontend: mode selector, queue polling (2 s), board polling (1 s), turn gating, result screen, cleanup (leave / dequeue) | `tictactoe.js:125-166` (selector), `:352-419` (queue), `:421-530` (online board & moves), `:532-556` (cleanup) |
-| Auth: DRF `IsAuthenticated` → JWT (`window.authFetch`) or session | `tictactoe.js:211-217` `apiFetch` |
-| Tests | `gameapp/tests.py` (14: pairing, closest rating, stale entry, moves, win/draw/forfeit, history for both, 403, SSR) |
-
-## How it interacts with the rest
-* Uses the shared `User` and `MatchHistory` models; the profile/stat code does not distinguish online from local games (both are `game_type='TICTACTOE'`).
-* `authFetch` (script.js) supplies the Bearer token and refreshes it on 401, so a long online session keeps working.
-* `initializeGameIfNeeded` (script.js) creates one `TicTacToeGame` per visit and calls `cleanup()` when the user navigates away, which forfeits an active online match or leaves the queue.
+| Game class (board, turn, win/draw check, restart, cleanup) | `static/frontend/js/tictactoe.js:3-305` |
+| Match id + result persistence | `tictactoe.js:141` (`initializeMatch`), `:175` (`finishMatch`); server `create_match` / `save_match_view` in `userapp/views.py` |
+| History storage / display | `userapp/models.py` `MatchHistory`; `build_profile_summary` (`userapp/views.py:80`); profile page |
+| Matchmaking (tournament) | `tournaments/views.py:54-93` (`add_players`, round-robin), `:96` (`view_tournament`), `:143` (`start_match`), `:190` (`finish_match`); `tournaments/models.py:18-99` (`get_winner`, tiebreak rounds); `script.js:2302`, `:2400-2405` (next-match highlight/announcement) |
+| Page wiring | `script.js` `initializeGameIfNeeded` creates one `TicTacToeGame` per visit and calls `cleanup()` on navigation |
 
 ## Status after audit
-Two-browser live test: A queues → B queues → matched (A = X, B = O) → alternating moves → "You won"/"You lost" → both match histories updated; 0 JS errors. Fairness = closest win-rate pairing; balance = alternating X/O by arrival order.
+Headless-browser walkthrough: a local game is played to a win, the `TICTACTOE` row appears on the profile with the date; tournament playthroughs (3 players, ties, second tiebreak round) verified live. 51 Django tests overall (`tournaments/tests.py`: 10 incl. tiebreak rounds and login-required API).
 
 ## Likely evaluator questions
-1. **Why TicTacToe?** Distinct from Pong, turn-based (so no real-time transport needed), quick to play — the matchmaking and history plumbing is the interesting part.
-2. **Show me the matchmaking.** Two browsers, both click *Online*; the second one is paired immediately; explain the rating and the 60-second staleness rule.
-3. **Why polling and not WebSockets?** Turn-based game, 1-second polls are enough, no extra infrastructure (Channels/Redis); WebSockets would be the natural upgrade for real-time games (see *Remote players* module, not selected).
-4. **What makes matches "fair and balanced"?** Pairing by closest TicTacToe win-rate; X/O assignment alternates by who waited (the waiter plays X).
-5. **What happens on disconnect?** `cleanup()` forfeits (`…/leave/`); queue rows not refreshed for 60 s are ignored, so a closed tab never blocks the queue.
-6. **Where is history stored?** `userapp_matchhistory` — one row per player per game with result and score; shown on the profile and in the export.
-7. **Can I cheat by posting moves for the opponent?** No: the server checks you are a participant, that it is your turn and that the cell is empty (`ttt_move`), all inside a row lock.
-8. **Is the local mode still needed?** Yes — it is the "same keyboard" experience and the fallback when nobody else is online.
+1. **Why TicTacToe?** Distinct from Pong, quick to play, and it exercises the same history pipeline (`save-match`) as Pong.
+2. **Where is the matchmaking?** In the tournament: aliases are registered, every pairing is generated automatically, the page announces "Next match: A vs B", and tied leaders get extra tiebreaker matches — the system organises who plays whom and when (subject III.3 wording).
+3. **Why is there no online play?** The *Remote players* module was not chosen; both games are local by design, so there is no network transport to get wrong. An online TicTacToe queue was prototyped and removed to keep that promise.
+4. **What makes matches "fair and balanced"?** Round-robin: each participant meets every other one once; ties are broken by additional round-robins among the tied players only.
+5. **Is the history "stored securely and up to date"?** Rows are written by the authenticated API right when a game ends (`save-match` validates game type, result and score), served only to the logged-in owner, and exported/deleted with the account (GDPR).
+6. **How is a TicTacToe draw recorded?** `DRAW 0-0`; it counts in games played but not as a win.
+7. **Can the same alias appear twice in a tournament?** No — `unique_together('tournament','nickname')` plus the view's duplicate/blank checks.

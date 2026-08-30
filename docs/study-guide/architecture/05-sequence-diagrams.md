@@ -46,14 +46,16 @@ sequenceDiagram
 
     U->>SPA: click "Sign in with 42" (initiate42OAuth :975)
     SPA->>API: POST /api/auth/redirect_uri/ (redirect_uri :481, csrf_exempt)
-    API-->>SPA: {oauth_link: https://api.intra.42.fr/oauth/authorize?client_id=FORTYTWO_CLIENT_ID&redirect_uri=https://localhost/oauth/callback&response_type=code}
+    API->>API: state = signing.dumps(random, key=OAUTH_STATE_SECRET) ; session['oauth_state']=state (:604-605)
+    API-->>SPA: {oauth_link: https://api.intra.42.fr/oauth/authorize?client_id=…&redirect_uri=https://localhost/oauth/callback&response_type=code&state=STATE}
     SPA->>I: window.location = oauth_link (:1007)
     U->>I: log in at 42, consent
-    I-->>SPA: 302 https://localhost/oauth/callback?code=XYZ
+    I-->>SPA: 302 https://localhost/oauth/callback?code=XYZ&state=STATE
     SPA->>API: GET /oauth/callback?code=XYZ → catch-all → index.html
     SPA->>SPA: showPage('oauth/callback') (:25-40) → checkOAuthLogin() (:1018)
     SPA->>SPA: history.replaceState to strip ?code (:1033)
-    SPA->>API: POST /api/auth/get-token/ {code} (get_token :586, csrf_exempt)
+    SPA->>API: POST /api/auth/get-token/ {code, state} (get_token :679, csrf_exempt)
+    API->>API: session.pop('oauth_state') == state ? signing.loads(max_age=600) : 400 (:693-704)
     API->>I: POST /oauth/token grant_type=authorization_code, code, client_id, client_secret, redirect_uri (:601-613)
     I-->>API: {access_token}
     API->>I: GET /v2/me Bearer access_token (:621-623)
@@ -65,7 +67,7 @@ sequenceDiagram
     SPA->>SPA: setTimeout → window.location.href='/' (:1077)
 ```
 
-Notes: no `state` parameter is sent/verified (CSRF protection on the OAuth callback is absent — audit limitation; `OAUTH_STATE_SECRET` exists in `.env` but is unused). The **registered redirect URI in the 42 app must be exactly `https://localhost/oauth/callback`**. `oauth_callback` (`views.py:515`) is an older server-side variant that is never reached. The 42 client key expired in 2026; the code path is verified up to the authorize URL; final verification needs the rotated key in `.env` (`FORTYTWO_CLIENT_ID/SECRET`).
+Notes: 🆕 the `state` parameter is signed with `OAUTH_STATE_SECRET`, bound to the browser session, single-use and valid for 10 minutes — login-CSRF on the callback is blocked (`OAuthStateTests`). The **registered redirect URI in the 42 app must be exactly `https://localhost/oauth/callback`**. `oauth_callback` (`views.py:515`) is an older server-side variant that is never reached. The 42 client key expired in 2026; the code path is verified up to the authorize URL; final verification needs the rotated key in `.env` (`FORTYTWO_CLIENT_ID/SECRET`).
 
 ## (c) 2FA login — **🆕 post-fix behaviour**
 
@@ -153,7 +155,7 @@ sequenceDiagram
     API-->>SPA: stats + match_history → cards + SVG pie chart (createWinratePieChart :1947)
 ```
 
-**TicTacToe (bonus feature, not a claimed module)** differs only at the edges: `new TicTacToeGame(container)` (`script.js:221`) → constructor calls `initializeMatch()` → `POST /api/auth/match/create/` (`tictactoe.js:138`, returns a UUID `match_id` from `create_match views.py:826`); on win/draw `finishMatch()` (`tictactoe.js:192`) posts `game_type:'TICTACTOE', opponent:'Player 2', score '1-0'|'0-1'|'0-0'` to `/api/auth/save-match/` (`:222`). (`updateMatchState` posts to `/api/game/match/<id>/state`, a URL that does not exist — the failure is caught and ignored.)
+**TicTacToe (the second game, local hot-seat)** differs only at the edges: `new TicTacToeGame(container)` (`script.js:221`) → constructor calls `initializeMatch()` → `POST /api/auth/match/create/` (`tictactoe.js:138`, returns a UUID `match_id` from `create_match views.py:826`); on win/draw `finishMatch()` (`tictactoe.js:192`) posts `game_type:'TICTACTOE', opponent:'Player 2', score '1-0'|'0-1'|'0-0'` to `/api/auth/save-match/` (`:222`). (`updateMatchState` posts to `/api/game/match/<id>/state`, a URL that does not exist — the failure is caught and ignored.)
 
 **Game modes / the AI opponent (AI-Algo Major module).** The mode screen offers *Player vs Player* (two people on one keyboard: W/S vs ↑/↓) or *Player vs AI*. In AI mode `PongAI` (`pong.js:585-676`) controls the right paddle: it samples the ball **once per second** (`UPDATE_INTERVAL = 1000`), extrapolates the intercept point with a deliberate prediction error and a 10 % "mistake" chance, and then moves the paddle towards that target frame by frame at a capped speed — i.e. it simulates key presses between observations rather than tracking the ball perfectly (see `SPA-routing-and-frontend.md` → *The AI opponent*). There is no online play, queue or WebSocket; say this plainly if asked about "remote players" (not a selected module).
 
@@ -258,35 +260,7 @@ Triggers: `scheduleTokenRefresh()` after password login, OTP verification and 42
 handler (`:146`) when `isLoggedIn` is set and the stored token is already expired; and any 401.
 The games call the same wrapper through `window.authFetch` (`pong.js:1007`, `tictactoe.js:145`).
 
-## (h) 🆕 Online TicTacToe matchmaking and play (Gameplay Major module)
-
-```mermaid
-sequenceDiagram
-    participant A as Browser A (tictactoe.js)
-    participant S as Django /api/game/ttt/* (gameapp/views.py)
-    participant DB as PostgreSQL
-    participant B as Browser B
-    A->>S: POST /ttt/queue/ (authFetch, every 2 s)
-    S->>DB: select_for_update queue rows (<60 s old, not me)
-    S-->>A: {status: waiting, queued: 1}
-    B->>S: POST /ttt/queue/
-    S->>DB: closest rating = A → create TicTacToeMatch(X=A, O=B), delete queue rows
-    S-->>B: {status: matched, match_id, symbol: O}
-    A->>S: POST /ttt/queue/ (next poll)
-    S-->>A: {status: matched, match_id, symbol: X}
-    loop every 1 s while active
-        A->>S: GET /ttt/match/<id>/
-        B->>S: GET /ttt/match/<id>/
-    end
-    A->>S: POST /ttt/match/<id>/move/ {cell} (turn X)
-    S->>DB: lock row, validate turn/cell, apply, check_winner
-    S-->>A: state (turn O)
-    B->>S: POST …/move/ {cell}
-    Note over S,DB: on win/draw → status finished, MatchHistory rows for A and B
-    B->>S: (leaving the page) POST /ttt/match/<id>/leave/ → forfeit if still active
-```
-
-## (i) 🆕 SSR page load
+## (h) 🆕 SSR page load
 
 ```mermaid
 sequenceDiagram
@@ -303,7 +277,7 @@ sequenceDiagram
     Br->>Br: script.js load → showPage(body.dataset.ssrPage, false) → hydrate via authFetch
 ```
 
-## (j) 🆕 Anonymization, including the 42 return path
+## (i) 🆕 Anonymization, including the 42 return path
 
 ```mermaid
 sequenceDiagram

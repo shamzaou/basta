@@ -5,7 +5,7 @@ Answers describe the code **as it is after the Aug-2026 audit**. Items marked �
 ## A. The big picture (almost certain to be asked)
 
 1. **What is the project?** FAST_PONG — a single-page web app around 3D Pong (Three.js) with an AI opponent, accounts with e-mail 2FA and 42 OAuth login, friends, match history/stats dashboard, round-robin tournaments with tie-breakers, and GDPR tools. Django + PostgreSQL in Docker, served over HTTPS by Gunicorn. (TicTacToe exists as an extra game — not a claimed module.)
-2. **Which modules?** Majors (7): Django backend, standard user management, remote authentication (42 OAuth), another game with history and matchmaking (TicTacToe local + online), AI opponent, 2FA + JWT, advanced 3D (Three.js). Minors (6): Bootstrap, PostgreSQL, stats dashboards, GDPR, expanding browser compatibility, SSR. 7 + 6/2 = 10 major-equivalents (7 needed).
+2. **Which modules?** Majors (7): Django backend, standard user management, remote authentication (42 OAuth), another game with history and matchmaking (local TicTacToe; matchmaking = the tournament system), AI opponent, 2FA + JWT, advanced 3D (Three.js). Minors (6): Bootstrap, PostgreSQL, stats dashboards, GDPR, expanding browser compatibility, SSR. 7 + 6/2 = 10 major-equivalents (7 needed).
 3. **Why Django?** Full-stack batteries (ORM, migrations, auth, sessions, CSRF, admin, e-mail) plus DRF/SimpleJWT; Python known by the whole team; fastest path to auth-heavy features. `backend/settings.py`.
 4. **Why PostgreSQL?** Subject requirement; transactional, first-class Django backend, one Docker service (`docker-compose.yml:24`).
 5. **Why Three.js?** Scene-graph API over WebGL loadable from a `<script>` tag — no bundler, matches our vanilla-JS front-end. `static/frontend/js/pong.js`.
@@ -29,7 +29,7 @@ Answers describe the code **as it is after the Aug-2026 audit**. Items marked �
 20. **How does 42 OAuth (remote authentication) work?** Button → `POST /api/auth/redirect_uri/` builds the authorize URL (`client_id`, `redirect_uri=https://localhost/oauth/callback`, `response_type=code`) → user consents on 42 → redirected to the SPA route `/oauth/callback?code=` → `checkOAuthLogin` posts the code to `/api/auth/get-token/` → server exchanges it at `api.intra.42.fr/oauth/token` with the client secret, reads `/v2/me`, `get_or_create` the user by e-mail (`is_42_user`, `intra_id`), `login()`, returns JWTs → SPA stores them and reloads home. (`views.py:480`, `:583`; `script.js:939`, `:1018`.)
 21. **Why OAuth / why 42?** Every evaluator has a 42 account; OAuth delegates password handling to the identity provider; the authorization-code grant keeps the secret server-side.
 22. **Why does the 42 login fail today?** The 42 client key expired after a year. Rotate on the intra, set `FORTYTWO_CLIENT_ID`/`FORTYTWO_CLIENT_SECRET` (and `CLIENT_ID`/`CLIENT_SECRET`) in `.env`, `make restart`. The redirect URI on the 42 app must be exactly `https://localhost/oauth/callback`.
-23. **Is there a `state` parameter?** No — honest gap (login CSRF). `OAUTH_STATE_SECRET` exists in `.env` but is unused; the fix is to generate/store/verify a random `state` in `redirect_uri`/`get_token`.
+23. **Is there a `state` parameter?** 🆕 Yes: `redirect_uri` signs a random value with `OAUTH_STATE_SECRET`, stores it in the session and puts it in the authorize URL; 42 echoes it; `get_token` requires the same value (single-use, 10-min TTL) before exchanging the code — that blocks login-CSRF on the callback.
 24. **What if a 42 e-mail matches an existing local account?** `get_or_create(email=…)` links the login to that account; `is_42_user` is only set on creation.
 25. **Password policy?** ≥10 chars, not similar to username/e-mail, not common, not numeric, ≥1 upper/digit/special (`userapp/validators.py`).
 26. **CSRF?** Django middleware; SPA reads the `csrftoken` cookie and sends `X-CSRFToken`; `CSRF_TRUSTED_ORIGINS` includes https://localhost.
@@ -40,7 +40,7 @@ Answers describe the code **as it is after the Aug-2026 audit**. Items marked �
 
 29. **Custom user model?** `userapp.User(AbstractUser)`: e-mail login, display name, avatar, 42 ids, `two_factor_enabled`, `last_activity`, friends M2M (`userapp/models.py:6`).
 30. **Avatar upload?** Base64 data-URL in a JSON PUT → decoded and saved under `media/profile_pictures/`; served by `/api/auth/avatar/<id>/` with `man.png` default.
-31. **Friends?** Non-symmetric M2M; add/remove/list endpoints; "Find Users" tab. No online status.
+31. **Friends?** Non-symmetric M2M; add/remove/list endpoints; "Find Users" tab; 🆕 online status via a one-minute heartbeat (presence only, no online play).
 32. **How does the Pong AI work?** 🆕 `PongAI` (`pong.js:671-773`): once per second (`UPDATE_INTERVAL = 1000`) it samples the ball, predicts where it will cross its paddle with `predictZ` (extrapolation folded at the ±2.9 walls = anticipated bounces), adds a human error margin/mistake chance, then every frame `pressKeys()` presses simulated `arrowup`/`arrowdown` that `InputHandler` applies at the same `paddleSpeed` (0.15) as a human. No A*. See Q64–65.
 33. **Why does it refresh only once per second?** Subject rule: the AI must simulate human perception and anticipate; the 1 s window forces prediction instead of tracking the ball perfectly.
 33b. **Does the AI adapt?** 🆕 Yes: every 5 s `updateDifficulty()` reads the live score — leading by ≥ 2 it plays sloppier (accuracy 0.6, slower), trailing by ≥ 2 it plays sharper (0.9, faster), otherwise 0.8 (`pong.js:733-755`).
@@ -72,8 +72,8 @@ Answers describe the code **as it is after the Aug-2026 audit**. Items marked �
 53. **Why Gunicorn directly on 443 without nginx?** Fewer moving parts for a local evaluation; WhiteNoise serves static files; a reverse proxy is the first production step.
 54. **Where do secrets live?** `.env` (git-ignored) read by python-decouple: Django secret, DB password, Gmail app password, 42 client id/secret, JWT secret. Not baked into the image (bind mount).
 55. **Does the site need internet?** Yes for Bootstrap, jQuery/Popper, Google Fonts and **Three.js** (CDN). Vendoring them is a recommended improvement.
-56. **How do you test?** `make test` → 54 Django tests (2FA regression, no-2FA login, GDPR export/delete/cleanup, tournament tie-breakers). Audit also ran a curl API flow and a headless-Chrome UI walkthrough (0 JS errors).
-57. **What would you improve?** Rate-limit OTP; `state` on OAuth; HttpOnly-cookie JWTs; server-authoritative game results; real AI difficulty adaptation and bounce-aware prediction; touch controls; vendor CDN assets; cron in the image; password reset; `renderer.dispose()`.
+56. **How do you test?** `make test` → 51 Django tests (2FA regression, no-2FA login, GDPR export/delete/cleanup, tournament tie-breakers). Audit also ran a curl API flow and a headless-Chrome UI walkthrough (0 JS errors).
+57. **What would you improve?** Rate-limit OTP; HttpOnly-cookie JWTs; server-authoritative game results; real AI difficulty adaptation and bounce-aware prediction; touch controls; vendor CDN assets; cron in the image; password reset; `renderer.dispose()`.
 58. **What does `production_settings.py` do?** Nothing at runtime — Gunicorn uses `backend.settings`; 🆕 compose now also points `exec` commands there, and the file has a `SECRET_KEY` fallback so it no longer crashes if used.
 59. **What is `gameapp` for?** Serves the SPA shell (`index`) and holds unused `Game/Player/Score` models reserved for server-side games.
 60. **Is the backend microservices?** No, and we don't claim it — a modular monolith (3 Django apps, one process) with a separate Postgres container.
@@ -83,7 +83,7 @@ Answers describe the code **as it is after the Aug-2026 audit**. Items marked �
 ```bash
 make build && make up            # https://localhost  (accept the self-signed cert)
 make logs                        # container logs (entrypoint output)
-make test                        # 62 tests
+make test                        # 54 tests
 make shell                       # Django shell
 make db                          # psql into basta_db  (\dt to list tables)
 make gdpr-cleanup                # dry-run inactivity cleanup
@@ -117,9 +117,9 @@ Test accounts to pre-create for the demo: one normal user, one with 2FA enabled,
 
 ### 🆕 Subject-compliance questions (30 Aug 2026)
 
-61. **How does the matchmaking of the second game work?** Click *Online — find an opponent*: the browser POSTs `/api/game/ttt/queue/` every 2 s. The server keeps one `TicTacToeQueue` row per waiting user with a *rating* (TicTacToe win-rate, 50 if no history), drops entries not refreshed for 60 s, and pairs the caller with the waiting player whose rating is closest (fair/balanced match) inside `transaction.atomic()` + `select_for_update()` so two joiners can't both grab the same opponent. The waiter becomes X, the joiner O; a `TicTacToeMatch` row holds the 9-char board and whose turn it is.
-62. **Why polling instead of WebSockets?** TicTacToe is turn-based, so a 1-second `GET /api/game/ttt/match/<id>/` is plenty and keeps the stack simple (Gunicorn sync workers, no Channels/Redis). Real-time Pong would need WebSockets — that's the *Remote players* module we did not choose.
-63. **What if a player leaves an online game?** The page's `cleanup()` POSTs `…/leave/`: the opponent is declared the winner and both `MatchHistory` rows are written by the server. A queued player leaving sends `DELETE …/queue/`; stale queue rows expire after 60 s anyway.
+61. **How does the matchmaking work?** It is the tournament system: the logged-in user registers 3–8 aliases (the first is their unique display name), `add_players` builds every pairing (`itertools.combinations`), the page announces "Next match: A vs B" and highlights the row, results update the scores, and tied leaders get extra tiebreaker rounds until one winner remains.
+62. **Why is there no online play?** The *Remote players* module was not chosen; Pong and TicTacToe are both local by design (same keyboard). An online TicTacToe queue was prototyped during the audit and removed to keep the project consistent with that choice.
+63. **What is the OAuth `state` for?** A signed random value bound to the browser session; 42 sends it back and `get_token` refuses any code exchange whose state does not match — protection against login-CSRF / code injection on the callback.
 64. **How does the AI "simulate keyboard input"?** `PongAI` never touches the paddle. Once per second it looks at the ball, predicts where it will cross its paddle (folding the path at the ±2.9 walls), then every frame `pressKeys()` puts `arrowup`/`arrowdown` into `InputHandler.aiKeys` — the same code path that moves a human paddle at `GAME_CONFIG.paddleSpeed` (0.15). It releases the key inside a ±0.1 dead-zone. Difficulty only changes the prediction error and mistake chance, never the speed.
 65. **Is the AI as fast as a human player?** Yes — both paddles move exactly `paddleSpeed` per frame through the same `InputHandler.update()`; the harness measured 0.1500 per frame for the AI.
 66. **How do you protect against XSS?** Server side, Django templates auto-escape (the SSR profile). Client side, every user-controlled string (nicknames, usernames, display names, opponents) is inserted with `createElement`/`textContent`; `innerHTML` is only used for static markup. We verified it by registering a tournament player named `<b id=xss-probe>` — it is displayed literally.

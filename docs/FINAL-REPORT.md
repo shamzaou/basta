@@ -2,7 +2,7 @@
 
 Everything below was done on `master` in small commits. `make build && make up` works from a
 clean checkout with a fresh database volume, the site serves at https://localhost, and
-`make test` passes (62 tests). Screenshots of every page were captured from the running site
+`make test` passes (54 tests). Screenshots of every page were captured from the running site
 with headless Chrome (0 JavaScript errors).
 
 ## 1. What was fixed (with root causes)
@@ -25,7 +25,8 @@ with headless Chrome (0 JavaScript errors).
 | Tournament API open to anyone with a CSRF cookie | no auth check | `tournaments/views.py` `require_login` (401) |
 | No "next fight" announcement | — | `#next-match` + highlighted row |
 | GDPR anonymization missing (module bullet 1) | removed earlier | `POST /api/auth/anonymize-account/` + Settings button; 42-safe via `get_or_create_42_user` |
-| Second game had no matchmaking | hot-seat only | `gameapp` `TicTacToeQueue/TicTacToeMatch`, `/api/game/ttt/*`, Local/Online mode in `tictactoe.js` |
+| Second game "matchmaking" | an online TicTacToe queue was built, then removed at the team's request — matchmaking is the tournament system (pairings, next match, tiebreakers); TicTacToe stays local | `tournaments/`, `tictactoe.js` (local), `gameapp` migration `0003` |
+| 42 OAuth had no `state` (login-CSRF) | none generated/verified | `userapp/views.py::redirect_uri` / `get_token`, `script.js::checkOAuthLogin`, `OAUTH_STATE_SECRET` |
 | SSR was only the empty SPA shell | no server-rendered content | `gameapp.views.index` route-aware context (`ssr_*`), template renders title/meta/active page/profile |
 | **Second sweep (30 bugs, 30 Aug 2026)** — auth: app silently broke after the 60-min JWT expiry | refresh timer only armed after 42 login; `getAccessToken()` unused | `script.js` `window.authFetch` (fresh token, 401 retry), `scheduleTokenRefresh` after every login, refresh on page load |
 | Registration / email validation | raw DB error on duplicates, case-sensitive email, no format check, similarity validator skipped | `userapp/views.py` (`register_view`, `login_view`, `verify_otp`, `profile_view`) |
@@ -37,7 +38,7 @@ with headless Chrome (0 JavaScript errors).
 | GDPR cleanup never deleted while email failed | deletion mail sent before `delete()` in the same `try` | `delete_inactive_users.py` |
 | Misc: double page initialisation / double Back, OTP modal (Enter, Cancel), avatar size/type checks, logged-out access to game pages, save-match validation, inactive users listed, invalid dates in Firefox, alert/logout ordering, `make clean` | — | `script.js`, `index.html`, `userapp/views.py`, `Makefile` |
 
-Regression tests: `userapp/tests.py` (30: 2FA flow, slow/failing email backends, GDPR export/anonymize (incl. a 42 account)/delete/cleanup, 42 user helper, registration/email/avatar validation), `gameapp/tests.py` (14: matchmaking, online play, forfeit, SSR) and `tournaments/tests.py` (10: tiebreak rounds, validation, login required).
+Regression tests: `userapp/tests.py` (38: 2FA flow, slow/failing email backends, GDPR export/anonymize (incl. a 42 account)/delete/cleanup, 42 user helper, registration/email/avatar validation, password feedback, presence, unique display name, JWT on profile, 42 accounts without 2FA, OAuth state), `gameapp/tests.py` (3: SSR) and `tournaments/tests.py` (10: tiebreak rounds, validation, login required).
 Full details, severities and the deferred-issue list: `docs/audit-report.md`.
 
 ## 2. What remains for the humans
@@ -52,7 +53,7 @@ Full details, severities and the deferred-issue list: `docs/audit-report.md`.
    `.env`, restart, and read the code with `grep "OTP for login" gunicorn-error.log | tail -1`.
 3. **Speaker names** — `presentation/index.html` uses *Speaker 1…4* placeholders on every section;
    the member-contribution slide is derived from git history and marked "team: adjust".
-4. **Test on a second browser** (Firefox/Safari) before the defense — the *Expanding browser compatibility* module requires it and it was not possible here (Firefox not installed). Also consider the two remaining user-management gaps: friends' online status and a unique display name (see `docs/audit-report.md` §2c).
+4. **Second-browser testing** — done by the team on Firefox (browser-compatibility module); re-check after any frontend change.
    A language switcher built during the audit was likewise removed after the team confirmed *Multiple
    language support* is not a selected module.
 5. Optional before the demo: pre-create the accounts listed on the demo cheat-sheet slide.
@@ -74,7 +75,7 @@ Full details, severities and the deferred-issue list: `docs/audit-report.md`.
 
 ## 3b. Selected modules (final list)
 
-7 Major — Django backend, standard user management, remote authentication (42 OAuth), another game with history and matchmaking (TicTacToe), AI opponent, 2FA + JWT, advanced 3D — and 6 Minor — Bootstrap, PostgreSQL, stats dashboards, GDPR, expanding browser compatibility, SSR — = **10 major-equivalents** (7 required). "Support on all devices" is no longer claimed (responsive layout and touch controls remain as features).
+7 Major — Django backend, standard user management, remote authentication (42 OAuth), another game with history and matchmaking (local TicTacToe + tournament matchmaking), AI opponent, 2FA + JWT, advanced 3D — and 6 Minor — Bootstrap, PostgreSQL, stats dashboards, GDPR, expanding browser compatibility, SSR — = **10 major-equivalents** (7 required). "Support on all devices" is no longer claimed (responsive layout and touch controls remain as features).
 
 ## 4. Verification evidence
 
