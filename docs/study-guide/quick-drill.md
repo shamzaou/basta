@@ -5,7 +5,7 @@ Answers describe the code **as it is after the Aug-2026 audit**. Items marked �
 ## A. The big picture (almost certain to be asked)
 
 1. **What is the project?** FAST_PONG — a single-page web app around 3D Pong (Three.js) with an AI opponent, accounts with e-mail 2FA and 42 OAuth login, friends, match history/stats dashboard, round-robin tournaments with tie-breakers, and GDPR tools. Django + PostgreSQL in Docker, served over HTTPS by Gunicorn. (TicTacToe exists as an extra game — not a claimed module.)
-2. **Which modules?** Majors (6): Django backend, standard user management, remote authentication (42 OAuth), AI opponent, 2FA + JWT, advanced 3D. Minors (7): front-end toolkit (Bootstrap), PostgreSQL, user & game stats dashboards, GDPR, support on all devices, browser compatibility, SSR. 6 + 7×0.5 = **9.5 major-equivalents** (7 required).
+2. **Which modules?** Majors (7): Django backend, standard user management, remote authentication (42 OAuth), another game with history and matchmaking (TicTacToe local + online), AI opponent, 2FA + JWT, advanced 3D (Three.js). Minors (6): Bootstrap, PostgreSQL, stats dashboards, GDPR, expanding browser compatibility, SSR. 7 + 6/2 = 10 major-equivalents (7 needed).
 3. **Why Django?** Full-stack batteries (ORM, migrations, auth, sessions, CSRF, admin, e-mail) plus DRF/SimpleJWT; Python known by the whole team; fastest path to auth-heavy features. `backend/settings.py`.
 4. **Why PostgreSQL?** Subject requirement; transactional, first-class Django backend, one Docker service (`docker-compose.yml:24`).
 5. **Why Three.js?** Scene-graph API over WebGL loadable from a `<script>` tag — no bundler, matches our vanilla-JS front-end. `static/frontend/js/pong.js`.
@@ -41,13 +41,13 @@ Answers describe the code **as it is after the Aug-2026 audit**. Items marked �
 29. **Custom user model?** `userapp.User(AbstractUser)`: e-mail login, display name, avatar, 42 ids, `two_factor_enabled`, `last_activity`, friends M2M (`userapp/models.py:6`).
 30. **Avatar upload?** Base64 data-URL in a JSON PUT → decoded and saved under `media/profile_pictures/`; served by `/api/auth/avatar/<id>/` with `man.png` default.
 31. **Friends?** Non-symmetric M2M; add/remove/list endpoints; "Find Users" tab. No online status.
-32. **How does the Pong AI work?** `PongAI` (`pong.js:585`): once per second (`UPDATE_INTERVAL = 1000`) it snapshots ball position + velocity, predicts where the ball crosses the paddle plane, adds an error scaled by `(1-ACCURACY)` and a 10 % random mistake, then every frame moves toward that target at ≤ `MAX_SPEED` — like a human holding a key. Human ↑/↓ are disabled for the AI paddle.
+32. **How does the Pong AI work?** 🆕 `PongAI` (`pong.js:671-773`): once per second (`UPDATE_INTERVAL = 1000`) it samples the ball, predicts where it will cross its paddle with `predictZ` (extrapolation folded at the ±2.9 walls = anticipated bounces), adds a human error margin/mistake chance, then every frame `pressKeys()` presses simulated `arrowup`/`arrowdown` that `InputHandler` applies at the same `paddleSpeed` (0.15) as a human. No A*. See Q64–65.
 33. **Why does it refresh only once per second?** Subject rule: the AI must simulate human perception and anticipate; the 1 s window forces prediction instead of tracking the ball perfectly.
 33b. **Does the AI adapt?** 🆕 Yes: every 5 s `updateDifficulty()` reads the live score — leading by ≥ 2 it plays sloppier (accuracy 0.6, slower), trailing by ≥ 2 it plays sharper (0.9, faster), otherwise 0.8 (`pong.js:733-755`).
 33c. **Can you play on a phone?** 🆕 Yes — drag on your half of the canvas (pointer events, `touch-action: none`, multi-touch for two players); keyboard on desktop (`pong.js:551-560`).
 33d. **What happens when the tiebreakers tie again?** 🆕 `Tournament.get_winner` plays tiebreak *rounds*: a fully played round that is still level creates a new round-robin among the remaining leaders, until one player has the most tiebreak wins (`tournaments/models.py:18-99`).
 34. **Why no A\*?** Pong has no graph to search; the AI uses kinematic prediction (linear extrapolation). A* is forbidden by the subject anyway.
-35. **How is AI difficulty tuned?** Constants `ACCURACY`, `MISTAKE_CHANCE`, `MAX_SPEED`; `updateDifficulty()` runs every 5 s but its score-based branch is stubbed (`scoreDiff = 0`) — say it honestly; making it read the real score is a listed improvement.
+35. **How is AI difficulty tuned?** 🆕 `updateDifficulty()` every 5 s from the live score: AI leading by ≥2 → `ACCURACY 0.6 / MISTAKE_CHANCE 0.15`, trailing by ≥2 → `0.9 / 0.05`, else `0.8 / 0.10`. Speed is never changed (subject rule).
 36. **Can the AI lose?** Yes — prediction error, random mistakes, the 1 s blind window and the ball speeding up 5 % per hit; games are first to 3 points.
 37. **Where is the stats dashboard?** `/profile`: Games Played, Win Rate (SVG pie chart), Best Score, last 5 matches with game badge/opponent/score/result/date, friends. Data from `profile_view` (`views.py:76`); chart is hand-drawn SVG (`createWinratePieChart`, `script.js:1913`), no library.
 38. **How is win rate / best score computed?** `wins / total × 100` (integer) over non-tournament matches; best score = the win with the largest `user − opponent` margin (`views.py:85-111`). Full stats (wins/losses/draws, all matches) in the JSON export.
@@ -72,7 +72,7 @@ Answers describe the code **as it is after the Aug-2026 audit**. Items marked �
 53. **Why Gunicorn directly on 443 without nginx?** Fewer moving parts for a local evaluation; WhiteNoise serves static files; a reverse proxy is the first production step.
 54. **Where do secrets live?** `.env` (git-ignored) read by python-decouple: Django secret, DB password, Gmail app password, 42 client id/secret, JWT secret. Not baked into the image (bind mount).
 55. **Does the site need internet?** Yes for Bootstrap, jQuery/Popper, Google Fonts and **Three.js** (CDN). Vendoring them is a recommended improvement.
-56. **How do you test?** `make test` → 17 Django tests (2FA regression, no-2FA login, GDPR export/delete/cleanup, tournament tie-breakers). Audit also ran a curl API flow and a headless-Chrome UI walkthrough (0 JS errors).
+56. **How do you test?** `make test` → 54 Django tests (2FA regression, no-2FA login, GDPR export/delete/cleanup, tournament tie-breakers). Audit also ran a curl API flow and a headless-Chrome UI walkthrough (0 JS errors).
 57. **What would you improve?** Rate-limit OTP; `state` on OAuth; HttpOnly-cookie JWTs; server-authoritative game results; real AI difficulty adaptation and bounce-aware prediction; touch controls; vendor CDN assets; cron in the image; password reset; `renderer.dispose()`.
 58. **What does `production_settings.py` do?** Nothing at runtime — Gunicorn uses `backend.settings`; 🆕 compose now also points `exec` commands there, and the file has a `SECRET_KEY` fallback so it no longer crashes if used.
 59. **What is `gameapp` for?** Serves the SPA shell (`index`) and holds unused `Game/Player/Score` models reserved for server-side games.
@@ -83,7 +83,7 @@ Answers describe the code **as it is after the Aug-2026 audit**. Items marked �
 ```bash
 make build && make up            # https://localhost  (accept the self-signed cert)
 make logs                        # container logs (entrypoint output)
-make test                        # 34 tests
+make test                        # 54 tests
 make shell                       # Django shell
 make db                          # psql into basta_db  (\dt to list tables)
 make gdpr-cleanup                # dry-run inactivity cleanup
@@ -114,3 +114,16 @@ curl -sk -X POST https://localhost/api/auth/redirect_uri/
 ```
 
 Test accounts to pre-create for the demo: one normal user, one with 2FA enabled, one throw-away for delete; two users to demo friends. For the AI module: Play Now → Player vs AI, play one game to 3 points, then open Profile to show the `vs. AI` row and the win-rate chart.
+
+### 🆕 Subject-compliance questions (30 Aug 2026)
+
+61. **How does the matchmaking of the second game work?** Click *Online — find an opponent*: the browser POSTs `/api/game/ttt/queue/` every 2 s. The server keeps one `TicTacToeQueue` row per waiting user with a *rating* (TicTacToe win-rate, 50 if no history), drops entries not refreshed for 60 s, and pairs the caller with the waiting player whose rating is closest (fair/balanced match) inside `transaction.atomic()` + `select_for_update()` so two joiners can't both grab the same opponent. The waiter becomes X, the joiner O; a `TicTacToeMatch` row holds the 9-char board and whose turn it is.
+62. **Why polling instead of WebSockets?** TicTacToe is turn-based, so a 1-second `GET /api/game/ttt/match/<id>/` is plenty and keeps the stack simple (Gunicorn sync workers, no Channels/Redis). Real-time Pong would need WebSockets — that's the *Remote players* module we did not choose.
+63. **What if a player leaves an online game?** The page's `cleanup()` POSTs `…/leave/`: the opponent is declared the winner and both `MatchHistory` rows are written by the server. A queued player leaving sends `DELETE …/queue/`; stale queue rows expire after 60 s anyway.
+64. **How does the AI "simulate keyboard input"?** `PongAI` never touches the paddle. Once per second it looks at the ball, predicts where it will cross its paddle (folding the path at the ±2.9 walls), then every frame `pressKeys()` puts `arrowup`/`arrowdown` into `InputHandler.aiKeys` — the same code path that moves a human paddle at `GAME_CONFIG.paddleSpeed` (0.15). It releases the key inside a ±0.1 dead-zone. Difficulty only changes the prediction error and mistake chance, never the speed.
+65. **Is the AI as fast as a human player?** Yes — both paddles move exactly `paddleSpeed` per frame through the same `InputHandler.update()`; the harness measured 0.1500 per frame for the AI.
+66. **How do you protect against XSS?** Server side, Django templates auto-escape (the SSR profile). Client side, every user-controlled string (nicknames, usernames, display names, opponents) is inserted with `createElement`/`textContent`; `innerHTML` is only used for static markup. We verified it by registering a tournament player named `<b id=xss-probe>` — it is displayed literally.
+67. **What does SSR do here?** The Django view behind every URL (`gameapp.views.index`) resolves the page from the path, sets `<title>` and `<meta name="description">`, renders that page `active` (so the HTML already shows it before JavaScript runs), and for a logged-in session pre-renders the profile (stats and last matches). The SPA then hydrates and takes over routing (`body.dataset.ssrPage`).
+68. **How does anonymization work for a 42 account?** Same endpoint, no password needed (session/JWT). It replaces username/e-mail, clears display name, avatar, `intra_id`, `is_42_user`, 2FA, friends, tokens, sets `is_active=False` and an unusable password. If that person logs in with 42 again, `get_or_create_42_user` only matches *active* accounts by e-mail, so a fresh account is created and the anonymized row stays anonymous.
+69. **Why is the tournament API protected now?** The subject says "ensure your routes are protected": every `tournaments/` view runs through `require_login` (401 JSON when anonymous) in addition to CSRF.
+70. **Where are the credentials?** Only in `.env` (git-ignored); `docker-compose.yml` substitutes `${DB_NAME}/${DB_USER}/${DB_PASSWORD}` from it.

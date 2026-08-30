@@ -2,7 +2,7 @@
 
 Everything below was done on `master` in small commits. `make build && make up` works from a
 clean checkout with a fresh database volume, the site serves at https://localhost, and
-`make test` passes (34 tests). Screenshots of every page were captured from the running site
+`make test` passes (54 tests). Screenshots of every page were captured from the running site
 with headless Chrome (0 JavaScript errors).
 
 ## 1. What was fixed (with root causes)
@@ -19,6 +19,14 @@ with headless Chrome (0 JavaScript errors).
 | Avatar of the previous account stayed after switching users | nav/settings avatar `src` was only set when the current account had a picture; never reset inside the SPA | `static/frontend/js/script.js` (`updateNavAvatar`, `loadSettingsData`, `handleLogout`) |
 | Silent token refresh broken | wrong URL + undefined `logout()` | `static/frontend/js/script.js` |
 | GDPR cron not runnable | no cron in the image | `Makefile` (`gdpr-cleanup`, `gdpr-cleanup-run`) |
+| **Subject-compliance batch (30 Aug 2026)** — stored XSS via tournament nicknames | `innerHTML` with user strings | `script.js` `loadTournamentData` (DOM + `textContent`) |
+| AI paddle faster/slower than a player; AI moved the paddle directly; straight-line prediction | `MAX_SPEED`, `executeMove`, no wall folding | `pong.js` `InputHandler.aiKeys`, `PongAI.predictZ/pressKeys` — simulated keys at `paddleSpeed` 0.15, bounce-aware |
+| DB password committed in `docker-compose.yml` | hard-coded env | `${DB_*}` substituted from `.env` |
+| Tournament API open to anyone with a CSRF cookie | no auth check | `tournaments/views.py` `require_login` (401) |
+| No "next fight" announcement | — | `#next-match` + highlighted row |
+| GDPR anonymization missing (module bullet 1) | removed earlier | `POST /api/auth/anonymize-account/` + Settings button; 42-safe via `get_or_create_42_user` |
+| Second game had no matchmaking | hot-seat only | `gameapp` `TicTacToeQueue/TicTacToeMatch`, `/api/game/ttt/*`, Local/Online mode in `tictactoe.js` |
+| SSR was only the empty SPA shell | no server-rendered content | `gameapp.views.index` route-aware context (`ssr_*`), template renders title/meta/active page/profile |
 | **Second sweep (30 bugs, 30 Aug 2026)** — auth: app silently broke after the 60-min JWT expiry | refresh timer only armed after 42 login; `getAccessToken()` unused | `script.js` `window.authFetch` (fresh token, 401 retry), `scheduleTokenRefresh` after every login, refresh on page load |
 | Registration / email validation | raw DB error on duplicates, case-sensitive email, no format check, similarity validator skipped | `userapp/views.py` (`register_view`, `login_view`, `verify_otp`, `profile_view`) |
 | Secrets in the server log | debug `print`s of passwords, headers, OTP codes | `userapp/views.py` |
@@ -29,9 +37,7 @@ with headless Chrome (0 JavaScript errors).
 | GDPR cleanup never deleted while email failed | deletion mail sent before `delete()` in the same `try` | `delete_inactive_users.py` |
 | Misc: double page initialisation / double Back, OTP modal (Enter, Cancel), avatar size/type checks, logged-out access to game pages, save-match validation, inactive users listed, invalid dates in Firefox, alert/logout ordering, `make clean` | — | `script.js`, `index.html`, `userapp/views.py`, `Makefile` |
 
-Regression tests: `userapp/tests.py` (26 tests: 2FA flow, slow/failing email backends, GDPR
-export/delete/cleanup command, registration/email validation, profile PUT, save-match validation,
-avatar limits) and `tournaments/tests.py` (8: tiebreak rounds, player/score validation).
+Regression tests: `userapp/tests.py` (30: 2FA flow, slow/failing email backends, GDPR export/anonymize (incl. a 42 account)/delete/cleanup, 42 user helper, registration/email/avatar validation), `gameapp/tests.py` (14: matchmaking, online play, forfeit, SSR) and `tournaments/tests.py` (10: tiebreak rounds, validation, login required).
 Full details, severities and the deferred-issue list: `docs/audit-report.md`.
 
 ## 2. What remains for the humans
@@ -46,8 +52,7 @@ Full details, severities and the deferred-issue list: `docs/audit-report.md`.
    `.env`, restart, and read the code with `grep "OTP for login" gunicorn-error.log | tail -1`.
 3. **Speaker names** — `presentation/index.html` uses *Speaker 1…4* placeholders on every section;
    the member-contribution slide is derived from git history and marked "team: adjust".
-4. **Be ready for "the GDPR module says anonymization"** — the team chose full deletion; an anonymize
-   endpoint built during the audit was removed at the team's request (see `modules/08-cybersecurity-gdpr.md`, Q2).
+4. **Test on a second browser** (Firefox/Safari) before the defense — the *Expanding browser compatibility* module requires it and it was not possible here (Firefox not installed). Also consider the two remaining user-management gaps: friends' online status and a unique display name (see `docs/audit-report.md` §2c).
    A language switcher built during the audit was likewise removed after the team confirmed *Multiple
    language support* is not a selected module.
 5. Optional before the demo: pre-create the accounts listed on the demo cheat-sheet slide.
@@ -59,13 +64,17 @@ Full details, severities and the deferred-issue list: `docs/audit-report.md`.
 | `docs/audit-report.md` | Read §1 for the two bug stories (staff will ask), §3 for the honest limitations, §5 for the external blockers. |
 | `docs/study-guide/00-overview.md` | Start here; 15-minute re-orientation on stack, run commands and request flow. |
 | `docs/study-guide/architecture/` | Mermaid diagrams (render in GitHub/VS Code): containers, backend apps + URL table, ER diagram, request lifecycle, sequence diagrams for login / 42 OAuth / 2FA / games / tournaments / GDPR. |
-| `docs/study-guide/modules/01…11` | One file per selected module (Web ×3, user management, remote auth/42 OAuth, AI opponent, stats dashboards, GDPR, 2FA+JWT, 3D, accessibility): what it requires, where it is implemented (`path:line`), status, and 5–10 likely evaluator questions with answers. |
+| `docs/study-guide/modules/01…12` | One file per selected module (Web ×3, user management, remote auth/42 OAuth, AI opponent, stats dashboards, another game + matchmaking, GDPR, 2FA+JWT, 3D, accessibility): what it requires, where it is implemented (`path:line`), status, and 5–10 likely evaluator questions with answers. |
 | `docs/study-guide/SPA-routing-and-frontend.md` | Client-side router, games, Three.js + AI opponent, stats dashboard rendering, token handling. |
 | `docs/study-guide/quick-drill.md` | 40+ rapid-fire Q&As ordered by likelihood, plus demo commands. Drill this the night before. |
 | `presentation/FAST_PONG-presentation.pdf` | The presentation (36 slides, 16:9, same visual style as the team's earlier capstone deck). Rebuild after edits with `python presentation/build_pdf_deck.py` (content and layout live in that script; photos in `presentation/assets/`). |
 | `presentation/index.html` | Shorter HTML slideshow (18 slides, light theme): ← → / Space navigate, `Home`/`End` jump, `P` shows all slides stacked. |
 | `presentation/screenshots/` | Raw screenshots (also embedded in the deck). |
 | `make test` | Run before the evaluation to show the green suite. |
+
+## 3b. Selected modules (final list)
+
+7 Major — Django backend, standard user management, remote authentication (42 OAuth), another game with history and matchmaking (TicTacToe), AI opponent, 2FA + JWT, advanced 3D — and 6 Minor — Bootstrap, PostgreSQL, stats dashboards, GDPR, expanding browser compatibility, SSR — = **10 major-equivalents** (7 required). "Support on all devices" is no longer claimed (responsive layout and touch controls remain as features).
 
 ## 4. Verification evidence
 

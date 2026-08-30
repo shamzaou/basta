@@ -27,6 +27,9 @@ Implement a secure remote-authentication system (OAuth 2.0 with the 42 intranet)
 * 42 users share the `User` table: friends, match history, GDPR export/delete all apply (`delete_account` `views.py:851` cascades like for any other account).
 * A 42 user has `two_factor_enabled=False` and an unusable password (never set), so they cannot use the password form.
 
+## 🆕 Account matching (`get_or_create_42_user`, `userapp/views.py:132-158`)
+Both OAuth views now call one helper: it looks up an **active** account by the 42 e-mail (case-insensitive) and otherwise creates one with `create_user(password=None)` (unusable password, `is_42_user=True`, `intra_id`). If the 42 login is already taken as a username, `<login>_<intra_id>` is used. Because anonymized accounts are inactive and no longer carry the e-mail, a returning 42 user gets a fresh account instead of being re-linked (tested in `userapp/tests.py`).
+
 ## Security notes (be ready for these)
 * **Authorization-code grant**, exchange performed **server-side** with the client secret, which never reaches the browser ✅.
 * **No `state` parameter** is sent or checked ⚠️ — `OAUTH_STATE_SECRET` exists in `.env` and `JWT_SETTINGS['STATE_TTL']` in settings (`backend/settings.py:254`), but nothing uses them. Adding it: generate a random value in `redirect_uri`, store it in the session/cache, append `&state=…`, and have `get_token` verify the value returned by 42 before exchanging the code. Say this honestly if asked about CSRF on the OAuth flow.

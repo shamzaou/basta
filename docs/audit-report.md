@@ -103,7 +103,7 @@ No Celery/broker introduced.
 After the first audit the team asked for a full bug sweep of the project ("scour the project
 for other bugs") and then to fix everything found. Three parallel reviews (SPA, games, backend)
 plus live UI scenarios produced 30 findings; all were fixed, each backend fix has a test, and the
-whole batch was re-verified through the real UI with headless Chrome. Suite: **34 tests OK**
+whole batch was re-verified through the real UI with headless Chrome. Suite: **34 tests OK** at the time (54 after §2c)
 (userapp 26, tournaments 8).
 
 | # | Sev | What was wrong | Root cause | Fix | Where |
@@ -148,6 +148,30 @@ second round of 3; "A wins! 3 - 0" announced; Save Settings persisted; 2FA toggl
 pause overlay and canvas removed on leaving the page; one `match/create` per TicTacToe visit;
 logged-out `/profile` → login; 0 JavaScript errors.
 
+## 2c. Subject-compliance fixes (30 Aug 2026)
+
+A line-by-line review of the selected modules and the mandatory part against `en.subject` v15
+found the items below; all were fixed on request and re-verified live (two-browser test for the
+online game, headless Chrome for the SPA, Node harness for the AI, 54 Django tests).
+
+| # | Subject rule | What was wrong | Fix (file) | Verified |
+|---|---|---|---|---|
+| C1 | III.4 "protected against XSS" | **Stored XSS**: tournament nicknames were injected with `innerHTML` (`<b id=xss-probe>` rendered as a real element). | `loadTournamentData` builds rows, winner cells, Start buttons and the players list with `createElement`/`textContent` (`script.js:2249-2360`); no user string reaches `innerHTML` anywhere in the SPA. | Live: probe nickname now shown as literal text. |
+| C2 | III.3 "the AI must exhibit the same speed as a regular player" | AI paddle moved at `MAX_SPEED` 0.10–0.14 vs the human 0.15. | AI no longer moves the paddle; it presses simulated keys consumed by `InputHandler` at `GAME_CONFIG.paddleSpeed` (`pong.js:626-640`, `:742-753`). Difficulty now changes accuracy/mistakes only (`:755-773`). | Harness: displacement per frame exactly 0.1500. |
+| C3 | IV.5 "simulate keyboard input … refresh once per second … anticipate bounces" | `executeMove` set the paddle position directly; prediction was a straight line (no wall bounces). | `PongAI.pressKeys` holds `arrowup`/`arrowdown` in `InputHandler.aiKeys` with a ±0.1 dead-zone; `predictZ` folds the trajectory at the ±2.9 walls (`pong.js:714-741`); `UPDATE_INTERVAL` stays 1000 ms. | Harness: folded prediction matches simulation; AI returns the ball in a 1000-frame rally. |
+| C4 | III.4 "credentials … must be saved locally in a .env file" | `docker-compose.yml` committed `POSTGRES_PASSWORD=postgres`. | `db` service now uses `${DB_NAME}/${DB_USER}/${DB_PASSWORD}` substituted from `.env`; unused `DATABASE_URL` removed. | `docker-compose config` resolves from `.env`. |
+| C5 | III.4 "ensure your routes are protected" | Tournament API accepted any visitor holding a CSRF cookie. | `require_login` decorator → 401 JSON on all seven tournament views (`tournaments/views.py:14-21`, applied `:33-231`); SPA shows "Please log in" on 401. | Test + live: anonymous create → 401. |
+| C6 | III.3 "matchmaking … announce the next fight" | Nothing announced the next match. | `#next-match` line ("Next match: A vs B" / "All matches played") and `.next-match-row` highlight (`script.js:2350`, `index.html:545`). | Live. |
+| C7 | IV.6 GDPR "request anonymization of their personal data" | Anonymization had been removed. | `POST /api/auth/anonymize-account/` restored (`userapp/views.py:886-925`) + Settings button (`script.js:858-885`). **42-safe**: `get_or_create_42_user` (`:132-158`) matches only *active* accounts by e-mail and handles username collisions, so an anonymized 42 user who logs in again gets a fresh account and the anonymized row is never re-linked. | Tests `userapp/tests.py` (normal + 42 account); live UI. |
+| C8 | IV.4 "Add another game **with user history and matchmaking**" | TicTacToe was hot-seat only — no way to find an opponent. | Online matchmaking: `gameapp.TicTacToeQueue`/`TicTacToeMatch` (`gameapp/models.py:39-85`), `/api/game/ttt/queue/` pairs the waiting player with the closest TicTacToe win-rate (`gameapp/views.py:112-137`), turn-based play through `GET …/match/<id>/` + `POST …/move/` (`:141-192`), forfeit `…/leave/` (`:196-`), `MatchHistory` written for both players on finish (`:96-108`). UI: Local / Online mode selector, queue polling every 2 s, board polling every 1 s (`tictactoe.js:352-556`). | Two headless browsers: queued → matched → X wins → both histories written. 14 gameapp tests. |
+| C9 | IV.10 "content is pre-rendered on the server" | Django only served the empty SPA shell. | `gameapp.views.index` (`gameapp/views.py:38-61`) picks the page from the URL, sets `<title>`/`<meta description>` per route, renders the requested page as `active`, pre-fills the profile (stats + last matches via `build_profile_summary`, `userapp/views.py:80-130`) for logged-in sessions, and redirects login-only pages to the login view when anonymous. Template: `index.html:9-17`, `:59-120`. `script.js:152` starts from `body.dataset.ssrPage`. | Tests (title/username in HTML); live fetch of `/profile` contains the username. |
+
+### Subject compliance check (after the fixes)
+
+Mandatory part (III): SPA + Back/Forward ✅ · latest Chrome, no errors and **no warnings** ✅ (verified on every page) · single `docker-compose up --build` ✅ (bind mount `.:/app`; container runs as root — on a 42 Linux cluster keep Docker runtime files in `/goinfre`) · same-keyboard Pong ✅ · tournament shows who plays whom, order, and now the next fight ✅ · aliases per tournament ✅ · AI same speed ✅ (C2) · hashed passwords, ORM, HTTPS, server-side validation ✅ · XSS ✅ (C1) · routes protected ✅ (C5) · credentials in `.env` ✅ (C4; `localhost-key.pem` is a self-signed dev certificate).
+
+Remaining ⚠️ (not fixed, documented): unique display name not enforced (`display_name` has no unique constraint; tournaments use per-tournament nicknames); no friends **online status**; no separate per-session stats dashboard (only the match list and the tournament scoreboard); Bootstrap usage is light; browser-compatibility testing on Firefox/Safari still has to be done by the team.
+
 ## 3. Issues documented but deliberately not fixed (📝)
 
 These would require design changes the team should own, or are out of scope for a
@@ -156,7 +180,7 @@ recognisable minimal fix. All are listed in the presentation's *Limitations* sli
 | # | Sev | Finding | Detail / recommendation |
 |---|-----|---------|-------------------------|
 | 10 | ⚪ | Backend is a modular monolith | Three Django apps in one Gunicorn process + one Postgres container. Not a problem: *Designing the backend as microservices* is **not** a selected module. Mentioned only so nobody claims it at the evaluation. |
-| 11 | 🟠 | Tournament API is unauthenticated | `tournaments/views.py` endpoints only require a CSRF token; any visitor with the cookie can create/finish matches. Since the second sweep the inputs are validated (names, scores, double registration), but there is still no login check. |
+| 11 | ✅ | ~~Tournament API is unauthenticated~~ | **Fixed (§2c C5)**: every tournament view now requires a logged-in session (`require_login`, 401 JSON). |
 | 12 | 🟠 | Mixed auth model | `profile_view`/`user_settings_view` use `@authentication_classes([TokenAuthentication, SessionAuthentication])` → the browser succeeds via the **session cookie**, not the JWT. Other DRF endpoints accept the JWT Bearer through DRF defaults. Django views (`login`, `verify-otp`, tournaments) use sessions/CSRF only. JWTs live in `localStorage` (XSS-readable); since the second sweep they are refreshed automatically (`authFetch`), so expiry no longer breaks the app. |
 | 13 | 🟠 | No rate limiting / lockout on `/login/` and `/verify-otp/` | A 6-digit code with a 10-min TTL and no attempt limit is brute-forceable by script. Codes are single-use; recommend attempt counter in the cache + lockout. |
 | 14 | 🟡 | Dead / misleading code | `check_auth` (uses `JWT_SECRET_KEY` while tokens are signed with `SECRET_KEY` → always 401; unused by frontend), `oauth_callback` view (unused; hard-codes `redirect_uri=https://localhost:443/home`), `verify_otp_view`, `update_profile`, `gameapp` models, `django_otp` apps, `rest_framework.authtoken` (tokens created but never used), `production_settings.py`, root `wsgi.py`/`wsgi_utils.py`/`check_wsgi.py`, `scripts/init_db.sh`, `backend/asgi.py` + `daphne`. |
@@ -170,30 +194,30 @@ recognisable minimal fix. All are listed in the presentation's *Limitations* sli
 | 22 | 🟡 | `entrypoint.sh` runs `makemigrations` at every start | Can silently create migrations in a "production" container. Observed on a fresh volume: it wrote `django_otp/plugins/otp_totp/migrations/0003_alter_totpdevice_id.py` *inside site-packages* (django-otp 1.0.0 predates Django 4.2's `DEFAULT_AUTO_FIELD`). Harmless in the container, but prefer committing migrations and running only `migrate` — or drop the unused `django_otp` apps. |
 | 23 | 🟡 | Email change through profile PUT is not re-verified; no password reset/change flow | The About page tells users to email support for password changes. |
 | 24 | ⚪ | Frontend hygiene | Leftover `// <<<<<<< master` merge-marker comments, `alert()`-driven UX, Russian comments. (The duplicate `loadTournamentData`/`handleResize`, the hard-coded `scoreDiff` and the POSTs to non-existent routes were fixed in the second sweep.) |
-| 25 | ⚪ | Second game "matchmaking" is local | Pong: PvP on one keyboard or vs `PongAI`; TicTacToe: hot-seat X/O. No online queue. Documented in the module guide. |
+| 25 | ✅ | ~~Second game "matchmaking" is local~~ | **Fixed (§2c C8)**: TicTacToe has an online queue with rating-based pairing and turn-based play; Pong stays local (PvP on one keyboard or vs the AI), which is what the mandatory part asks. |
 | 26 | ⚪ | Tournaments use nicknames, not accounts | `tournaments.Player` is an alias table; "users across tournaments" = the logged-in user runs a tournament of aliases; tournament games are excluded from personal stats. |
 
 ---
 
-## 4. Module verification matrix (post-fix, team's actual selection)
+## 4. Module verification matrix (post-fix, team's actual selection — 7 Major + 6 Minor = 10 major-equivalents)
 
 | Module | Type | Status | Verified how |
 |--------|------|--------|--------------|
-| Use a framework as backend (Django) | Major | ✅ | Site serves; 34 tests; scripted API flow (register→login→profile→matches→friends→export→tournament→delete) all 2xx. |
-| Front-end framework/toolkit (Bootstrap) | Minor | ✅ (light use) | CDN include + `container`/`btn`/`btn-group`/`text-center` classes; most styling is custom `styles.css`. |
-| Database for the backend (PostgreSQL) | Minor | ✅ | postgres:13 container, migrations applied, `django_cache` table created. |
-| Standard user management / auth / users across tournaments | Major | ✅ | Register (duplicate/invalid email → 400, case-insensitive email), login, logout, profile GET/PUT, display name, 2FA toggle in Settings, validated avatar upload, friends add/remove/list, stats; tournament round-robin with repeated tiebreak rounds verified live. |
-| Remote authentication (42 OAuth) | Major | ✅ code / 🔒 key | Authorize URL generated correctly; SPA callback route + `get-token` exchange verified by code review; end-to-end login needs the rotated 42 key (§5). |
-| AI opponent (Pong vs AI) | Major | ✅ | `PongAI` decides once per second from ball position/velocity (no A*), difficulty now follows the live score; vs-AI game rendered and scored in headless Chrome; match saved with opponent "AI". |
-| User and game stats dashboards | Minor | ✅ | Profile stat cards (games played, win rate, best score), SVG win-rate pie chart, recent-match list (ISO dates, browser-formatted), JSON export with statistics; tournament page shows per-player scores. |
-| GDPR (anonymization, local data management, deletion) | Minor | ✅ | Export JSON, account deletion (cascade), inactivity command — all tested. Team chose deletion over anonymization (an anonymize endpoint was prototyped and removed). |
-| 2FA + JWT | Major | ✅ (delivery blocked by Gmail creds) | Both bugs fixed with regression tests; JWT issuance/refresh verified. |
+| Use a framework as backend (Django) | Major | ✅ | Site serves; 54 tests; scripted API flow (register→login→profile→matches→friends→export→tournament→delete) all 2xx. |
+| Front-end framework/toolkit (Bootstrap) | Minor | ✅ (light use ⚠️) | CDN include + `container`/`btn`/`btn-group`/`text-center` classes; most styling is custom `styles.css`. |
+| Database for the backend (PostgreSQL) | Minor | ✅ | postgres:13 container, credentials from `.env`, migrations applied (incl. `gameapp 0002`), `django_cache` table created. |
+| Standard user management / auth / users across tournaments | Major | ✅ (⚠️ no online status, display name not unique) | Register (duplicate/invalid email → 400, case-insensitive email), login, logout, profile GET/PUT, display name, 2FA toggle, validated avatar upload, friends add/remove/list, stats; tournament round-robin with repeated tiebreak rounds, next-fight announcement, login-protected API, XSS-safe rendering — verified live. |
+| Remote authentication (42 OAuth) | Major | ✅ code / 🔒 key | Authorize URL correct; SPA callback + `get-token` exchange via `get_or_create_42_user` (active-only match, username-collision handling) covered by tests; end-to-end login needs the rotated 42 key (§5). |
+| Add another game with user history and matchmaking (TicTacToe) | Major | ✅ | Local hot-seat + **online matchmaking** (queue, closest-rating pairing, polling play, forfeit); both players' `MatchHistory` written server-side; profile stats/history include TicTacToe. Two-browser live test + 14 tests. |
+| AI opponent (Pong vs AI) | Major | ✅ | Samples the game once per second, predicts the intercept with wall-bounce folding, presses simulated arrow keys at the human paddle speed (no A*); rubber-banding adjusts accuracy only; can win. Node harness + live game. |
+| User and game stats dashboards | Minor | ✅ (⚠️ no per-session dashboard) | Profile stat cards, SVG win-rate pie chart, recent-match list (ISO dates), JSON export with statistics; tournament page = per-tournament scoreboard. |
+| GDPR (anonymization, local data management, deletion) | Minor | ✅ | Export JSON, **anonymize** (42-safe), delete (cascade), inactivity command — all tested; privacy policy on the About page. |
+| 2FA + JWT | Major | ✅ (delivery blocked by Gmail creds) | Both 2FA bugs fixed with regression tests; JWT issuance, automatic refresh (`authFetch`) and validation verified. |
 | Advanced 3D (Three.js) | Major | ✅ | WebGL Pong rendered in headless Chrome (screenshot `11-pong-3d-vs-ai.jpg`). |
-| Support on all devices (responsive) | Minor | ✅ | 390×844 walkthrough, hamburger menu works (screenshot 17); Pong playable by touch (pointer drag on the canvas). |
-| Expanding browser compatibility | Minor | ✅ (untested on Firefox here) | Standard ES modules/WebGL/fetch; no Chrome-only APIs found. |
-| SSR integration | Minor | ✅ (template-level) | Django renders `index.html` with manifest static URLs and CSRF token; SPA takes over. |
+| Expanding browser compatibility | Minor | ⚠️ untested on Firefox here | Standard ES modules/WebGL/fetch, ISO dates, no Chrome-only APIs found — the team must still test on a second browser before the defense. |
+| SSR integration | Minor | ✅ | Route-aware server rendering: per-page `<title>`/`<meta description>`, requested page rendered active, profile pre-filled for logged-in sessions; SPA hydrates afterwards. Tests + live fetch. |
 
-Extra features that are **not** claimed modules: TicTacToe (second game, hot-seat), friends list.
+Features that are **not** claimed modules: responsive layout + Pong touch controls ("Support on all devices" was dropped from the selection), friends list.
 
 ## 5. Blocked externally (🔒) — needs the humans
 
@@ -216,8 +240,8 @@ Extra features that are **not** claimed modules: TicTacToe (second game, hot-sea
 
 * `make build && make up` from the committed tree: web + db start, entrypoint runs
   migrate → createcachetable → collectstatic → Gunicorn TLS on 443. `curl -k https://localhost/` → 200.
-* `make test`: **34 tests, OK** (userapp 26, tournaments 8).
-* Headless-Chrome walkthrough of every page, both games, tournament creation, i18n and mobile
-  layout: **0 JavaScript errors**; screenshots in `presentation/screenshots/`.
+* `make test`: **54 tests, OK** (userapp 30, gameapp 14, tournaments 10).
+* Headless-Chrome walkthrough of every page, both games (incl. a two-browser online TicTacToe match), tournament creation and mobile
+  layout: **0 JavaScript errors, 0 console warnings**; screenshots in `presentation/screenshots/`.
 * Commits (all on `master`): settings/test fix → 2FA fix → frontend fixes → staticfiles →
-  screenshots → docs → language-switcher removal after the team corrected the module list → anonymize removal + display-name fix → Pong wall + avatar fixes → second sweep (30 bugs).
+  screenshots → docs → language-switcher removal after the team corrected the module list → anonymize removal + display-name fix → Pong wall + avatar fixes → second sweep (30 bugs) → subject-compliance fixes (XSS, AI keyboard simulation, credentials, tournament auth, next fight, anonymization, online matchmaking, SSR).

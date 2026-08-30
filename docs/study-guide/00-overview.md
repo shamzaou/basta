@@ -28,7 +28,7 @@ FAST_PONG is our 42 Abu Dhabi ft_transcendence capstone: a single-page web app w
 make build      # docker-compose build
 make up         # docker-compose up -d  -> https://localhost  (accept the self-signed cert)
 make logs       # follow container logs (note: Gunicorn stdout goes to gunicorn-error.log, see below)
-make test       # docker-compose exec web python manage.py test   (34 tests, all green)
+make test       # docker-compose exec web python manage.py test   (54 tests, all green)
 make migrate    # apply migrations inside the container
 make shell      # Django shell
 make down       # stop
@@ -61,8 +61,8 @@ Things to know before a demo:
 | Path | Purpose |
 |---|---|
 | `backend/` | Django project: `settings.py`, `urls.py` (root router), `wsgi.py`, `asgi.py` |
-| `userapp/` | Custom `User` model, auth (login/register/logout/2FA/OAuth), profile, friends, match history, GDPR (export/delete, `delete_inactive_users` command), activity middleware, password validator, **tests** |
-| `gameapp/` | Serves the SPA (`index` view) and holds unused `Game/Player/Score` models |
+| `userapp/` | Custom `User` model, auth (login/register/logout/2FA/OAuth), profile, friends, match history, GDPR (export/anonymize/delete, `delete_inactive_users` command), activity middleware, password validator, **tests** |
+| `gameapp/` | SPA host view with SSR context (`index`), online TicTacToe matchmaking (`TicTacToeQueue`/`TicTacToeMatch`, `/api/game/ttt/*`), tests |
 | `tournaments/` | `Tournament/Player/Match` models, round-robin + tiebreaker logic, JSON API, tests |
 | `templates/frontend/index.html` | The single server-rendered page containing every SPA "page" `<div>` |
 | `static/frontend/` | `css/styles.css`, `js/script.js` (router + all API calls), `js/pong.js` (3D game incl. `PongAI`), `js/tictactoe.js` (bonus mini-game), `assets/man.png` (default avatar) |
@@ -112,14 +112,15 @@ Key facts to say out loud:
 | 3 | Web — database for the backend (PostgreSQL) | Minor | `modules/03-web-postgresql.md` |
 | 4 | User Management — standard user management, authentication, users across tournaments | Major | `modules/04-user-management.md` |
 | 5 | User Management — remote authentication (42 OAuth) | Major | `modules/05-remote-authentication-42-oauth.md` |
+| 5b | Gameplay & UX — add another game with user history and **matchmaking** (TicTacToe, local + online) | Major | `modules/12-another-game-matchmaking.md` |
 | 6 | AI-Algo — introduce an AI opponent | Major | `modules/06-ai-opponent.md` |
 | 7 | AI-Algo — user and game stats dashboards | Minor | `modules/07-stats-dashboards.md` |
 | 8 | Cybersecurity — GDPR compliance: anonymization, local data management, account deletion | Minor | `modules/08-cybersecurity-gdpr.md` |
 | 9 | Cybersecurity — 2FA and JWT | Major | `modules/09-cybersecurity-2fa-jwt.md` |
 | 10 | Graphics — advanced 3D techniques (Three.js) | Major | `modules/10-graphics-3d.md` |
-| 11 | Accessibility — support on all devices · expanding browser compatibility · SSR integration | 3 × Minor | `modules/11-accessibility.md` |
+| 11 | Accessibility — expanding browser compatibility · SSR integration | 2 × Minor | `modules/11-accessibility.md` |
 
-6 Major + 7 Minor = 9.5 major-equivalents (7 are needed for 100 %). **Not** selected — do not claim them: another game with matchmaking (TicTacToe is just a bonus feature), microservices, multiple languages, live chat, remote players, blockchain.
+7 Major + 6 Minor = 10 major-equivalents (7 are needed for 100 %). **Not** selected — do not claim them: support on all devices (the responsive layout and Pong touch controls exist, but are not a claimed module), microservices, multiple languages, live chat, remote players, blockchain.
 
 ## How to use this study guide
 

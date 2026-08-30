@@ -47,6 +47,10 @@ Use advanced 3D techniques (Three.js/WebGL) to render the Pong game, providing a
 ## Status after audit
 Works ✅ in Chrome (SwiftShader headless) and real GPUs, keyboard and touch. Remaining caveat: CDN dependency (offline → `THREE is not defined`).
 
+## 🆕 Notes (30 Aug 2026)
+* The AI paddle is now driven by simulated keys through `InputHandler` (see `modules/06-ai-opponent.md`); the renderer/physics are unchanged.
+* Touch controls (pointer drag on each half of the canvas, `InputHandler`, `pong.js:530-`) remain as a feature even though "Support on all devices" is no longer a claimed module.
+
 ## Likely evaluator questions
 1. **Why Three.js?** A thin, well-documented scene-graph API over WebGL: cameras, lights, materials and geometries without writing shaders, loadable from a `<script>` tag (no build step, consistent with our vanilla-JS front-end).
 2. **What is "advanced" here?** Perspective projection with a tilted camera, Phong shading with specular highlights and emissive materials, a **procedurally generated texture** (`CanvasTexture`, `:411`), edge-line geometry for the neon outline, spin physics coupled to mesh rotation, antialiasing, and a DOM HUD composited over the canvas.

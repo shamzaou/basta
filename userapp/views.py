@@ -77,6 +77,84 @@ def send_otp_email_async(user, otp):
 
 
 
+def build_profile_summary(user):
+    """Profile stats + last 5 non-tournament matches. Shared by profile_view (API) and the
+    server-side rendered index page (SSR module)."""
+    base = MatchHistory.objects.filter(user=user).exclude(game_type='TOURNAMENT')
+    match_history = base.order_by('-date_played')[:5]
+
+    total_matches = base.count()
+    wins = base.filter(result='WIN').count()
+    win_rate = int((wins / total_matches) * 100) if total_matches > 0 else 0
+
+    # Best score = the win with the biggest score difference
+    best_score = "0-0"
+    if wins > 0:
+        best_match = None
+        biggest_diff = -1
+        for match in base.filter(result='WIN'):
+            scores = match.score.split('-')
+            if len(scores) == 2:
+                try:
+                    diff = int(scores[0]) - int(scores[1])
+                except ValueError:
+                    continue
+                if diff > biggest_diff:
+                    biggest_diff = diff
+                    best_match = match
+        if best_match:
+            best_score = best_match.score
+
+    matches = []
+    for match in match_history:
+        matches.append({
+            'opponent': match.opponent,
+            'score': match.score,
+            'result': match.result,
+            'date': match.date_played.isoformat(),
+            'date_played': match.date_played,
+            'game_type': match.game_type,
+        })
+
+    return {
+        'username': user.username,
+        'display_name': user.display_name if hasattr(user, 'display_name') else user.username,
+        'date_joined': user.date_joined.strftime('%B %Y'),
+        'stats': {
+            'games_played': total_matches,
+            'win_rate': f"{win_rate}%",
+            'best_score': best_score,
+        },
+        'match_history': matches,
+    }
+
+
+def get_or_create_42_user(user_info):
+    """Find or create the local account for a 42 Intra profile (used by the OAuth views).
+
+    * Matching is done on the 42 e-mail, case-insensitively, and only against ACTIVE
+      accounts: an account that was anonymised (GDPR) no longer carries the e-mail and is
+      inactive, so a returning 42 user gets a fresh account instead of the anonymised one.
+    * The 42 login is used as username unless it is already taken (someone registered
+      with that name), in which case `<login>_<intra id>` is used.
+    Returns (user, created).
+    """
+    email = (user_info.get('email') or '').strip().lower()
+    login_name = (user_info.get('login') or '').strip() or f"user42_{user_info.get('id')}"
+    fortytwo_id = user_info.get('id')
+
+    user = User.objects.filter(email__iexact=email, is_active=True).first() if email else None
+    if user:
+        return user, False
+
+    username = login_name
+    if User.objects.filter(username__iexact=username).exists():
+        username = f"{login_name}_{fortytwo_id}"
+    user = User.objects.create_user(username=username, email=email, password=None,
+                                    is_42_user=True, intra_id=str(fortytwo_id) if fortytwo_id is not None else None)
+    return user, True
+
+
 @api_view(['GET', 'PUT'])
 @permission_classes([IsAuthenticated])
 @authentication_classes([TokenAuthentication, SessionAuthentication])
@@ -84,62 +162,17 @@ def profile_view(request):
     if request.method == 'GET':
         try:
             user = request.user
-            
-            # Exclude tournament games from both match history and statistics
-            match_history = MatchHistory.objects.filter(user=user).exclude(game_type='TOURNAMENT').order_by('-date_played')[:5]
-            
-            # Calculate statistics excluding tournament games
-            total_matches = MatchHistory.objects.filter(user=user).exclude(game_type='TOURNAMENT').count()
-            wins = MatchHistory.objects.filter(user=user, result='WIN').exclude(game_type='TOURNAMENT').count()
-            win_rate = int((wins / total_matches) * 100) if total_matches > 0 else 0
-            
-            # Find best score from wins, excluding tournament matches
-            best_score = "0-0"
-            if wins > 0:
-                best_score_matches = MatchHistory.objects.filter(user=user, result='WIN').exclude(game_type='TOURNAMENT')
-                if best_score_matches.exists():
-                    # Find match with biggest score difference
-                    best_match = None
-                    biggest_diff = -1
-                    for match in best_score_matches:
-                        scores = match.score.split('-')
-                        if len(scores) == 2:
-                            try:
-                                user_score = int(scores[0])
-                                opp_score = int(scores[1])
-                                diff = user_score - opp_score
-                                if diff > biggest_diff:
-                                    biggest_diff = diff
-                                    best_match = match
-                            except ValueError:
-                                continue
-                    
-                    if best_match:
-                        best_score = best_match.score
-            
-            # Format match history for response
-            matches = []
-            for match in match_history:
-                matches.append({
-                    'opponent': match.opponent,
-                    'score': match.score,
-                    'result': match.result,
-                    'date': match.date_played.isoformat(),
-                    'game_type': match.game_type  # Ensure game_type is included
-                })
-                
+            summary = build_profile_summary(user)
+            matches = [{k: m[k] for k in ('opponent', 'score', 'result', 'date', 'game_type')}
+                       for m in summary['match_history']]
             return Response({
                 'username': user.username,
                 'email': user.email,
-                'display_name': user.display_name if hasattr(user, 'display_name') else user.username,
+                'display_name': summary['display_name'],
                 'avatar': user.profile_picture.url if user.profile_picture else None,
-                'date_joined': user.date_joined.strftime('%B %Y'),
+                'date_joined': summary['date_joined'],
                 'two_factor_enabled': user.two_factor_enabled,
-                'stats': {
-                    'games_played': total_matches,
-                    'win_rate': f"{win_rate}%",
-                    'best_score': best_score
-                },
+                'stats': summary['stats'],
                 'match_history': matches
             })
         except Exception as e:
@@ -574,13 +607,7 @@ def oauth_callback(request):
             return redirect("https://localhost:443/login")
 
         user_info = user_info_response.json()
-        username = user_info.get("login")
-        email = user_info.get("email")
-
-        user, created = User.objects.get_or_create(
-            email=email,
-            defaults={'username': username, 'is_42_user': True, 'intra_id': user_info.get('id')}
-        )
+        user, created = get_or_create_42_user(user_info)
 
         login(request, user)
 
@@ -653,22 +680,10 @@ def get_token(request):
             return JsonResponse({'error': error_message}, status=401)
 
         user_data = user_response.json()
-        fortytwo_id = user_data.get('id')
-        email = user_data.get('email')
-        username = user_data.get('login')
 
-
-        # Get or create user
-        User = get_user_model()
-        user, created = User.objects.get_or_create(
-            email=email,
-            defaults={'username': username, 'is_42_user': True, 'intra_id': fortytwo_id}
-        )
-
-        # Ensure intra_id is saved for new users
-        if created:
-            user.intra_id = fortytwo_id
-            user.save()
+        # Get or create the local account (never matches anonymised/inactive accounts,
+        # never collides on username)
+        user, created = get_or_create_42_user(user_data)
 
         # Log the user in
         login(request, user)
@@ -864,6 +879,47 @@ def create_match(request):
     except Exception as e:
         logger.exception("create_match failed")
         return Response({'error': 'Failed to create match'}, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def anonymize_account(request):
+    """GDPR anonymisation: strip every personal identifier from the account but keep the
+    (non-personal) match statistics. The account is disabled and cannot be logged into
+    again. Works for 42 accounts too: the 42 e-mail/intra id are removed, so the next
+    42 login creates a fresh account (see get_or_create_42_user)."""
+    try:
+        user = request.user
+        token = uuid.uuid4().hex[:10]
+
+        if user.profile_picture:
+            try:
+                default_storage.delete(user.profile_picture.path)
+            except Exception:
+                pass
+            user.profile_picture = None
+
+        user.username = f"anon_{token}"
+        user.email = f"anon_{token}@anonymized.invalid"
+        user.display_name = None
+        user.first_name = ''
+        user.last_name = ''
+        user.is_42_user = False
+        user.intra_id = None
+        user.two_factor_enabled = False
+        user.is_active = False
+        user.set_unusable_password()
+        user.friends.clear()
+        user.friend_of.clear()
+        user.save()
+
+        Token.objects.filter(user=user).delete()
+        logout(request)
+
+        return Response({'status': 'success', 'message': 'Account anonymized successfully'})
+    except Exception as e:
+        logger.exception("Anonymisation failed for user id=%s", getattr(request.user, 'id', None))
+        return Response({'status': 'error', 'message': 'Anonymisation failed'}, status=400)
 
 
 @api_view(['DELETE'])

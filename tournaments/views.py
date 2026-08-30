@@ -7,7 +7,18 @@ from django.shortcuts import get_object_or_404
 from django.db import transaction, IntegrityError, DataError
 import json
 from itertools import combinations
+from functools import wraps
 from .models import Tournament, Player, Match
+
+
+def require_login(view_func):
+    """Tournament API is only for logged-in users (mandatory part: protected routes)."""
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+        return view_func(request, *args, **kwargs)
+    return wrapper
 
 def create_additional_matches(tournament, top_players):
     """Создает дополнительные матчи между игроками с одинаковым количеством очков."""
@@ -19,6 +30,7 @@ def create_additional_matches(tournament, top_players):
             is_additional=True
         )
 
+@require_login
 @require_POST
 def create_tournament(request):
     """
@@ -27,7 +39,6 @@ def create_tournament(request):
     При ошибке -> { "success": false, "error": "...", status=400 }
     """
     try:
-        print("Request received at create_tournament")
         data = json.loads(request.body)
         participants_count = int(data['participants_count'])
         if 3 <= participants_count <= 8:
@@ -38,6 +49,7 @@ def create_tournament(request):
         return JsonResponse({'success': False, 'error': 'Invalid data'}, status=400)
 
 # @csrf_exempt
+@require_login
 @require_POST
 def add_players(request, tournament_id):
     """
@@ -80,6 +92,7 @@ def add_players(request, tournament_id):
     except (KeyError, ValueError, TypeError, json.JSONDecodeError, IntegrityError, DataError):
         return JsonResponse({'success': False, 'error': 'Invalid data'}, status=400)
 
+@require_login
 def view_tournament(request, tournament_id):
     """
     Возвращает JSON с информацией о турнире (статус, участники, матчи, потенциальные победители).
@@ -124,6 +137,7 @@ def view_tournament(request, tournament_id):
     }
     return JsonResponse(data)
 
+@require_login
 @csrf_protect
 @require_POST
 def start_match(request, match_id):
@@ -155,6 +169,7 @@ def start_match(request, match_id):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
+@require_login
 def get_match_details(request, game_id):
     """
     Возвращает детали указанного матча (player1, player2, score_player1, score_player2, winner).
@@ -170,6 +185,7 @@ def get_match_details(request, game_id):
     }
     return JsonResponse(details)
 
+@require_login
 @require_POST
 def finish_match(request, match_id):
     """
@@ -210,6 +226,7 @@ def finish_match(request, match_id):
         return JsonResponse({'success': False, 'message': 'Failed to finish match'}, status=500)
 
 
+@require_login
 @require_POST
 def update_match_state(request, match_id):
     match = get_object_or_404(Match, id=match_id)

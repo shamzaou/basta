@@ -32,6 +32,7 @@ urlpatterns = [
     path('match/save', views.save_match_view, name='save-match'),
 
     path('delete-account/', views.delete_account, name='delete-account'),
+    path('anonymize-account/', views.anonymize_account, name='anonymize-account'),
 
     # Add direct avatar access
     path('avatar/<int:user_id>/', views.get_avatar_image, name='get-avatar'),

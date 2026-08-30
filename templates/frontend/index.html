@@ -6,14 +6,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ft_transcendence</title>
+    <title>{{ ssr_title|default:"ft_transcendence" }}</title>
+    <meta name="description" content="{{ ssr_description|default:"FAST_PONG - play 3D Pong and TicTacToe, join tournaments and track your stats." }}">
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
     <!-- Подключаем финальный styles.css -->
     <link rel="stylesheet" href="{% static 'frontend/css/styles.css' %}">
 </head>
-<body>
+<body data-ssr-page="{{ ssr_page|default:"home" }}" data-ssr-logged-in="{{ ssr_logged_in|yesno:"true,false" }}">
     {% csrf_token %}
     <header>
         <div class="container">
@@ -26,7 +27,7 @@
                 </div>
                 
                 <!-- logged-out navigation -->
-                <ul class="nav-links logged-out">
+                <ul class="nav-links logged-out"{% if ssr_logged_in %} style="display: none;"{% else %} style="display: flex;"{% endif %}>
                     <li><a href="/" class="active">Home</a></li>
                     <li><a href="/about">About</a></li>
                     <li><a href="/login" class="btn-nav">Log in</a></li>
@@ -34,7 +35,7 @@
                 </ul>
 
                 <!-- logged-in navigation -->
-                <ul class="nav-links logged-in">
+                <ul class="nav-links logged-in"{% if ssr_logged_in %} style="display: flex;"{% else %} style="display: none;"{% endif %}>
                     <li><a href="/" class="active">Home</a></li>
                     <li><a href="/tictactoe">TicTacToe</a></li>
                     <li><a href="/about">About</a></li>
@@ -55,7 +56,7 @@
 
     <main>
         <!-- Home Page -->
-        <div id="home" class="page active">
+        <div id="home" class="page{% if ssr_page|default:"home" == "home" %} active{% endif %}">
             <div class="container">
                 <h1>ft_transcendence</h1>
                 <div class="pong-animation">
@@ -80,7 +81,7 @@
 {% comment %} ============================================================================== {% endcomment %}
 
         <!-- Profile Page -->
-        <div id="profile" class="page">
+        <div id="profile" class="page{% if ssr_page == "profile" %} active{% endif %}">
             <div class="container">
                 <h1>Player Profile</h1>
                 <div class="profile-page-container">
@@ -89,8 +90,8 @@
                             <div class="profile-header-left">
                                 <img id="profile-avatar" src="{% static 'frontend/assets/man.png' %}" alt="Profile Avatar" class="profile-avatar">
                                 <div class="profile-info">
-                                    <h2 id="profile-username">Loading...</h2>
-                                    <p>Joined: <span id="profile-joined">Loading...</span></p>
+                                    <h2 id="profile-username">{% if ssr_profile %}{{ ssr_profile.username }}{% else %}Loading...{% endif %}</h2>
+                                    <p>Joined: <span id="profile-joined">{% if ssr_profile %}{{ ssr_profile.date_joined }}{% else %}Loading...{% endif %}</span></p>
                                 </div>
                             </div>
                             <!-- Pie chart positioned as a sibling element to profile-header-left -->
@@ -100,35 +101,33 @@
                         <div class="stats-grid">
                             <div class="stat-card">
                                 <h3>Games Played</h3>
-                                <div class="stat-value">156</div>
+                                <div class="stat-value">{% if ssr_profile %}{{ ssr_profile.stats.games_played }}{% else %}0{% endif %}</div>
                             </div>
                             <div class="stat-card">
                                 <h3>Win Rate</h3>
-                                <div class="stat-value">68%</div>
+                                <div class="stat-value">{% if ssr_profile %}{{ ssr_profile.stats.win_rate }}{% else %}0%{% endif %}</div>
                             </div>
                             <div class="stat-card">
                                 <h3>Best Score</h3>
-                                <div class="stat-value">11-0</div>
+                                <div class="stat-value">{% if ssr_profile %}{{ ssr_profile.stats.best_score }}{% else %}0-0{% endif %}</div>
                             </div>
                         </div>
 
                         <div class="match-history">
                             <h2>Recent Matches</h2>
-                            <div class="match-card">
-                                <span>vs. Player2</span>
-                                <span>11-9</span>
-                                <span class="match-result win">WIN</span>
-                            </div>
-                            <div class="match-card">
-                                <span>vs. Player3</span>
-                                <span>7-11</span>
-                                <span class="match-result loss">LOSS</span>
-                            </div>
-                            <div class="match-card">
-                                <span>vs. Player4</span>
-                                <span>11-5</span>
-                                <span class="match-result win">WIN</span>
-                            </div>
+                            {% if ssr_profile %}
+                                {% for match in ssr_profile.match_history %}
+                                <div class="match-card">
+                                    <span class="game-type">{{ match.game_type }}</span>
+                                    <span>vs. {{ match.opponent }}</span>
+                                    <span>{{ match.score }}</span>
+                                    <span class="match-result {% if match.result == 'WIN' %}win{% else %}loss{% endif %}">{{ match.result }}</span>
+                                    <span class="match-date">{{ match.date }}</span>
+                                </div>
+                                {% empty %}
+                                <p>No matches played yet.</p>
+                                {% endfor %}
+                            {% endif %}
                         </div>
                     </div>
 
@@ -169,7 +168,7 @@
         </div>
 
         <!-- Settings Page -->
-        <div id="settings" class="page">
+        <div id="settings" class="page{% if ssr_page == "settings" %} active{% endif %}">
             <div class="container">
                 <h1>User Settings</h1>
                 <div class="settings-container">
@@ -247,6 +246,13 @@
                         <div class="danger-zone">
                             <h2>Danger Zone</h2>
                             <p>Once you delete your account, there is no going back. Please be certain.</p>
+                            <button type="button" class="btn btn-secondary" id="anonymize-account">
+                                Anonymize My Account
+                            </button>
+                            <div class="gdpr-notice">
+                                Replaces your username, email, avatar and 42 link with anonymous values and disables login.
+                                Your game statistics are kept without personal data.
+                            </div>
                             <button type="button" class="btn btn-danger" id="delete-account">
                                 Delete My Account
                             </button>
@@ -261,7 +267,7 @@
         </div>
 
         <!-- Game Page -->
-        <div id="game" class="page">
+        <div id="game" class="page{% if ssr_page == "game" %} active{% endif %}">
             <div class="container">
                 <h1>Pong Game</h1>
                 <div class="game-container" style="width: 100%; height: 600px; position: relative; background: #0a0a0a;"></div>
@@ -269,7 +275,7 @@
         </div>
 
         <!-- TicTacToe Page Placeholder -->
-        <div id="tictactoe" class="page">
+        <div id="tictactoe" class="page{% if ssr_page == "tictactoe" %} active{% endif %}">
             <div class="container">
                 <h1>TicTacToe</h1>
                 <div class="tictactoe-container">
@@ -280,7 +286,7 @@
         </div>
 
         <!-- About Page -->
-        <div id="about" class="page">
+        <div id="about" class="page{% if ssr_page == "about" %} active{% endif %}">
             <div class="container">
                 <h1>About FAST_PONG</h1>
                 <div class="about-container">
@@ -435,7 +441,7 @@
         </div>
 
         <!-- Login Page -->
-        <div id="login" class="page">
+        <div id="login" class="page{% if ssr_page == "login" %} active{% endif %}">
             <div class="container">
                 <div class="auth-container">
                     <div class="form-header">
@@ -462,7 +468,7 @@
         </div>
 
         <!-- Register Page -->
-        <div id="register" class="page">
+        <div id="register" class="page{% if ssr_page == "register" %} active{% endif %}">
             <div class="container">
                 <div class="auth-container">
                     <div class="form-header">
@@ -507,7 +513,7 @@
 
 
         <!-- Tournament Page -->
-        <div id="tournament" class="page">
+        <div id="tournament" class="page{% if ssr_page == "tournament" %} active{% endif %}">
             <div class="container">
                 <h1>Tournament</h1>
         
@@ -536,6 +542,7 @@
                 <!-- Подсекция: Просмотр турнира -->
                 <div id="view-tournament" class="sub-section" style="display: none;">
                     <h1 id="tournament-status">Tournament</h1>
+                    <p id="next-match" class="next-match"></p>
                     <div class="section">
                         <h2>Players:</h2>
                         <ul class="players-list" id="players-list">

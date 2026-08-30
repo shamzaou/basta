@@ -145,7 +145,11 @@ window.addEventListener('popstate', (event) => {
 
 window.addEventListener('load', async () => {
     const path = window.location.pathname;
-    const initialPage = path.substring(1) || 'home';
+    // The server already rendered the requested page (SSR) and tells us which one in
+    // <body data-ssr-page>; fall back to the URL path. If the server says "logged in" but
+    // this browser has no local session (e.g. localStorage was cleared) we simply proceed
+    // with the local state - checkLoginState() re-applies the navigation below.
+    const initialPage = document.body.dataset.ssrPage || path.substring(1) || 'home';
     if (!history.state) {
         history.replaceState({ pageId: initialPage }, '', path);
     }
@@ -500,7 +504,14 @@ function startTournamentMatch(matchId) {
         },
         credentials: 'include'
     })
-    .then(response => response.json())
+    .then(response => {
+        if (response.status === 401 || response.status === 403) {
+            alert('Please log in');
+            showPage('login');
+            return { success: false, message: 'Please log in' };
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             window.currentMatchId = matchId;
@@ -841,6 +852,37 @@ document.addEventListener('DOMContentLoaded', () => {
 	
 	// Add event listener to delete button
 	document.getElementById('delete-account').addEventListener('click', deleteAccount);
+
+	// GDPR anonymisation: keep the (non-personal) statistics, strip every identifier,
+	// disable login. Works for password accounts and 42-OAuth accounts alike.
+	async function anonymizeAccount() {
+		if (!confirm('Anonymize your account? Your username, email, avatar and 42 link will be replaced with anonymous values and you will not be able to log in again. Your game statistics are kept without personal data.')) {
+			return;
+		}
+
+		try {
+			const response = await authFetch('/api/auth/anonymize-account/', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' }
+			});
+
+			if (response.ok) {
+				clearLocalSession();
+				alert('Your account has been anonymized.');
+				window.location.href = '/login';
+			} else {
+				const data = await response.json().catch(() => ({}));
+				throw new Error(data.message || 'Failed to anonymize account');
+			}
+		} catch (error) {
+			alert('Failed to anonymize account: ' + error.message);
+		}
+	}
+
+	const anonymizeBtn = document.getElementById('anonymize-account');
+	if (anonymizeBtn) {
+		anonymizeBtn.addEventListener('click', anonymizeAccount);
+	}
 
 
     // OTP verification: the form submit handles both the button and the Enter key
@@ -2178,6 +2220,11 @@ async function loadTournamentData(tournamentId) {
         const response = await fetch(`/tournaments/api/tournaments/${currentTournamentId}/`, {
             credentials: 'include'
         });
+        if (response.status === 401 || response.status === 403) {
+            alert('Please log in');
+            showPage('login');
+            return;
+        }
         if (!response.ok) {
             // The tournament no longer exists (deleted / wrong id): forget it and show the create form
             setCurrentTournament(null);
@@ -2189,24 +2236,46 @@ async function loadTournamentData(tournamentId) {
         // console.log('Полученные данные турнира:', data);
         // console.log('ID текущего матча:', window.currentMatchId);
 
-        // Define renderMatch function first - IMPORTANT!
+        // Find the next fight to announce: first unplayed regular match, then tiebreakers
+        const orderedMatches = [...data.matches.filter(m => !m.is_additional), ...data.matches.filter(m => m.is_additional)];
+        const nextMatch = orderedMatches.find(m => !m.is_complete) || null;
+        const nameOf = (id) => {
+            const p = data.players.find(pl => pl.id === id);
+            return p ? p.nickname : 'Unknown';
+        };
+
+        // Rows are built with DOM APIs (textContent) - nicknames are user input and must
+        // never be inserted as HTML.
         const renderMatch = (match, tableBody) => {
             const tr = document.createElement('tr');
-            const player1 = data.players.find(p => p.id === match.player1);
-            const player2 = data.players.find(p => p.id === match.player2);
-            const winner = match.winner ? data.players.find(p => p.id === match.winner) : null;
-            
-            tr.innerHTML = `
-                <td>${player1 ? player1.nickname : 'Unknown'}</td>
-                <td>${player2 ? player2.nickname : 'Unknown'}</td>
-                <td>${match.is_complete ? `${match.score_player1}-${match.score_player2}` : '-'}</td>
-                <td>${winner ? winner.nickname : (match.is_complete ? 'Tie' : '-')}</td>
-                <td>
-                    ${match.is_complete 
-                        ? '<span class="status-finished">Finished</span>' 
-                        : `<button onclick="startTournamentMatch(${match.id})">Start Match</button>`}
-                </td>
-            `;
+            if (nextMatch && match.id === nextMatch.id) {
+                tr.classList.add('next-match-row');
+            }
+            const cells = [
+                nameOf(match.player1),
+                nameOf(match.player2),
+                match.is_complete ? `${match.score_player1}-${match.score_player2}` : '-',
+                match.winner ? nameOf(match.winner) : (match.is_complete ? 'Tie' : '-')
+            ];
+            cells.forEach(text => {
+                const td = document.createElement('td');
+                td.textContent = text;
+                tr.appendChild(td);
+            });
+            const actionTd = document.createElement('td');
+            if (match.is_complete) {
+                const done = document.createElement('span');
+                done.className = 'status-finished';
+                done.textContent = 'Finished';
+                actionTd.appendChild(done);
+            } else {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = 'Start Match';
+                btn.addEventListener('click', () => startTournamentMatch(match.id));
+                actionTd.appendChild(btn);
+            }
+            tr.appendChild(actionTd);
             tableBody.appendChild(tr);
         };
 
@@ -2277,6 +2346,14 @@ async function loadTournamentData(tournamentId) {
             statusElement.textContent = `Tournament (${data.tournament.status})`;
         }
 
+        // Announce the next fight (mandatory: the matchmaking must announce who plays next)
+        const nextMatchElement = document.getElementById('next-match');
+        if (nextMatchElement) {
+            nextMatchElement.textContent = nextMatch
+                ? `Next match: ${nameOf(nextMatch.player1)} vs ${nameOf(nextMatch.player2)}`
+                : 'All matches played';
+        }
+
         // Render players list - ADD NULL CHECK
         const playersList = document.getElementById('players-list');
         if (playersList) {
@@ -2284,7 +2361,12 @@ async function loadTournamentData(tournamentId) {
             data.players.forEach(player => {
                 const li = document.createElement('li');
                 li.classList.add('player-item');
-                li.innerHTML = `<span>${player.nickname}</span><span>Score: ${player.score}</span>`;
+                const name = document.createElement('span');
+                name.textContent = player.nickname;
+                const score = document.createElement('span');
+                score.textContent = `Score: ${player.score}`;
+                li.appendChild(name);
+                li.appendChild(score);
                 playersList.appendChild(li);
             });
         }

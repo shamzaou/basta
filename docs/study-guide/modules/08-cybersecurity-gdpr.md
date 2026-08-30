@@ -1,50 +1,45 @@
-# Module — Cybersecurity: GDPR compliance — anonymization, local data management, account deletion (Minor)
+# Module — Cybersecurity: GDPR Compliance Options with User Anonymization, Local Data Management, and Account Deletion (Minor)
 
-**Verdict: Works end-to-end ✅** — JSON export, permanent account deletion, inactivity cleanup command, activity tracking and a privacy policy all exist and are tested. Caveat: the cleanup cron is not scheduled inside the container. **Note on wording:** the 42 module title lists *anonymization*; the team chose **full deletion** instead (see "Why no anonymization?" below).
+**Verdict: Works end-to-end ✅** — JSON export (local data management), **anonymization** (🆕 restored and made 42-safe in the Aug-2026 subject-compliance pass), permanent deletion, inactivity cleanup, activity tracking and a privacy policy.
 
 ## What the module requires (42 subject wording)
-Users can request anonymization of their personal data, manage their local data (view/edit/delete), and permanently delete their account; the system must be GDPR-aware (clear information, data retention).
+Let users (1) request anonymization of their personal data, (2) view / edit / delete their personal information (local data management), (3) permanently delete their account and all associated data, and (4) be clearly informed of their rights.
 
 ## What it does in FAST_PONG
-| Right | Feature | Endpoint / place |
+| Right | Where the user does it | Backend |
 |---|---|---|
-| Access / portability ("local data management") | "Download My Data" → JSON with profile, statistics, full match history, export date (SPA adds avatar as base64) | `GET /api/auth/export-data/` |
-| Rectification | edit display name / e-mail / avatar in Settings | `PUT /api/auth/profile/` |
-| Erasure | "Delete My Account": hard delete of the user row, cascades to `MatchHistory`, friend links and the DRF token | `DELETE /api/auth/delete-account/` |
-| Retention | warn after 5 months, delete after 6 months of inactivity; `last_activity` maintained by middleware | `manage.py delete_inactive_users` |
-| Information | Privacy Policy sections 1-6 + legal disclaimer on the About page | `templates/frontend/index.html` (About) |
+| View / edit data | Settings page (display name, avatar, e-mail shown, 2FA toggle) | `profile_view` GET/PUT (`userapp/views.py:161-269`) |
+| Export ("Download my data") | Settings → *Download My Data* → JSON file | `export_user_data` (`:1004-1063`) — profile, statistics, full match history, export date (`timezone.now()`) |
+| **Anonymize** | Settings → Danger Zone → *Anonymize My Account* (confirm → logged out) | `anonymize_account` (`:886-925`) |
+| Delete | Settings → Danger Zone → *Delete My Account* | `delete_account` (`:927-935`) — hard delete, cascades to `MatchHistory`, tokens, friend links |
+| Automatic retention | `make gdpr-cleanup` / `-run` | `delete_inactive_users` command: warn after 5 months, delete after 6 (`INACTIVE_USER_*` settings); e-mail is best-effort, deletion always happens |
+| Activity tracking | every authenticated request | `UserActivityMiddleware` updates `last_activity` at most every 15 min |
+| Transparency | About page → Privacy Policy (data collected, use, rights, retention, contact) | template |
+
+### What anonymization does (`userapp/views.py:886-925`)
+Username → `anon_<10 hex>`, e-mail → `anon_<hex>@anonymized.invalid`, display/first/last name cleared, avatar file deleted, `is_42_user=False`, `intra_id=None`, 2FA off, `is_active=False`, unusable password, friends removed both ways, DRF tokens deleted, session logged out. `MatchHistory` rows are kept — they contain no personal data (opponent strings are "AI"/"Player 2"/nicknames) and keep the statistics meaningful.
+
+### Why it is safe for 42-OAuth accounts
+A 42 user has no password, so the endpoint authenticates by session/JWT like everyone else. After anonymization the account no longer carries the 42 e-mail or `intra_id`, and the OAuth views look up accounts with `get_or_create_42_user` (`userapp/views.py:132-158`), which matches **only active accounts** by e-mail and falls back to `<login>_<intra_id>` on a username collision. Result (tested): a returning 42 user gets a fresh account; the anonymized row is never re-linked or de-anonymized.
 
 ## Exactly where it is implemented
-
-| Concern | Symbol | Ref |
-|---|---|---|
-| Export | `export_user_data` — user_information, profile.avatar_url, statistics (W/L/D, win rate), match_history, `export_date` | `userapp/views.py:930-989` (`export_date` `:981`) |
-| Export frontend | `handleDownloadUserData` (fetches export, embeds avatar base64, adds `export_metadata`, triggers download) | `static/frontend/js/script.js:1515-1626` |
-| Delete | `delete_account` → `user.delete()` (FK cascade on `MatchHistory.user`, `userapp/models.py:78`) | `userapp/views.py:849-857`; frontend `deleteAccount()` `script.js:795-830`; button `templates/frontend/index.html:236` |
-| Inactivity cleanup | `Command.handle`: thresholds `:36-37`, warn queryset `:41-42`, delete queryset `:48-49`, skips staff/superusers, `--dry-run`, `--notify-only`, warning/deletion e-mails `:91-122` | `userapp/management/commands/delete_inactive_users.py` |
-| Retention settings | `INACTIVE_USER_DELETE_MONTHS=6`, `INACTIVE_USER_WARNING_MONTHS=5`, `LAST_ACTIVITY_UPDATE_WINDOW=15` | `backend/settings.py:307-309` |
-| Activity tracking | `UserActivityMiddleware` updates `User.last_activity` at most every 15 min | `userapp/middleware.py:6-29`; model fields `userapp/models.py:15-16`, `update_last_activity` `:61` |
-| Cron definition | `0 0 * * 0 python manage.py delete_inactive_users` — **file only, not installed** | `gdpr_cleanup_crontab` |
-| 🆕 Make targets | `make gdpr-cleanup` (dry run) / `make gdpr-cleanup-run` | `Makefile:84-90` |
-| Privacy policy text | "Data We Collect / How We Use / Your Rights / Retention 6 months / Third parties / Changes" | `templates/frontend/index.html` About page (search "Privacy Policy") |
-| Tests | `GdprTests`: export content, delete cascades, cleanup command dry-run vs real | `userapp/tests.py:189-232` |
-
-## How it interacts with the rest
-* Export and delete require an authenticated user (`IsAuthenticated`); the SPA sends the JWT from localStorage plus the CSRF token.
-* Deletion removes the `MatchHistory` rows with the user (FK cascade), so statistics disappear together with the identity — nothing personal is retained.
-* The cleanup command uses the same `send_mail` path as 2FA, so it needs a working `EMAIL_BACKEND` (with Gmail down it logs the failure and skips that user).
-
-**🆕 Changed in Aug-2026 audit:** the Makefile targets and the GDPR tests were added. An "Anonymize My Account" endpoint/button was prototyped during the audit and **removed again at the team's request** — the module is delivered as export + deletion + retention cleanup. Everything else in this module is original team code.
+| Piece | File / lines |
+|---|---|
+| Anonymize endpoint + route | `userapp/views.py:886-925`, `userapp/urls.py` (`anonymize-account/`) |
+| Settings button + handler | `templates/frontend/index.html:249`, `static/frontend/js/script.js:858-885` |
+| 42 helper used by `get_token` / `oauth_callback` | `userapp/views.py:132-158` |
+| Delete endpoint | `userapp/views.py:927-935` |
+| Export | `userapp/views.py:1004-1063` |
+| Cleanup command | `userapp/management/commands/delete_inactive_users.py` |
+| Tests | `userapp/tests.py` `GdprTests` (export, anonymize normal + 42 account, delete, cleanup with failing e-mail) |
 
 ## Status after audit
-Works ✅ (unit tests + curl + UI screenshot `09-settings`). **🆕 Second sweep:** `delete_inactive_users` sends the deletion e-mail best-effort and then **always** deletes (`userapp/management/commands/delete_inactive_users.py:73-84`) — before, a failing SMTP raised before `delete()` and no account was ever removed; covered by a test with a failing e-mail backend. Limitations to state: the crontab is not installed in the Docker image (no `cron` package in `Dockerfile`), so retention is enforced only when someone runs `make gdpr-cleanup-run`; e-mail notifications depend on Gmail credentials; export does not include the friends list; no cookie banner (only first-party functional cookies are used).
+All four bullets covered; verified live in the UI (anonymize → logged out → old credentials rejected) and by tests.
 
 ## Likely evaluator questions
-1. **What personal data do you store?** Username, e-mail, optional display name, avatar file, 42 login/id when using OAuth, last activity/login timestamps, match history (opponent nickname, score, date). Listed in the About page's privacy policy.
-2. **Why no anonymization? The module says "anonymization".** We implemented the strictest form of erasure instead: "Delete My Account" removes the user row and everything that references it (`views.py:851`, FK cascade). Anonymization (keeping statistics under a pseudonym) was prototyped during the pre-evaluation audit and deliberately removed — the team preferred one unambiguous "right to be forgotten" action over two similar buttons. If staff insist, explain that the export + delete pair still gives the user full control of their data.
-3. **Show me deletion.** Settings → Danger Zone → "Delete My Account" → confirm → `DELETE /api/auth/delete-account/` → user gone, `MatchHistory` gone (`GdprTests.test_delete_account_removes_user_and_history`). Demo with a throw-away account.
-4. **How is retention enforced?** Middleware stamps `last_activity` (`middleware.py:23`); `delete_inactive_users` warns at 5 months and deletes at 6 (`settings.py:307-308`). Scheduled by the provided crontab on the host — admit it is not running inside the container.
-5. **Why throttle `last_activity` writes?** To avoid a DB write per request; it only updates when older than 15 min (`settings.py:309`).
-6. **What is in the export and in what format?** JSON (`export_user_data`), downloaded as `user_data_<username>_<date>.json` with avatar as base64 (`script.js:1597`).
-7. **Is consent collected?** Registration implies acceptance; the policy is public on the About page. Improvement: explicit checkbox and cookie notice.
-8. **How do you protect the data?** HTTPS only, hashed passwords (PBKDF2), HttpOnly session cookie, CSRF protection, authenticated-only endpoints, DB in a private Docker network.
+1. **Anonymize vs delete?** Anonymize keeps non-personal statistics and disables the account; delete removes everything. Both are one click behind a confirmation.
+2. **Can an anonymized user come back?** Not to that account — it is inactive with an unusable password; a 42 user who logs in again gets a new account.
+3. **What about data in other users' histories?** Opponent strings are nicknames or "AI"/"Player 2", never e-mails; tournament players are per-tournament aliases.
+4. **How do you honour retention?** `delete_inactive_users` (6 months), scheduled by the host (`gdpr_cleanup_crontab`), runnable with `make gdpr-cleanup-run`.
+5. **Where is the user informed?** Privacy policy on the About page + notices under each Danger-Zone button.
+6. **Is the export complete?** Profile, statistics, every match with dates, avatar URL; the SPA also embeds the avatar as base64 in the downloaded file.

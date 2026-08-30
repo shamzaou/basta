@@ -257,3 +257,66 @@ sequenceDiagram
 Triggers: `scheduleTokenRefresh()` after password login, OTP verification and 42 login; the `load`
 handler (`:146`) when `isLoggedIn` is set and the stored token is already expired; and any 401.
 The games call the same wrapper through `window.authFetch` (`pong.js:1007`, `tictactoe.js:145`).
+
+## (h) 🆕 Online TicTacToe matchmaking and play (Gameplay Major module)
+
+```mermaid
+sequenceDiagram
+    participant A as Browser A (tictactoe.js)
+    participant S as Django /api/game/ttt/* (gameapp/views.py)
+    participant DB as PostgreSQL
+    participant B as Browser B
+    A->>S: POST /ttt/queue/ (authFetch, every 2 s)
+    S->>DB: select_for_update queue rows (<60 s old, not me)
+    S-->>A: {status: waiting, queued: 1}
+    B->>S: POST /ttt/queue/
+    S->>DB: closest rating = A → create TicTacToeMatch(X=A, O=B), delete queue rows
+    S-->>B: {status: matched, match_id, symbol: O}
+    A->>S: POST /ttt/queue/ (next poll)
+    S-->>A: {status: matched, match_id, symbol: X}
+    loop every 1 s while active
+        A->>S: GET /ttt/match/<id>/
+        B->>S: GET /ttt/match/<id>/
+    end
+    A->>S: POST /ttt/match/<id>/move/ {cell} (turn X)
+    S->>DB: lock row, validate turn/cell, apply, check_winner
+    S-->>A: state (turn O)
+    B->>S: POST …/move/ {cell}
+    Note over S,DB: on win/draw → status finished, MatchHistory rows for A and B
+    B->>S: (leaving the page) POST /ttt/match/<id>/leave/ → forfeit if still active
+```
+
+## (i) 🆕 SSR page load
+
+```mermaid
+sequenceDiagram
+    participant Br as Browser
+    participant V as gameapp.views.index
+    participant U as userapp.views.build_profile_summary
+    participant T as templates/frontend/index.html
+    Br->>V: GET /profile (session cookie)
+    V->>V: page = 'profile' (login-only → 'login' if anonymous); title/description
+    V->>U: build_profile_summary(user)
+    U-->>V: stats + last 5 matches
+    V->>T: render(ssr_page, ssr_title, ssr_description, ssr_logged_in, ssr_profile)
+    T-->>Br: HTML with <title>, meta, #profile already .active and filled
+    Br->>Br: script.js load → showPage(body.dataset.ssrPage, false) → hydrate via authFetch
+```
+
+## (j) 🆕 Anonymization, including the 42 return path
+
+```mermaid
+sequenceDiagram
+    participant Br as Browser (Settings)
+    participant S as userapp.views.anonymize_account
+    participant DB as PostgreSQL
+    participant F as api.intra.42.fr
+    Br->>S: POST /api/auth/anonymize-account/ (authFetch)
+    S->>DB: username→anon_…, email→anon_…@anonymized.invalid, clear name/avatar/intra_id/2FA/friends, is_active=false, unusable password, delete tokens
+    S-->>Br: {status: success} → clearLocalSession() → /login
+    Note over Br,F: later, the same person clicks "Sign in with 42"
+    Br->>S: POST /api/auth/get-token/ {code}
+    S->>F: exchange code, GET /v2/me
+    S->>DB: get_or_create_42_user: match ACTIVE account by e-mail → none → create fresh user (login or login_<id>)
+    S-->>Br: JWT for the NEW account (anonymized row untouched)
+```

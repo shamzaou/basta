@@ -10,6 +10,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/auth/', include('userapp.urls')),
     path('tournaments/', include('tournaments.urls')),
+    path('api/game/', include('gameapp.urls')),
     # path('tournaments/api/tournaments/create/', views.create_tournament),
     # Keep your catch-all route at the end
   

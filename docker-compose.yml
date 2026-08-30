@@ -12,7 +12,6 @@ services:
     depends_on:
       - db
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/basta_db
       - DEBUG=0
       - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,[::1]
       - DJANGO_SETTINGS_MODULE=backend.settings
@@ -26,9 +25,10 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
-      - POSTGRES_DB=basta_db
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      # Credentials come from .env (never committed) - same keys Django reads via python-decouple
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
     networks:
       - basta-network
 

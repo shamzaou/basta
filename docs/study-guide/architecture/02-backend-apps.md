@@ -10,7 +10,7 @@ flowchart LR
     urls["backend/urls.py<br/>admin/ · api/auth/ · tournaments/ · catch-all"]
     userapp["<b>userapp</b><br/>User, MatchHistory<br/>auth, 2FA, OAuth, profile, friends, GDPR"]
     tournaments["<b>tournaments</b><br/>Tournament, Player, Match<br/>round-robin + tiebreakers"]
-    gameapp["<b>gameapp</b><br/>index view (SPA host)<br/>Game/Player/Score (unused)"]
+    gameapp["<b>gameapp</b><br/>index view (SPA host + SSR)<br/>TicTacToeQueue / TicTacToeMatch<br/>/api/game/ttt/* (matchmaking)"]
     drf["rest_framework · simplejwt · authtoken"]
     urls --> userapp
     urls --> tournaments
@@ -48,7 +48,19 @@ Dependency facts: `gameapp/models.py:3` imports `userapp.models.User`; `tourname
 | Tests | `tournaments/tests.py` — 3 tests (🆕 corrected to call `get_winner()`; they previously always failed) |
 | Comments | Written in Russian — the author (Nour) wrote the docstrings; they describe exactly what the views do |
 
-### `gameapp` — SPA host
+### `gameapp` — SPA host, SSR and online TicTacToe 🆕
+
+| Item | Where |
+|---|---|
+| `index` view — resolves the page from the URL, builds the SSR context (`ssr_page/title/description/logged_in/profile`) | `gameapp/views.py:24-61` |
+| Models `TicTacToeQueue`, `TicTacToeMatch` (+ `check_winner`, `symbol_of`) | `gameapp/models.py:39-85` |
+| `ttt_queue` (POST pair/enqueue, DELETE leave), `ttt_match` (GET state), `ttt_move` (POST), `ttt_leave` (POST forfeit) — DRF `IsAuthenticated`, JWT or session | `gameapp/views.py:112-213` |
+| URLs mounted at `/api/game/` | `gameapp/urls.py`, `backend/urls.py:13` |
+| Tests (14) | `gameapp/tests.py` |
+
+(The original `Game/Player/Score` models remain unused.)
+
+### `gameapp` — legacy notes
 
 | Component | Contents |
 |---|---|
@@ -99,6 +111,9 @@ Authentication legend — **Session**: Django session cookie set by `login()`; *
 | POST | `/tournaments/api/tournaments/match/<id>/state/` | `update_match_state` | none (CSRF) | No-op |
 | GET | `/admin/` | Django admin | superuser session | |
 | GET | anything else | `gameapp.views.index` | none | Serves the SPA |
+
+### 🆕 Tournament views are login-protected
+`require_login` (`tournaments/views.py:14-21`) wraps all seven views → `401 {"success": false, "error": "Authentication required"}` for anonymous callers; CSRF still applies to the POST views.
 
 ### Talking points on auth
 

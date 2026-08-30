@@ -2212,3 +2212,17 @@ body.is-logged-out .logged-out {
 .modal-cancel:hover {
     text-decoration: underline;
 }
+
+/* Tournament: next-fight announcement (matchmaking must announce who plays next) */
+.next-match {
+    text-align: center;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.8em;
+    color: var(--secondary-color);
+    margin: 0.5em 0 1em;
+}
+
+.next-match-row td {
+    background-color: rgba(255, 0, 255, 0.15);
+    box-shadow: inset 3px 0 0 var(--secondary-color);
+}

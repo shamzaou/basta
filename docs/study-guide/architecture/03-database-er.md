@@ -90,6 +90,31 @@ erDiagram
     GAMEAPP_PLAYER ||--o{ GAMEAPP_SCORE : "unused"
 ```
 
+### 🆕 Online TicTacToe tables (`gameapp`, migration 0002)
+
+```mermaid
+erDiagram
+    USER ||--o| TICTACTOEQUEUE : "waits (1:1)"
+    USER ||--o{ TICTACTOEMATCH : "player_x"
+    USER ||--o{ TICTACTOEMATCH : "player_o"
+    TICTACTOEQUEUE {
+        int user_id PK
+        float rating "TicTacToe win-rate, 50 default"
+        datetime joined_at "auto_now - refreshed by each poll"
+    }
+    TICTACTOEMATCH {
+        int id PK
+        int player_x_id FK
+        int player_o_id FK
+        char board "9 chars, '.' = empty"
+        char turn "X or O"
+        char status "active or finished"
+        char winner "X, O or '' (draw)"
+        datetime created_at
+        datetime updated_at
+    }
+```
+
 ## Table-by-table
 
 ### `userapp_user` (`userapp/models.py:6-63`, `db_table = 'userapp_user'`)
@@ -125,7 +150,10 @@ One row per finished non-tournament game, written by `save_match_view`. `orderin
 * `Match.winner` uses `SET_NULL`; `is_additional=True` marks tiebreaker matches created by `Tournament.create_additional_matches()` for players tied on `get_score()` (= count of `Match` rows where `winner == player`).
 * `unique_together = ('tournament', 'nickname')` enforces unique nicknames per tournament at the DB level (the view also rejects duplicates in the request).
 
-### `gameapp_*` — present, unused
+### `gameapp_tictactoequeue` / `gameapp_tictactoematch` 🆕
+See the diagram above; rows are created by `/api/game/ttt/queue/` and `…/move/` (`gameapp/views.py`). Finished matches also produce two `userapp_matchhistory` rows (one per player).
+
+### `gameapp_game` / `gameapp_player` / `gameapp_score` — present, unused
 
 `Game`, `Player(OneToOne User)`, `Score` were an early design for server-side game state. No view or JS touches them. Say so if asked; do not pretend they store matches.
 

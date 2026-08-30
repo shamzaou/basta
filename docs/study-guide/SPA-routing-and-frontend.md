@@ -66,7 +66,7 @@ Key points to say:
 | `GamePhysics` | `:27-92` | Ball velocity + **spin** vectors; `resetBall()`; `handlePaddleCollision()` computes bounce angle from where the ball hit the paddle (±45°), speeds up 5 % per hit up to the max, adds spin; `updatePhysics()` moves the ball, applies spin, bounces off side walls (z ±2.9, damped), detects paddle hits at x ±4.7 with a 0.9 hitbox, returns `'player1'`/`'player2'` when x passes ±5 |
 | `GameRenderer` | `:95-504` | Everything Three.js (below) + DOM UI (score, instructions, player names, restart/next button) + injected CSS |
 | `InputHandler` | `:507-582` | keydown/keyup Set; W/S move paddle 1, ↑/↓ paddle 2 (ignored in AI mode); Space handled in `PongGame.setupEventHandlers` (pause overlay) |
-| `PongAI` | `:585-676` | Re-reads ball position/velocity once per second (`UPDATE_INTERVAL 1000` — the subject's "AI refreshes its view once per second" constraint), predicts the intercept z, adds prediction error (`ACCURACY`) and a 10 % `MISTAKE_CHANCE`, moves at ≤ `MAX_SPEED`; `updateDifficulty()` placeholder |
+| `PongAI` | `:671-773` | Re-reads ball position/velocity once per second (`UPDATE_INTERVAL 1000` — the subject's "AI refreshes its view once per second" constraint), predicts the intercept z, adds prediction error (`ACCURACY`) and a `MISTAKE_CHANCE`, then presses simulated arrow keys at the human `paddleSpeed`; `updateDifficulty()` adjusts accuracy from the live score |
 | `PongGame` | `:679-1188` | State (`score`, `gameStatus playing/paused/finished`, `matchId`, `tournamentId`), constructs the above, `animate()` loop via `requestAnimationFrame` (`:1111`), `updateScore()` → `finishMatch()` at 3 points, `saveMatchHistory()` or tournament `finish`, restart / next-game buttons, `cleanup()` (removes key listeners, cancels the animation frame). Static `initializeGame(container, mode)` (`:1123`) shows the PvP/AI mode selection unless a tournament match is pending; `startGame` (`:1175`) instantiates and stores `window.currentGame` |
 
 ### TicTacToe (`tictactoe.js`)
@@ -88,14 +88,14 @@ All in `GameRenderer` (`pong.js:95-504`):
 
 If asked "why Three.js and not Babylon.js": the subject allows Three.js/WebGL for the Graphics module; Three.js was familiar, has a tiny API surface for what we need (geometries, Phong materials, one camera), and loads from a CDN with no build step, matching our no-bundler frontend.
 
-## The AI opponent (`PongAI`, `pong.js:585-676`) — AI-Algo Major module
+## The AI opponent (`PongAI`, `pong.js:671-773`) — AI-Algo Major module (🆕 simulated keys)
 
-* Created only in *Player vs AI* mode: `this.ai = gameMode === 'ai' ? new PongAI(this.renderer.paddle2) : null` (`pong.js:707`); called every frame from `PongGame.update` (`:1076`) with the ball mesh and the current velocity vector.
-* **It sees the ball once per second, not every frame** (`UPDATE_INTERVAL = 1000`, `:589,608-613`): on each tick it snapshots position/velocity and calls `decideNextMove` — this is the subject's "refreshes its view of the game once per second" constraint, and it is why the AI is beatable.
-* `decideNextMove` (`:618-639`): if the ball travels towards the AI (`ballVelocity.x > 0`) it linearly extrapolates the intercept `z` (`timeToIntercept = (paddle.x - ball.x) / vx`, `perfectZ = ball.z + vz * t`), then adds a prediction error scaled by `(1 - ACCURACY)` and, with probability `MISTAKE_CHANCE`, a large random offset; otherwise it drifts back towards the centre. The result is a target and a direction (`up`/`down`/`null`).
-* `executeMove` (`:641-650`) runs every frame and moves the paddle towards the target at `min(MAX_SPEED, distance/10)` — so the AI *simulates key presses* between its one-second observations instead of teleporting.
-* `updateDifficulty` (`:652-675`) is called every 5 s and is meant to adapt to the score difference, but `scoreDiff` is hard-coded to `0`, so the "close game" preset always applies (`ACCURACY 0.15`, `MISTAKE_CHANCE 0.10`, `MAX_SPEED 0.12`) — acknowledge this if asked; the constructor defaults (`ACCURACY 0.85`) are overwritten after the first 5 s.
-* No neural network / A* — the subject forbids A* and asks for a heuristic that can win occasionally and use power-ups if any; there are no power-ups here. Arrow keys are ignored in AI mode (`InputHandler.handleKeyDown :530-533`).
+* `update()` (`:692-710`) samples ball position/velocity only once per second (`UPDATE_INTERVAL 1000`) and calls `decideNextMove`.
+* `predictZ()` (`:714-725`) extrapolates the ball to the paddle's x and folds the value at the ±2.9 walls (bounce anticipation); when the ball moves away the target is the centre.
+* `decideNextMove()` (`:726-741`) adds `(rand − 0.5)·(1 − ACCURACY)` and, with `MISTAKE_CHANCE`, a random ±1 offset; clamps to ±2.1.
+* `pressKeys()` (`:742-753`) runs every frame and puts `arrowup`/`arrowdown` into `InputHandler.aiKeys` (released inside a ±0.1 dead-zone); `InputHandler.update()` (`:615-636`) moves paddle 2 from those keys at `GAME_CONFIG.paddleSpeed` — the same speed as the human paddle.
+* `updateDifficulty()` (`:755-773`) every 5 s from the live score adjusts accuracy/mistake chance only.
+* Details and evaluator Q&As: `modules/06-ai-opponent.md`.
 
 ## The stats dashboard (AI-Algo Minor module) — how the profile page is rendered
 
@@ -131,6 +131,13 @@ If asked "why Three.js and not Babylon.js": the subject allows Three.js/WebGL fo
 * **Settings** — "Save Settings" PUTs `{display_name, two_factor_enabled}`; the new Security section's `#two-factor-toggle` (`:640`, state loaded at `:1297`) PUTs `two_factor_enabled` on change; avatar uploads are checked client-side (`image/*`, ≤ 2 MB, `:734`).
 * **OTP modal** — `<form id="otp-form">` (`:847`) so Enter submits; Cancel button; no outside-click close.
 * **Dates** — the API now returns ISO 8601; `new Date()` results are guarded (raw string if invalid).
+
+## 🆕 Subject-compliance pass (30 Aug 2026)
+* **SSR hand-off** — the server renders `<body data-ssr-page="…" data-ssr-logged-in="…">`, the requested page already `active`, nav lists pre-set and the profile pre-filled (`index.html:9-17`, `:30-38`, `:59-120`). The `load` handler starts from `document.body.dataset.ssrPage` (`script.js:152`) and hydrates; if the server says logged-in but `localStorage` has no session, `checkLoginState()` simply re-applies the local state.
+* **XSS rule** — user-controlled strings (nicknames, usernames, display names, opponents) are only ever inserted with `textContent`/`createElement`; `loadTournamentData` (`script.js:2215-2360`) was rewritten that way and `#next-match` is filled with `textContent`.
+* **Tournament API is login-protected** — 401 → "Please log in" (`script.js:2224`, `startTournamentMatch`).
+* **Anonymize** button handler (`script.js:858-885`) → `authFetch POST /api/auth/anonymize-account/` → `clearLocalSession()`.
+* **TicTacToe online UI** (`tictactoe.js:125-166`, `:352-556`) — mode selector; *Online* polls `POST /api/game/ttt/queue/` every 2 s (Cancel = `DELETE`), then renders the board from `GET /api/game/ttt/match/<id>/` every 1 s, gates clicks on `turn === you`, posts moves, shows "You won / You lost / Draw" + *Play again*; `cleanup()` stops timers and forfeits/dequeues. All requests go through `window.authFetch`.
 
 ## Known frontend quirks (be ready to acknowledge)
 

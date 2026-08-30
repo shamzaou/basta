@@ -363,3 +363,83 @@ class InactiveCleanupResilienceTests(TestCase):
         User.objects.filter(pk=old.pk).update(last_activity=timezone.now() - timedelta(days=30 * 7))
         call_command('delete_inactive_users', stdout=StringIO())
         self.assertFalse(User.objects.filter(pk=old.pk).exists())
+
+
+class AnonymizationTests(TestCase):
+    """GDPR anonymisation, including a 42-OAuth account and the returning-42-user path."""
+    PASSWORD = 'Str0ng!Passw0rd'
+
+    def setUp(self):
+        from .models import MatchHistory
+        self.user = User.objects.create_user(username='erin', email='erin@example.com', password=self.PASSWORD,
+                                             display_name='Erin E', first_name='Erin')
+        self.friend = User.objects.create_user(username='fred', email='fred@example.com', password=self.PASSWORD)
+        self.user.add_friend(self.friend); self.friend.add_friend(self.user)
+        MatchHistory.objects.create(user=self.user, game_type='PONG', opponent='AI', result='WIN', score='3-0')
+        MatchHistory.objects.create(user=self.user, game_type='TICTACTOE', opponent='fred', result='LOSS', score='0-1')
+
+    def test_anonymize_strips_pii_keeps_stats_and_blocks_login(self):
+        from .models import MatchHistory
+        from django.contrib.auth import authenticate
+        c = Client(); c.force_login(self.user)
+        r = c.post('/api/auth/anonymize-account/')
+        self.assertEqual(r.status_code, 200, r.content)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.username.startswith('anon_'))
+        self.assertTrue(self.user.email.endswith('@anonymized.invalid'))
+        self.assertNotIn('erin', self.user.email)
+        self.assertIsNone(self.user.display_name)
+        self.assertEqual(self.user.first_name, '')
+        self.assertFalse(self.user.is_active)
+        self.assertFalse(self.user.has_usable_password())
+        self.assertEqual(self.user.friends.count(), 0)
+        self.assertEqual(self.friend.friends.count(), 0)
+        self.assertEqual(MatchHistory.objects.filter(user=self.user).count(), 2)      # stats kept
+        self.assertIsNone(authenticate(username='erin@example.com', password=self.PASSWORD))
+        r = Client().post('/api/auth/login/', {'email': 'erin@example.com', 'password': self.PASSWORD},
+                          content_type='application/json')
+        self.assertEqual(r.status_code, 400)
+        # hidden from the users list
+        cf = Client(); cf.force_login(self.friend)
+        names = [u['username'] for u in cf.get('/api/auth/users/').json()['users']]
+        self.assertFalse(any(n.startswith('anon_') for n in names))
+        # the session is closed
+        self.assertIn(c.get('/api/auth/export-data/').status_code, (401, 403))
+
+    def test_anonymize_requires_auth(self):
+        self.assertIn(Client().post('/api/auth/anonymize-account/').status_code, (401, 403))
+
+    def test_42_user_anonymized_then_returning_42_login_gets_fresh_account(self):
+        from .views import get_or_create_42_user
+        info = {'id': 12345, 'login': 'gwen', 'email': 'Gwen@Student.42.fr'}
+        user42, created = get_or_create_42_user(info)
+        self.assertTrue(created)
+        self.assertTrue(user42.is_42_user)
+        self.assertEqual(user42.intra_id, '12345')
+        self.assertEqual(user42.email, 'gwen@student.42.fr')
+        self.assertFalse(user42.has_usable_password())
+        # second login finds the same account (case-insensitive e-mail)
+        again, created = get_or_create_42_user({'id': 12345, 'login': 'gwen', 'email': 'GWEN@student.42.fr'})
+        self.assertFalse(created); self.assertEqual(again.id, user42.id)
+
+        c = Client(); c.force_login(user42)
+        self.assertEqual(c.post('/api/auth/anonymize-account/').status_code, 200)
+        user42.refresh_from_db()
+        self.assertFalse(user42.is_42_user); self.assertIsNone(user42.intra_id)
+        self.assertFalse(user42.is_active); self.assertNotIn('gwen', user42.email)
+
+        # the same 42 person comes back: a NEW active account, the anonymised one untouched
+        fresh, created = get_or_create_42_user(info)
+        self.assertTrue(created)
+        self.assertNotEqual(fresh.id, user42.id)
+        self.assertTrue(fresh.is_active and fresh.is_42_user)
+        self.assertEqual(fresh.username, 'gwen')
+        user42.refresh_from_db()
+        self.assertTrue(user42.username.startswith('anon_'))
+
+    def test_42_username_collision_falls_back_to_login_id(self):
+        from .views import get_or_create_42_user
+        User.objects.create_user(username='hank', email='hank@example.com', password=self.PASSWORD)
+        u, created = get_or_create_42_user({'id': 777, 'login': 'hank', 'email': 'hank@student.42.fr'})
+        self.assertTrue(created)
+        self.assertEqual(u.username, 'hank_777')

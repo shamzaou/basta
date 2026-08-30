@@ -32,6 +32,9 @@ Every finished Pong (PvP or vs AI) or TicTacToe game is written to `MatchHistory
 ## Status after audit
 Verified live: four seeded matches → profile shows `4` games, `75%`, best score `3-0`, four match cards with PONG/TICTACTOE badges (screenshot `08-profile`); `export-data` JSON contains the same numbers; tournament table renders per-player scores (screenshot `14-tournament-view`). Unchanged by the audit except that the endpoints are now covered by tests (`GdprTests.test_export_contains_profile_and_history`).
 
+## 🆕 Note (subject review, 30 Aug 2026)
+The subject also asks for "a separate dashboard for game sessions". Today that is the recent-match list (per match: game, opponent, score, result, date) plus the tournament page (per-player scores and every match's result); there is no dedicated per-session page. Online TicTacToe results (see `modules/12`) are recorded for both players and appear here too.
+
 ## Likely evaluator questions
 1. **Where is the user dashboard?** `/profile` — stat cards, pie chart, recent matches, friends. Data from `GET /api/auth/profile/` (`profile_view`).
 2. **How is win rate computed?** `wins / total_matches × 100`, integer-truncated, over non-tournament matches (`views.py:85-87`); the chart derives the same numbers client-side.

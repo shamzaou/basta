@@ -1,58 +1,35 @@
-# Modules — Accessibility: support on all devices, expanded browser compatibility, SSR integration (3 Minors)
+# Modules — Accessibility: Expanding Browser Compatibility (Minor) · Server-Side Rendering (SSR) Integration (Minor)
 
-| Minor | Verdict |
-|---|---|
-| Support on all devices (responsive) | Works ✅ — custom media queries + hamburger menu; verified at 1280×800 and 390×844 |
-| Expanding browser compatibility | Works on Chrome/Edge/Firefox ✅ — modern-browser features only, no polyfills ⚠️ |
-| Server-Side Rendering integration | Partial ⚠️ — Django renders the SPA shell template; no per-route data rendering |
+("Support on all devices" is **not** a selected module any more — the responsive layout and the Pong touch controls remain as features; see `modules/10-graphics-3d.md`.)
 
-(*Multiple language support* is **not** a selected module. A switcher built during the audit was removed again in the follow-up; nothing of it remains in the code.)
+## 1. Expanding browser compatibility (Minor)
 
-## 1. Support on all devices (responsive design)
+**Verdict: Code is browser-neutral ✅ — cross-browser testing still to be done by the team ⚠️.**
 
-**Requirement:** the website works on desktops, laptops, tablets and phones; layout and interaction adapt (touch, screen size).
+*Subject:* add support for an additional browser, test and fix rendering discrepancies, keep a consistent experience.
 
-| Concern | Where | Ref |
-|---|---|---|
-| Viewport meta | `<meta name="viewport" content="width=device-width, initial-scale=1.0">` | `templates/frontend/index.html:8` |
-| Breakpoints | `@media (max-width: 768px)` ×8, `480px` ×2, `920px`, `1100px` | `static/frontend/css/styles.css` (grep `@media`; first at `:714`) |
-| Base font scaling | `body,html { font-size: 14px }` under 768 px | `styles.css` (inside the first 768 px block) |
-| Hamburger menu | `.hamburger` hidden on desktop (`:206`), shown ≤768 px (`:756`); nav lists hidden until `.active`; JS toggle + click-outside close | `styles.css`, `static/frontend/js/script.js:600-633` |
-| Fluid grids | profile stats `repeat(auto-fit, minmax(200px,1fr))`; profile/friends two columns → one column at 920 px; team grid | `styles.css` (grep `auto-fit`, `920px`) |
-| Game canvas | `calculateSize()` keeps 4:3 inside the container, max 800×600; single `resize` listener removed on dispose (🆕) | `static/frontend/js/pong.js:381`, `:128-140` |
-| Touch controls 🆕 | pointer events on the canvas (`touch-action: none`): drag on your half to move your paddle (left = P1, right = P2; vs AI only the left half) | `pong.js:551-560` |
-| TicTacToe board (extra feature) | CSS grid `max-width:300px`, `aspect-ratio:1` cells | `static/frontend/js/tictactoe.js:33-53` |
-| Tables | `.table-container` wrappers for tournament tables | `templates/frontend/index.html:530-565` |
-| Bootstrap `.container` | responsive max-widths | `index.html` (37 uses) |
+What is in place: standard ES modules (`<script type="module">`), `fetch`, `localStorage`, WebGL through Three.js r128, CSS grid/flexbox, no vendor-prefixed or Chrome-only APIs; dates come from the API as ISO-8601 and are formatted with `toLocaleDateString()` (the old `"24 Aug 2026"` strings broke `new Date()` in Firefox — fixed in the second sweep); `touch-action: none` + pointer events for the game canvas. Console is clean in Chrome on every page.
 
-Verified: screenshots `16-mobile-home`, `17-mobile-menu-open`, `18-mobile-profile` (390 px wide) and the desktop set.
+**Before the defense:** open the site in Firefox (and Safari if available), walk through login → profile → Pong vs AI → tournament, note anything you fixed — the evaluator will ask which browser was added and what you tested.
 
-Q&A: *How do you handle phones?* Media queries at 768/480 px, hamburger nav, fluid grids, viewport meta. *Can you play Pong on a phone?* Yes — 🆕 since the second sweep you drag on your half of the canvas (pointer events, multi-touch for two players on one tablet); keyboard still works on desktop. *Why custom breakpoints instead of the Bootstrap grid?* CSS Grid/Flexbox gave finer control for the arcade layout; Bootstrap supplies `.container` and buttons.
+## 2. Server-Side Rendering (SSR) integration (Minor) — 🆕 real SSR since the Aug-2026 subject-compliance pass
 
-## 2. Expanding browser compatibility
+**Verdict: Works ✅.** *Subject:* pre-render content on the server for faster first paint and SEO, while keeping the SPA experience.
 
-**Requirement:** support an additional web browser beyond the primary one, with consistent behaviour and fixes for browser-specific issues.
+How it works:
+1. Every URL falls into the catch-all `re_path(r'^.*$', index)` (`backend/urls.py:17`). `gameapp.views.index` (`gameapp/views.py:38-61`) maps the first path segment to one of the nine pages (`SSR_PAGES`, `:24-35`), sends anonymous visitors of login-only pages to the login view (`LOGIN_REQUIRED_PAGES`), and picks a per-page `<title>` and `<meta name="description">`.
+2. For a logged-in session it computes the profile summary on the server (`build_profile_summary`, `userapp/views.py:80-130` — the same helper the `/api/auth/profile/` endpoint uses) and passes it as `ssr_profile`.
+3. The template (`templates/frontend/index.html`) renders `<title>{{ ssr_title }}</title>` and the meta tag (`:9-10`), `<body data-ssr-page=… data-ssr-logged-in=…>` (`:17`), gives the requested page `class="page active"` (`:59`, `:84`, …) so it is visible before any JavaScript runs, pre-sets the nav lists (`:30`, `:38`) and fills the profile (username, joined, stats, last matches — `:93-120`) with Django's auto-escaping.
+4. `script.js:152` starts the router from `document.body.dataset.ssrPage`, then hydrates (fetches fresh data and replaces the same elements).
 
-* Primary: Chrome/Chromium (Edge). Additional: Firefox. The audit ran an automated headless-Chrome walkthrough (0 console errors); the code uses only standard APIs.
-* Features relied on and their support: ES modules `type="module"` (`index.html:601`), `fetch` + `AbortController` (`script.js:327`), `localStorage`, `history.pushState/popstate` (`script.js:67`, `:121`), CSS Grid/Flexbox/custom properties, `aspect-ratio` (TicTacToe cells — Firefox ≥ 89), WebGL 1 (Three.js r128), `FileReader.readAsDataURL` (`script.js:776`), `URL.createObjectURL` for the GDPR download (`script.js:1593`).
-* No transpilation or polyfills; no vendor prefixes needed for these features in current browsers.
-* Self-signed certificate: each browser must accept the `localhost.pem` warning once.
-* Known differences: Firefox may block CDN fonts more aggressively (falls back to `cursive`/sans-serif); `alert()`/`confirm()` dialogs look different; nothing functional.
+Tests: `gameapp/tests.py` (title contains "Profile", username present in the HTML for a logged-in client; anonymous `/profile` renders the login page). Live: `curl -k https://localhost/about` returns the About title/description without JavaScript.
 
-Q&A: *Which browsers?* Chrome + Firefox (+Edge as Chromium). *What would break on old browsers?* ES modules and `aspect-ratio` on IE/old Safari — out of scope. *How did you test?* Manual runs in both browsers during development; the audit added an automated headless-Chrome walkthrough of every page.
+## Status after audit (both)
+SSR ✅ verified; browser compatibility ⚠️ needs the team's manual test on a second browser.
 
-## 3. Server-Side Rendering (SSR) integration
-
-**Requirement:** integrate SSR to improve initial load/SEO while keeping SPA behaviour.
-
-What exists:
-* Every route is answered by Django's catch-all (`backend/urls.py:16`) → `gameapp/views.py:3` `index()` → `render(request, 'frontend/index.html')`. The full page (all eight `.page` sections, nav, OTP modal, privacy-policy text) is **rendered server-side by the Django template engine** (`backend/settings.py` `TEMPLATES`), including `{% static %}` URLs resolved through the WhiteNoise manifest (hashed file names, `index.html:14`, `:599-606`) and the `{% csrf_token %}` hidden input (`:17`).
-* The browser therefore receives complete HTML on the first request for any deep link (`/profile`, `/tournament`); then `script.js` (`window 'load'` → `showPage`, `script.js:132-138`) takes over routing without further full-page loads.
-* Auth-dependent data (profile, friends, tournaments) is fetched client-side after load.
-
-Honest framing: "template-level SSR of the application shell with server-resolved asset URLs and CSRF, not per-route data hydration." Improvement path: render the initial page state (user) into the template context, or pre-render profile data into a `<script type="application/json">` block.
-
-Q&A: *Where is SSR?* `index()` + Django templates; view-source shows full HTML, not an empty `<div id="root">`. *Why not Next/Nuxt?* The subject forbids front-end frameworks beyond the toolkit; Django templates are the sanctioned server renderer. *What is rendered on the server vs client?* Shell/markup/text/asset URLs server-side; user data client-side. *Does SEO benefit?* Public pages (home, about incl. privacy policy) are fully crawlable.
-
-## Status after audit (all three)
-Responsive ✅ (🆕 Pong now has touch controls), browsers ✅ (🆕 match dates are ISO 8601, so `new Date()` parses them in Firefox/Safari too), SSR partial ⚠️.
+## Likely evaluator questions
+1. **What is server-rendered?** The page skeleton *with* the requested page active, per-route title/description, and the profile data for logged-in users — the HTML is meaningful before JS.
+2. **Isn't a template-served SPA already SSR?** Before this change the server returned an empty shell; now the server decides the page and pre-renders its content — that's the difference.
+3. **How does hydration avoid a flash?** The server-active page is the same one the router would show; `showPage(initial, pushState=false)` just re-applies it.
+4. **Which second browser?** Firefox (say what you tested and fixed — e.g. ISO dates).
+5. **Any browser-specific code?** None; feature detection is unnecessary because only baseline APIs are used.

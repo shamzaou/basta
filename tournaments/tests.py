@@ -1,4 +1,6 @@
 from django.test import TestCase, Client
+from django.test import Client
+from userapp.models import User
 from tournaments.models import Tournament, Player, Match
 
 class TournamentTestCase(TestCase):
@@ -53,7 +55,7 @@ class TournamentApiValidationTests(TestCase):
     """Aug-2026 bug sweep: #10 add_players validation, #11 finish_match scores."""
 
     def setUp(self):
-        self.client = Client()
+        self.client = Client(); self.client.force_login(User.objects.create_user(username='tuser%d' % Tournament.objects.count(), email='tuser%d@example.com' % Tournament.objects.count(), password='Str0ng!Passw0rd'))
         self.t = Tournament.objects.create(name="T", participants_count=3)
         self.url = f'/tournaments/api/tournaments/{self.t.id}/add_players/'
 
@@ -127,3 +129,23 @@ class RepeatedTiebreakerTests(TestCase):
         self._play_round(lambda m: self.b if self.b in (m.player1, m.player2) else m.player1)
         self.assertEqual(self.t.get_winner(), self.b)
         self.assertEqual(Match.objects.filter(tournament=self.t, is_additional=True).count(), 3)
+
+
+class TournamentAuthTests(TestCase):
+    """Mandatory part: tournament API routes are protected (login required)."""
+
+    def test_unauthenticated_calls_get_401(self):
+        c = Client()
+        t = Tournament.objects.create(name="T", participants_count=3)
+        self.assertEqual(c.post('/tournaments/api/tournaments/create/', {'participants_count': 3},
+                                content_type='application/json').status_code, 401)
+        self.assertEqual(c.post(f'/tournaments/api/tournaments/{t.id}/add_players/', {'nicknames': ['a', 'b', 'c']},
+                                content_type='application/json').status_code, 401)
+        self.assertEqual(c.get(f'/tournaments/api/tournaments/{t.id}/').status_code, 401)
+        self.assertEqual(c.post('/tournaments/api/tournaments/1/finish/', {'score_player1': 3, 'score_player2': 0},
+                                content_type='application/json').status_code, 401)
+
+    def test_logged_in_user_can_create(self):
+        c = Client(); c.force_login(User.objects.create_user(username='tt', email='tt@example.com', password='Str0ng!Passw0rd'))
+        r = c.post('/tournaments/api/tournaments/create/', {'participants_count': 3}, content_type='application/json')
+        self.assertEqual(r.status_code, 200, r.content)

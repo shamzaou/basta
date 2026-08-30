@@ -533,6 +533,7 @@ class InputHandler {
         this.paddle2 = paddle2;
         this.gameMode = gameMode;
         this.keys = new Set();
+        this.aiKeys = new Set();          // keys "pressed" by the AI (same rules as a human player)
         this.canvas = canvas;
         this.pointers = new Map(); // pointerId -> 'left' | 'right'
 
@@ -621,17 +622,21 @@ class InputHandler {
             this.paddle1.position.z += paddleSpeed;
         }
 
-        // Paddle 2 controls (Arrow keys) with tighter bounds
-        // Only apply if we're in PvP mode
-        if (this.gameMode !== 'ai') {
-            if (this.keys.has('arrowup') && this.paddle2.position.z > -2.1) {
-                this.paddle2.position.z -= paddleSpeed;
-            }
-            if (this.keys.has('arrowdown') && this.paddle2.position.z < 2.1) {
-                this.paddle2.position.z += paddleSpeed;
-            }
+        // Paddle 2 controls (Arrow keys) with tighter bounds.
+        // In AI mode the keys come from the AI's simulated keyboard (aiKeys) instead of the
+        // real one, and move the paddle at exactly the same speed as a human player.
+        const p2Keys = this.gameMode === 'ai' ? this.aiKeys : this.keys;
+        if (p2Keys.has('arrowup') && this.paddle2.position.z > -2.1) {
+            this.paddle2.position.z -= paddleSpeed;
         }
-        // In AI mode, we explicitly do not process arrow keys
+        if (p2Keys.has('arrowdown') && this.paddle2.position.z < 2.1) {
+            this.paddle2.position.z += paddleSpeed;
+        }
+    }
+
+    // Called by the AI: which arrow keys it is currently "holding down"
+    setSimulatedKeys(keys) {
+        this.aiKeys = keys;
     }
 
     setGameMode(mode) {
@@ -664,28 +669,36 @@ class InputHandler {
 
 // AI class
 class PongAI {
-    constructor(paddle, getScore = null) {
+    // The AI "plays" like a human: it looks at the game only once per second (subject rule),
+    // predicts where the ball will cross its paddle line - including bounces off the walls -
+    // and then holds a simulated arrow key until the paddle is there. The paddle itself is
+    // moved by InputHandler at exactly the same speed as a human player's paddle.
+    constructor(paddle, getScore = null, inputHandler = null) {
         this.paddle = paddle;
-        this.getScore = getScore;           // () => { player1, player2 } — live score for difficulty tuning
+        this.getScore = getScore;           // () => { player1, player2 } - live score for difficulty tuning
+        this.inputHandler = inputHandler;   // receives the simulated key presses
         this.lastUpdateTime = 0;
         this.UPDATE_INTERVAL = 1000;        // the AI may only look at the game once per second
         this.lastSeenBallPosition = null;
         this.lastSeenBallVelocity = null;
         this.ACCURACY = 0.8;
-        this.MAX_SPEED = 0.12;
         this.MISTAKE_CHANCE = 0.10;
+        this.DEAD_ZONE = 0.1;               // release the key when the paddle is close enough
+        this.WALL_Z = 2.9;
+        this.targetZ = 0;
+        this.keys = new Set();
         this.difficultyUpdateTime = 0;
         this.difficultyUpdateInterval = 5000;
     }
 
     update(ball, ballVelocity) {
         const currentTime = Date.now();
-        
+
         if (currentTime - this.difficultyUpdateTime > this.difficultyUpdateInterval) {
             this.updateDifficulty();
             this.difficultyUpdateTime = currentTime;
         }
-        
+
         if (currentTime - this.lastUpdateTime >= this.UPDATE_INTERVAL) {
             this.lastUpdateTime = currentTime;
             this.lastSeenBallPosition = { x: ball.position.x, z: ball.position.z };
@@ -693,13 +706,25 @@ class PongAI {
             this.decideNextMove(this.lastSeenBallPosition, this.lastSeenBallVelocity);
         }
 
-        this.executeMove();
+        this.pressKeys();
+    }
+
+    // Where will the ball cross z when it reaches paddleX? Straight-line travel folded at the
+    // walls (z = +/-WALL_Z), i.e. the ball's bounces are anticipated.
+    predictZ(ball, ballVelocity, paddleX) {
+        if (ballVelocity.x === 0) return ball.z;
+        const frames = (paddleX - ball.x) / ballVelocity.x;
+        let z = ball.z + ballVelocity.z * frames;
+        const limit = this.WALL_Z;
+        for (let i = 0; i < 100 && Math.abs(z) > limit; i++) {
+            z = z > limit ? 2 * limit - z : -2 * limit - z;
+        }
+        return z;
     }
 
     decideNextMove(ball, ballVelocity) {
         if (ballVelocity.x > 0) {
-            const timeToIntercept = (this.paddle.position.x - ball.x) / ballVelocity.x;
-            const perfectZ = ball.z + (ballVelocity.z * timeToIntercept);
+            const perfectZ = this.predictZ(ball, ballVelocity, this.paddle.position.x);
             const predictionError = (Math.random() - 0.5) * (1 - this.ACCURACY) * 1.0;
             this.targetZ = perfectZ + predictionError;
 
@@ -707,31 +732,29 @@ class PongAI {
                 this.targetZ += (Math.random() - 0.5) * 2.0;
             }
         } else {
+            // Ball moving away: drift back towards the centre
             this.targetZ = (Math.random() - 0.5) * 0.5;
         }
-
-        if (this.paddle.position.z < this.targetZ - 0.1) {
-            this.nextMove = 'down';
-        } else if (this.paddle.position.z > this.targetZ + 0.1) {
-            this.nextMove = 'up';
-        } else {
-            this.nextMove = null;
-        }
+        this.targetZ = Math.max(-2.1, Math.min(2.1, this.targetZ));
     }
 
-    executeMove() {
-        const distanceToTarget = Math.abs(this.paddle.position.z - (this.targetZ || 0));
-        const speed = Math.min(this.MAX_SPEED, distanceToTarget / 10);
-
-        if (this.nextMove === 'up' && this.paddle.position.z > -2.1) {
-            this.paddle.position.z -= speed;
-        } else if (this.nextMove === 'down' && this.paddle.position.z < 2.1) {
-            this.paddle.position.z += speed;
+    // Simulated keyboard: hold ArrowUp/ArrowDown until the paddle reaches the target
+    pressKeys() {
+        this.keys.clear();
+        const dz = this.targetZ - this.paddle.position.z;
+        if (dz > this.DEAD_ZONE) {
+            this.keys.add('arrowdown');
+        } else if (dz < -this.DEAD_ZONE) {
+            this.keys.add('arrowup');
+        }
+        if (this.inputHandler) {
+            this.inputHandler.setSimulatedKeys(this.keys);
         }
     }
 
     updateDifficulty() {
-        // Rubber-banding on the real score: AI (player2) minus human (player1)
+        // Rubber-banding on the real score: AI (player2) minus human (player1).
+        // Only the AI's judgement changes - never its paddle speed (same rules as a player).
         const score = this.getScore ? this.getScore() : null;
         const scoreDiff = score ? (score.player2 || 0) - (score.player1 || 0) : 0;
 
@@ -739,17 +762,14 @@ class PongAI {
             // Make AI worse if winning by too much
             this.ACCURACY = 0.6;
             this.MISTAKE_CHANCE = 0.15;
-            this.MAX_SPEED = 0.10;
         } else if (scoreDiff <= -2) {
             // Make AI better if losing by too much
             this.ACCURACY = 0.9;
             this.MISTAKE_CHANCE = 0.05;
-            this.MAX_SPEED = 0.14;
         } else {
             // Default values for close games
             this.ACCURACY = 0.8;
             this.MISTAKE_CHANCE = 0.10;
-            this.MAX_SPEED = 0.12;
         }
     }
 }
@@ -783,7 +803,7 @@ class PongGame {
         this.renderer = new GameRenderer(canvasContainer);
         this.physics = new GamePhysics(GAME_CONFIG);
         this.inputHandler = new InputHandler(this.renderer.paddle1, this.renderer.paddle2, gameMode, this.renderer.renderer.domElement);
-        this.ai = gameMode === 'ai' ? new PongAI(this.renderer.paddle2, () => this.state.score) : null;
+        this.ai = gameMode === 'ai' ? new PongAI(this.renderer.paddle2, () => this.state.score, this.inputHandler) : null;
         this.lastStateUpdate = 0; // #24: periodic state updates (tournament matches only)
         
         // Set initial ball velocity

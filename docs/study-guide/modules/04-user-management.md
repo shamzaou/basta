@@ -1,6 +1,6 @@
 # Module — User Management: standard user management, authentication, users across tournaments (Major)
 
-**Verdict: Works end-to-end ✅** (register/login/logout, profile + avatar, display name, friends, match history & stats, 42 OAuth code path). ⚠️ "Users across tournaments" is satisfied loosely: tournaments use per-tournament nicknames, not accounts.
+**Verdict: Works end-to-end ✅ (two subject bullets remain partial: unique display name, friends' online status)** (register/login/logout, profile + avatar, display name, friends, match history & stats, 42 OAuth code path). ⚠️ "Users across tournaments" is satisfied loosely: tournaments use per-tournament nicknames, not accounts.
 
 ## What the module requires (42 subject wording)
 Users can securely subscribe, log in, choose a unique display name for tournaments, update information, upload an avatar (with default), add friends and see their status, view stats (wins/losses) and a match history (1v1, dates, details) accessible to logged-in users.
@@ -67,6 +67,13 @@ Caveats to admit if asked:
 * **42 OAuth** cannot be verified live until the new client key is in `.env` (`FORTYTWO_CLIENT_ID/SECRET`, redirect `https://localhost/oauth/callback`).
 * `check_auth` (`userapp/views.py:470`) and `user_settings_view` are dead/legacy endpoints; `update_profile` (`:207`) is not routed.
 * Password change/reset does not exist (the About page says "contact support").
+
+## 🆕 Subject-compliance pass (30 Aug 2026)
+* **Tournament API requires login** — `require_login` (`tournaments/views.py:14-21`) on every tournament view → 401 JSON; the SPA shows "Please log in" (`script.js:2224`).
+* **Next fight announced** — `#next-match` under the tournament status ("Next match: A vs B" / "All matches played") and `.next-match-row` highlight (`script.js:2350`, `index.html:545`).
+* **XSS-safe rendering** — nicknames/winners/players lists are built with `createElement` + `textContent` (`script.js:2249-2360`); a nickname `<b id=xss-probe>` is displayed literally.
+* **Anonymization** back in Settings (see `modules/08-cybersecurity-gdpr.md`).
+* **Remaining gaps (be honest):** `display_name` is not unique (no constraint; tournaments use per-tournament nicknames instead) and there is **no online status** for friends — both are listed in the subject bullets.
 
 ## Likely evaluator questions
 1. **How is the user model customised?** `AbstractUser` subclass with e-mail as the login field (`USERNAME_FIELD='email'`, `userapp/models.py:37`) and extra fields (display name, avatar, 42 fields, 2FA flag, GDPR timestamps, friends M2M).
