@@ -47,6 +47,7 @@ urlpatterns += [
     # Friend management endpoints
     path('users/', views.get_all_users, name='get-all-users'),
     path('friends/', views.get_friends, name='get-friends'),
+    path('heartbeat/', views.heartbeat, name='heartbeat'),
     path('friends/add/<int:user_id>/', views.add_friend, name='add-friend'),
     path('friends/remove/<int:user_id>/', views.remove_friend, name='remove-friend'),
 ]

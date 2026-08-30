@@ -83,3 +83,5 @@ Limitations to admit: tokens in `localStorage` (XSS-readable) rather than HttpOn
 10. **How do you prevent brute-forcing the 6-digit code?** Currently only the 10-min TTL and single use — admit no attempt limit; propose `cache.incr('otp_attempts_<id>')` with lockout.
 
 **🆕 Changed in Aug-2026 audit — 42 accounts:** the Settings → Security section is hidden for accounts created through 42 OAuth (`is_42_user`), and `PUT /api/auth/profile/ {two_factor_enabled: true}` returns 400 for them: they never enter a password on this site, so an e-mail second factor would protect nothing (42 handles their authentication). `profile_view` GET now also returns `is_42_user` so the SPA can decide. Tests: `FortyTwoTwoFactorTests`.
+
+**🆕 JWT everywhere:** `profile_view` and `user_settings_view` no longer override the authentication classes; all DRF endpoints validate the JWT Bearer token first (session cookie only as fallback). Test `ProfileJwtAuthTests`.

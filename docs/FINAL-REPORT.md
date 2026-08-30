@@ -2,7 +2,7 @@
 
 Everything below was done on `master` in small commits. `make build && make up` works from a
 clean checkout with a fresh database volume, the site serves at https://localhost, and
-`make test` passes (57 tests). Screenshots of every page were captured from the running site
+`make test` passes (62 tests). Screenshots of every page were captured from the running site
 with headless Chrome (0 JavaScript errors).
 
 ## 1. What was fixed (with root causes)

@@ -155,9 +155,26 @@ def get_or_create_42_user(user_info):
     return user, True
 
 
+# ---- Presence (friends' online status) --------------------------------------------
+# A logged-in tab sends a heartbeat every minute; a user is "online" if we heard from
+# them within ONLINE_WINDOW. This is presence only - there is no online play.
+ONLINE_WINDOW = datetime.timedelta(minutes=2)
+
+
+def is_online(user):
+    return bool(user.last_activity) and user.last_activity >= timezone.now() - ONLINE_WINDOW
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def heartbeat(request):
+    """Mark the current user as active right now (called every minute by the SPA)."""
+    User.objects.filter(pk=request.user.pk).update(last_activity=timezone.now())
+    return Response({'status': 'ok'})
+
+
 @api_view(['GET', 'PUT'])
 @permission_classes([IsAuthenticated])
-@authentication_classes([TokenAuthentication, SessionAuthentication])
 def profile_view(request):
     if request.method == 'GET':
         try:
@@ -219,8 +236,15 @@ def profile_view(request):
                 user.two_factor_enabled = wanted
             
             if 'display_name' in data:
+                new_display = (data['display_name'] or '').strip()
+                # Display names are unique (case-insensitive) so tournament aliases are unambiguous
+                if new_display and User.objects.exclude(pk=user.pk).filter(display_name__iexact=new_display).exists():
+                    return Response({
+                        'status': 'error',
+                        'message': 'Display name already taken'
+                    }, status=400)
                 # Direct update of display_name
-                User.objects.filter(id=user.id).update(display_name=data['display_name'].strip())
+                User.objects.filter(id=user.id).update(display_name=new_display or None)
                 user.refresh_from_db()
                 
             # Handle profile picture upload
@@ -540,6 +564,10 @@ def register_view(request):
 
 @require_POST
 def logout_view(request):
+    if request.user.is_authenticated:
+        # Go offline right away instead of waiting for the presence window to expire
+        User.objects.filter(pk=request.user.pk).update(
+            last_activity=timezone.now() - ONLINE_WINDOW - datetime.timedelta(seconds=1))
     logout(request)
     return JsonResponse({'status': 'success'})
 
@@ -746,7 +774,6 @@ def verify_otp_view(request):
 
 @api_view(['GET', 'PUT'])
 @permission_classes([IsAuthenticated])
-@authentication_classes([TokenAuthentication, SessionAuthentication])
 def user_settings_view(request):
     """Handle user settings get/update"""
     if request.method == 'GET':
@@ -1087,7 +1114,8 @@ def get_all_users(request):
                 'username': user.username,
                 'display_name': user.display_name if hasattr(user, 'display_name') else user.username,
                 'avatar': user.profile_picture.url if user.profile_picture else None,
-                'is_friend': user.id in user_friends_ids
+                'is_friend': user.id in user_friends_ids,
+                'online': is_online(user)
             })
         
         return Response({
@@ -1112,6 +1140,8 @@ def get_friends(request):
                 'id': friend.id,
                 'username': friend.username,
                 'display_name': friend.display_name if hasattr(friend, 'display_name') else friend.username,
+                'online': is_online(friend),
+                'last_seen': friend.last_activity.isoformat() if friend.last_activity else None,
                 # 'avatar': friend.profile_picture.url if friend.profile_picture else None
             })
         

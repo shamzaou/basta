@@ -413,7 +413,24 @@ async function handleLogout() {
 }
 
 // Forget everything about the current user on this browser (tokens, tournament, game globals)
+// Presence: tell the server once a minute that this tab is still open so friends see
+// us as "online" (presence only - there is no online play).
+let heartbeatTimer = null;
+function sendHeartbeat() {
+    if (localStorage.getItem('isLoggedIn') !== 'true') return;
+    authFetch('/api/auth/heartbeat/', { method: 'POST' }).catch(() => {});
+}
+function startHeartbeat() {
+    if (heartbeatTimer) return;
+    sendHeartbeat();
+    heartbeatTimer = setInterval(sendHeartbeat, 60000);
+}
+function stopHeartbeat() {
+    if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
+}
+
 function clearLocalSession() {
+    stopHeartbeat();
     ['isLoggedIn', 'userData', 'authToken', 'refreshToken', 'temp_email', 'currentTournamentId']
         .forEach(key => localStorage.removeItem(key));
     currentTournamentId = null;
@@ -1529,6 +1546,7 @@ function scheduleTokenRefresh() {
     let token = localStorage.getItem("authToken");
 
     if (!token) return;
+    startHeartbeat(); // every logged-in tab reports presence
 
     try {
         const payload = JSON.parse(atob(token.split('.')[1]));
@@ -1917,7 +1935,17 @@ function createFriendItem(user, isFriend) {
     
     info.appendChild(name);
     info.appendChild(username);
-    
+
+    if (typeof user.online === 'boolean') {
+        const status = document.createElement('div');
+        status.className = 'friend-status';
+        const dot = document.createElement('span');
+        dot.className = 'status-dot ' + (user.online ? 'online' : 'offline');
+        status.appendChild(dot);
+        status.appendChild(document.createTextNode(user.online ? 'Online' : 'Offline'));
+        info.appendChild(status);
+    }
+
     const button = document.createElement('button');
     button.className = isFriend ? 'friend-action remove' : 'friend-action';
     button.textContent = isFriend ? 'Remove' : 'Add';
@@ -2146,6 +2174,13 @@ function generatePlayerInputs(count) {
         input.id = `player-${i}`;
         input.name = `player-${i}`;
         input.required = true;
+        if (i === 0) {
+            // The logged-in user plays under their (unique) display name by default
+            try {
+                const me = JSON.parse(localStorage.getItem('userData') || '{}');
+                input.value = me.display_name || me.username || '';
+            } catch (e) { /* ignore */ }
+        }
 
         inputGroup.appendChild(label);
         inputGroup.appendChild(input);

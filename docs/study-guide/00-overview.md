@@ -28,7 +28,7 @@ FAST_PONG is our 42 Abu Dhabi ft_transcendence capstone: a single-page web app w
 make build      # docker-compose build
 make up         # docker-compose up -d  -> https://localhost  (accept the self-signed cert)
 make logs       # follow container logs (note: Gunicorn stdout goes to gunicorn-error.log, see below)
-make test       # docker-compose exec web python manage.py test   (57 tests, all green)
+make test       # docker-compose exec web python manage.py test   (62 tests, all green)
 make migrate    # apply migrations inside the container
 make shell      # Django shell
 make down       # stop

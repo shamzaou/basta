@@ -202,6 +202,28 @@ nav {
     background-color: rgba(255, 0, 0, 0.1);
 }
 
+/* Friends: online status (presence only) */
+.friend-status {
+    font-size: 0.75em;
+    color: #aaa;
+    margin-top: 0.2em;
+}
+
+.status-dot {
+    display: inline-block;
+    width: 0.6em;
+    height: 0.6em;
+    border-radius: 50%;
+    margin-right: 0.35em;
+    background-color: #555;
+    vertical-align: middle;
+}
+
+.status-dot.online {
+    background-color: var(--primary-color);
+    box-shadow: 0 0 6px var(--primary-color);
+}
+
 /* Mobile Menu */
 .hamburger {
     display: none;

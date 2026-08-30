@@ -480,3 +480,66 @@ class PasswordFeedbackTests(TestCase):
         self.assertIn('too similar to the username', joined)
         self.assertTrue(body['message'].startswith('Password not accepted:'))
         self.assertFalse(User.objects.filter(username='pwtester').exists())
+
+
+class PresenceTests(TestCase):
+    """Friends' online status: heartbeat every minute, online = seen within 2 minutes."""
+    PW = 'Str0ng!Passw0rd'
+
+    def setUp(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        self.me = User.objects.create_user(username='me', email='me@example.com', password=self.PW)
+        self.pal = User.objects.create_user(username='pal', email='pal@example.com', password=self.PW)
+        self.me.add_friend(self.pal)
+        User.objects.filter(pk=self.pal.pk).update(last_activity=timezone.now() - timedelta(hours=1))
+        self.client = Client(); self.client.force_login(self.me)
+
+    def friend_status(self):
+        return self.client.get('/api/auth/friends/').json()['friends'][0]['online']
+
+    def test_stale_friend_is_offline(self):
+        self.assertFalse(self.friend_status())
+
+    def test_heartbeat_makes_friend_online_and_logout_makes_offline(self):
+        pal_client = Client(); pal_client.force_login(self.pal)
+        self.assertEqual(pal_client.post('/api/auth/heartbeat/').status_code, 200)
+        self.assertTrue(self.friend_status())
+        self.assertEqual(pal_client.post('/api/auth/logout/').status_code, 200)
+        self.assertFalse(self.friend_status())
+
+    def test_users_list_reports_online(self):
+        pal_client = Client(); pal_client.force_login(self.pal); pal_client.post('/api/auth/heartbeat/')
+        users = {u['username']: u for u in self.client.get('/api/auth/users/').json()['users']}
+        self.assertTrue(users['pal']['online'])
+
+
+class DisplayNameUniqueTests(TestCase):
+    PW = 'Str0ng!Passw0rd'
+
+    def test_display_name_must_be_unique_case_insensitive(self):
+        a = User.objects.create_user(username='dna', email='dna@example.com', password=self.PW, display_name='Champ')
+        b = User.objects.create_user(username='dnb', email='dnb@example.com', password=self.PW)
+        c = Client(); c.force_login(b)
+        r = c.put('/api/auth/profile/', {'display_name': 'champ'}, content_type='application/json')
+        self.assertEqual(r.status_code, 400); self.assertIn('already taken', r.json()['message'])
+        r = c.put('/api/auth/profile/', {'display_name': 'Champ2'}, content_type='application/json')
+        self.assertEqual(r.status_code, 200)
+        # keeping your own name is fine
+        ca = Client(); ca.force_login(a)
+        self.assertEqual(ca.put('/api/auth/profile/', {'display_name': 'Champ'}, content_type='application/json').status_code, 200)
+
+
+class ProfileJwtAuthTests(TestCase):
+    """Profile and settings endpoints accept the JWT Bearer token (DRF defaults), not only the session."""
+
+    def test_profile_with_bearer_only(self):
+        from rest_framework_simplejwt.tokens import RefreshToken
+        u = User.objects.create_user(username='jwtonly', email='jwtonly@example.com', password='Str0ng!Passw0rd')
+        token = str(RefreshToken.for_user(u).access_token)
+        c = Client()   # no session
+        r = c.get('/api/auth/profile/', HTTP_AUTHORIZATION='Bearer ' + token)
+        self.assertEqual(r.status_code, 200); self.assertEqual(r.json()['username'], 'jwtonly')
+        self.assertEqual(c.get('/api/auth/settings/', HTTP_AUTHORIZATION='Bearer ' + token).status_code, 200)
+        self.assertEqual(c.get('/api/auth/profile/').status_code, 401)
+        self.assertEqual(c.get('/api/auth/profile/', HTTP_AUTHORIZATION='Bearer nope').status_code, 401)
