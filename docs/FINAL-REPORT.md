@@ -49,8 +49,8 @@ Full details, severities and the deferred-issue list: `docs/audit-report.md`.
 | `docs/study-guide/modules/01…11` | One file per selected module (Web ×3, user management, remote auth/42 OAuth, AI opponent, stats dashboards, GDPR, 2FA+JWT, 3D, accessibility): what it requires, where it is implemented (`path:line`), status, and 5–10 likely evaluator questions with answers. |
 | `docs/study-guide/SPA-routing-and-frontend.md` | Client-side router, games, Three.js + AI opponent, stats dashboard rendering, token handling. |
 | `docs/study-guide/quick-drill.md` | 40+ rapid-fire Q&As ordered by likelihood, plus demo commands. Drill this the night before. |
-| `presentation/FAST_PONG-presentation.pdf` | The slide deck as a normal PDF (18 slides, 16:9) — open in any PDF viewer / projector. |
-| `presentation/index.html` | Same deck as an HTML slideshow (clean light theme): ← → / Space navigate, `Home`/`End` jump, `P` shows all slides stacked. Regenerate the PDF with headless Chrome: `chrome --headless=new --no-pdf-header-footer --print-to-pdf=FAST_PONG-presentation.pdf index.html`. |
+| `presentation/FAST_PONG-presentation.pdf` | The presentation (36 slides, 16:9, same visual style as the team's earlier capstone deck). Rebuild after edits with `python presentation/build_pdf_deck.py` (content and layout live in that script; photos in `presentation/assets/`). |
+| `presentation/index.html` | Shorter HTML slideshow (18 slides, light theme): ← → / Space navigate, `Home`/`End` jump, `P` shows all slides stacked. |
 | `presentation/screenshots/` | Raw screenshots (also embedded in the deck). |
 | `make test` | Run before the evaluation to show the green suite. |
 
