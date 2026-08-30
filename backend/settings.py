@@ -271,6 +271,8 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # 42 OAuth Settings 
+# Signs the OAuth 'state' parameter (CSRF protection on the callback)
+OAUTH_STATE_SECRET = config('OAUTH_STATE_SECRET', default=SECRET_KEY)
 FORTYTWO_CLIENT_ID = config('FORTYTWO_CLIENT_ID')
 FORTYTWO_CLIENT_SECRET = config('FORTYTWO_CLIENT_SECRET')
 FORTYTWO_REDIRECT_URI = config('FORTYTWO_REDIRECT_URI')

@@ -1066,6 +1066,7 @@ async function checkOAuthLogin() {
     // Get the authorization code from URL if present
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
+    const state = urlParams.get('state');   // anti-CSRF value issued by /redirect_uri/
 
     if (!code) {
         // console.log("No OAuth code found in URL");
@@ -1085,7 +1086,7 @@ async function checkOAuthLogin() {
                 'X-CSRFToken': getCookie('csrftoken')
             },
             credentials: 'include',
-            body: JSON.stringify({ code: code }),
+            body: JSON.stringify({ code: code, state: state }),
         });
 
         if (!response.ok) {

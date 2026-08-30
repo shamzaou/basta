@@ -543,3 +543,41 @@ class ProfileJwtAuthTests(TestCase):
         self.assertEqual(c.get('/api/auth/settings/', HTTP_AUTHORIZATION='Bearer ' + token).status_code, 200)
         self.assertEqual(c.get('/api/auth/profile/').status_code, 401)
         self.assertEqual(c.get('/api/auth/profile/', HTTP_AUTHORIZATION='Bearer nope').status_code, 401)
+
+
+class OAuthStateTests(TestCase):
+    """42 OAuth: the authorize link carries a signed 'state' that get_token must see again."""
+
+    def test_authorize_link_contains_state_stored_in_session(self):
+        c = Client()
+        r = c.post('/api/auth/redirect_uri/')
+        self.assertEqual(r.status_code, 200)
+        link = r.json()['oauth_link']
+        self.assertIn('&state=', link)
+        self.assertEqual(link.split('&state=')[1], c.session['oauth_state'])
+
+    def test_get_token_rejects_missing_or_foreign_state(self):
+        from unittest import mock
+        c = Client()
+        c.post('/api/auth/redirect_uri/')
+        with mock.patch('userapp.views.requests.post') as post:
+            r = c.post('/api/auth/get-token/', {'code': 'abc'}, content_type='application/json')
+            self.assertEqual(r.status_code, 400)
+            r = c.post('/api/auth/get-token/', {'code': 'abc', 'state': 'forged'}, content_type='application/json')
+            self.assertEqual(r.status_code, 400)
+            post.assert_not_called()   # 42 is never contacted without a valid state
+
+    def test_get_token_accepts_issued_state(self):
+        from unittest import mock
+        c = Client()
+        state = c.post('/api/auth/redirect_uri/').json()['oauth_link'].split('&state=')[1]
+        token_resp = mock.Mock(status_code=200); token_resp.json.return_value = {'access_token': 'tok'}
+        me_resp = mock.Mock(status_code=200); me_resp.json.return_value = {'id': 777, 'login': 'stateok', 'email': 'stateok@student.42.fr'}
+        with mock.patch('userapp.views.requests.post', return_value=token_resp), mock.patch('userapp.views.requests.get', return_value=me_resp):
+            r = c.post('/api/auth/get-token/', {'code': 'abc', 'state': state}, content_type='application/json')
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertTrue(User.objects.filter(email='stateok@student.42.fr', is_42_user=True).exists())
+        # state is single-use
+        with mock.patch('userapp.views.requests.post') as post:
+            r = c.post('/api/auth/get-token/', {'code': 'abc', 'state': state}, content_type='application/json')
+            self.assertEqual(r.status_code, 400); post.assert_not_called()

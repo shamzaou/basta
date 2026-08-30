@@ -41,7 +41,9 @@ import uuid
 import os
 import re
 import mimetypes
+import secrets
 import threading
+from django.core import signing
 from django.http import HttpResponse, FileResponse
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
@@ -597,11 +599,17 @@ def redirect_uri(request):
             client_id = settings.FORTYTWO_CLIENT_ID
             redirect_uri = settings.FORTYTWO_REDIRECT_URI
             
+            # CSRF protection for the callback: a signed, time-limited random 'state'
+            # that is also remembered in this browser's session and checked in get_token.
+            state = signing.dumps({'n': secrets.token_hex(8)}, key=settings.OAUTH_STATE_SECRET, salt='oauth-state')
+            request.session['oauth_state'] = state
+
             oauth_link = (
                 f"https://api.intra.42.fr/oauth/authorize"
                 f"?client_id={client_id}"
                 f"&redirect_uri={redirect_uri}"
                 f"&response_type=code"
+                f"&state={state}"
             )
 
             return JsonResponse({"oauth_link": oauth_link})
@@ -682,9 +690,20 @@ def get_token(request):
         body_unicode = request.body.decode('utf-8')
         body_data = json.loads(body_unicode)
         code = body_data.get('code')
+        state = body_data.get('state')
 
         if not code:
             return JsonResponse({'error': 'Authorization code is required'}, status=400)
+
+        # Validate the OAuth 'state' (must be the one we issued to this browser, unexpired)
+        expected_state = request.session.pop('oauth_state', None)
+        if not state or not expected_state or state != expected_state:
+            return JsonResponse({'error': 'Invalid OAuth state'}, status=400)
+        try:
+            signing.loads(state, key=settings.OAUTH_STATE_SECRET, salt='oauth-state',
+                          max_age=settings.JWT_SETTINGS.get('STATE_TTL', 600))
+        except signing.BadSignature:
+            return JsonResponse({'error': 'Invalid or expired OAuth state'}, status=400)
 
         # Exchange code for access token with 42 API
         token_url = 'https://api.intra.42.fr/oauth/token'
