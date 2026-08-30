@@ -151,7 +151,9 @@ window.addEventListener('load', async () => {
     // with the local state - checkLoginState() re-applies the navigation below.
     const initialPage = document.body.dataset.ssrPage || path.substring(1) || 'home';
     if (!history.state) {
-        history.replaceState({ pageId: initialPage }, '', path);
+        // Keep the query string: the 42 OAuth callback arrives as /oauth/callback?code=...
+        // and showPage() must still see the code to exchange it.
+        history.replaceState({ pageId: initialPage }, '', path + window.location.search);
     }
 
     // If the stored JWT already expired (60 min) try to refresh it before showing anything;
