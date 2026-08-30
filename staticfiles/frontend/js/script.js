@@ -400,6 +400,7 @@ async function handleLogout() {
         localStorage.removeItem('refreshToken');
 
         checkLoginState();
+        updateNavAvatar(); // drop the previous account's picture
         showPage('login');
 
         alert('You have been logged out.');
@@ -1234,8 +1235,10 @@ async function loadSettingsData() {
                 const avatarUrl = data.profile_picture || data.avatar;
                 if (avatarUrl) {
                     const fixedUrl = fixImageUrl(avatarUrl);
-                    currentAvatar.src = fixedUrl + '?t=' + new Date().getTime(); // Force reload
+                    currentAvatar.src = fixedUrl.includes('?') ? fixedUrl : fixedUrl + '?t=' + new Date().getTime(); // Force reload
                     // console.log('Updated settings avatar to:', fixedUrl);
+                } else {
+                    currentAvatar.src = '/static/frontend/assets/man.png'; // reset after switching accounts
                 }
             }
             
@@ -1303,6 +1306,9 @@ async function updateNavAvatar() {
             const finalUrl = baseUrl.includes('?') ? baseUrl : baseUrl + '?t=' + new Date().getTime();
             
             navAvatar.src = finalUrl;
+        } else {
+            // No avatar on this account (or logged out): never keep the previous account's picture
+            navAvatar.src = '/static/frontend/assets/man.png';
         }
     } catch (error) {
         // console.error('Error updating nav avatar:', error);

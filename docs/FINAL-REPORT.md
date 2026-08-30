@@ -16,6 +16,7 @@ with headless Chrome (0 JavaScript errors).
 | Failing tournament tests | tests never called `get_winner()` (the only place tiebreakers are created) | `tournaments/tests.py` |
 | Settings saved the placeholder display name "The Champion" | template hard-coded `value="The Champion"`; `loadSettingsData` only overwrote it when a display name already existed | `templates/frontend/index.html`, `static/frontend/js/script.js::loadSettingsData` |
 | Pong ball stuck gliding along a wall | wall bounce in `GamePhysics.updatePhysics` flipped `velocity.z` after the move without clamping the ball back inside, so an overshooting ball re-flipped every frame until its vertical speed decayed to 0; serves could also be nearly flat | `static/frontend/js/pong.js::GamePhysics` (`updatePhysics`, `resetBall`) |
+| Avatar of the previous account stayed after switching users | nav/settings avatar `src` was only set when the current account had a picture; never reset inside the SPA | `static/frontend/js/script.js` (`updateNavAvatar`, `loadSettingsData`, `handleLogout`) |
 | Silent token refresh broken | wrong URL + undefined `logout()` | `static/frontend/js/script.js` |
 | GDPR cron not runnable | no cron in the image | `Makefile` (`gdpr-cleanup`, `gdpr-cleanup-run`) |
 

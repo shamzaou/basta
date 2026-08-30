@@ -12,6 +12,7 @@ Users can securely subscribe, log in, choose a unique display name for tournamen
 | Log in / out | e-mail + password → session **and** JWT pair; optional e-mail OTP; 42 OAuth |
 | Display name | `User.display_name`, editable in Settings; used in friend lists |
 | Avatar | base64 upload via `PUT /api/auth/profile/`, served by `/api/auth/avatar/<id>/` with default `man.png` |
+| Avatar reset 🆕 | **Changed in Aug-2026 audit:** `updateNavAvatar()` / `loadSettingsData()` in `script.js` now fall back to `man.png` when the account has no avatar and `handleLogout()` resets the navbar picture — previously the previous account's picture stayed visible after switching users inside the SPA |
 | Friends | non-symmetric self M2M; add/remove/list; "Find Users" tab lists everybody |
 | Stats & history | `MatchHistory` rows → games played, win rate (pie chart), best score, last 5 matches with date and game type |
 | Tournaments | logged-in user creates a tournament, enters 3–8 nicknames (aliases); round-robin matches; tournament matches are *not* written to personal history |

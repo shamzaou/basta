@@ -233,6 +233,7 @@ body.print .hud,body.print .progress,body.print .help{display:none}
   <li><code>make test</code> was broken (wrong settings module) → fixed; suite grew from 2 failing tests to <b>17 passing</b>.</li>
   <li>Fixed the settings page saving the placeholder <b>“The Champion”</b> as display name when none was set.</li>
   <li>Fixed the Pong ball getting <b>stuck along the top/bottom wall</b>: the wall bounce re-flipped every frame without pushing the ball back; it now clamps to the wall and keeps a minimum angle.</li>
+  <li>Fixed the <b>previous account's avatar</b> staying in the navbar/settings after switching users inside the SPA.</li>
   <li>Token-refresh URL bug in the SPA fixed; stale <code>staticfiles/</code> now rebuilt at container start.</li>
   <li>A language switcher was built on a wrong module assumption and <b>removed again</b> once the module list was corrected.</li>
   <li>Full docs: <code>docs/study-guide/</code>, <code>docs/audit-report.md</code>.</li>
