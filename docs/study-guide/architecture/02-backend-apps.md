@@ -102,8 +102,9 @@ Authentication legend — **Session**: Django session cookie set by `login()`; *
 
 ### Talking points on auth
 
-* **Three mechanisms coexist.** `login()` always creates a Django session; simplejwt access/refresh tokens are returned as JSON and kept in `localStorage`; the DRF `Token` is created only on 2FA login (`userapp/views.py:327-328`) and the SPA sends `Token <jwt>` (wrong scheme with a JWT value) only on tournament calls, which do not check auth anyway.
+* **Three mechanisms coexist.** `login()` always creates a Django session; simplejwt access/refresh tokens are returned as JSON and kept in `localStorage`; the DRF `Token` is created only on 2FA login (`verify_otp`) and is otherwise unused (🆕 the SPA no longer sends the bogus `Token <jwt>` header on tournament calls).
 * **Where the JWT is actually validated:** every `@api_view` without an explicit `authentication_classes` — match history, save-match, friends, users, export, delete — via `REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES']` (`backend/settings.py:56-63`). Verified during the audit with curl + Bearer only (no cookies): 201/200 on those, 401 on `/profile/`.
 * **Where the session cookie is what works:** `profile_view` and `user_settings_view`.
 * `SIMPLE_JWT` (`backend/settings.py:65-71`): access 60 min, refresh 7 days, rotation on, blacklist-after-rotation on but the `token_blacklist` app is not installed, so rotation works and blacklisting is silently skipped.
-* Tournament endpoints have **no authentication** — a known limitation (see audit report).
+* Tournament endpoints have **no authentication** — a known limitation (see audit report); 🆕 their inputs are now validated (`add_players`: non-empty ≤ 50-char nicknames, one registration per tournament, atomic; `finish_match`: integer, non-negative, non-equal scores).
+* 🆕 The SPA refreshes the access token automatically (`authFetch`), so the 60-minute JWT lifetime no longer breaks JWT-only endpoints while the 24-hour session is still alive.

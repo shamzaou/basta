@@ -2181,4 +2181,34 @@ body.is-logged-out .logged-out {
     margin-bottom: 15px;
 }
 
+/* Settings > Security switch and OTP modal cancel (Aug 2026) */
+.security-toggle label {
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+    cursor: pointer;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.7em;
+    color: var(--text-color);
+}
 
+.security-toggle input[type="checkbox"] {
+    width: 1.2em;
+    height: 1.2em;
+    accent-color: var(--primary-color);
+}
+
+.modal-cancel {
+    display: block;
+    margin: 0.8em auto 0;
+    background: none;
+    border: none;
+    color: var(--secondary-color);
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.7em;
+    cursor: pointer;
+}
+
+.modal-cancel:hover {
+    text-decoration: underline;
+}

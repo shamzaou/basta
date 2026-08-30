@@ -13,14 +13,14 @@ On the Pong page the mode-selection screen offers **Player vs Player** and **Pla
 | Concern | Code | Ref (`static/frontend/js/pong.js`) |
 |---|---|---|
 | Mode selection UI | `PongGame.initializeGame` → `modeSelection` with `pvpButton` / `aiButton` (`'Player vs AI'`) | `:1145-1172` |
-| AI instantiation | `this.ai = gameMode === 'ai' ? new PongAI(this.renderer.paddle2) : null` | `:707` |
+| AI instantiation | `this.ai = gameMode === 'ai' ? new PongAI(this.renderer.paddle2, () => this.state.score) : null` — 🆕 the AI receives a live-score getter | `:666`, constructor call in `PongGame` |
 | Per-frame hook | `PongGame.update()` → `this.ai.update(ball, ballVelocity)` only in AI mode | `:1075-1077` |
-| AI class | `class PongAI` — constants `UPDATE_INTERVAL = 1000` ms, `REACTION_DELAY = 1500`, `ACCURACY = 0.85`, `MAX_SPEED = 0.10`, `MISTAKE_CHANCE = 0.10`, `difficultyUpdateInterval = 5000` | `:585-598` |
+| AI class | `class PongAI` — constants `UPDATE_INTERVAL = 1000` ms, `ACCURACY = 0.8`, `MAX_SPEED = 0.12`, `MISTAKE_CHANCE = 0.10`, `difficultyUpdateInterval = 5000` (🆕 `REACTION_DELAY` removed) | `:666-680` |
 | One-second refresh | `update()`: if `now - lastUpdateTime >= UPDATE_INTERVAL` → snapshot `lastSeenBallPosition/Velocity` and call `decideNextMove`; otherwise keep executing the previous decision | `:600-616` |
 | Prediction | `decideNextMove`: when the ball moves toward the AI (`ballVelocity.x > 0`) → `timeToIntercept = (paddle.x - ball.x) / v.x`, `perfectZ = ball.z + v.z * timeToIntercept`, plus `predictionError = (rand-0.5)·(1-ACCURACY)` and, with probability `MISTAKE_CHANCE`, an extra ±1 unit; when the ball moves away → drift toward centre (`±0.25`) | `:618-639` |
 | Decision → "key press" | sets `nextMove = 'up' | 'down' | null` using a 0.1 dead-zone around `targetZ` | `:632-638` |
 | Movement | `executeMove()`: speed = `min(MAX_SPEED, distance/10)`, clamped to the table (`z ∈ [-2.1, 2.1]`) — same bounds as the human paddle | `:641-650` |
-| Adaptive difficulty | `updateDifficulty()` every 5 s — intended to loosen/tighten `ACCURACY`, `MISTAKE_CHANCE`, `REACTION_DELAY`, `MAX_SPEED` by score difference, **but `scoreDiff` is hard-coded to 0**, so the "close game" branch (`ACCURACY 0.15`, `MISTAKE_CHANCE 0.10`, `MAX_SPEED 0.12`) always applies after the first 5 s | `:652-675` |
+| Adaptive difficulty 🆕 | `updateDifficulty()` every 5 s reads the live score: `scoreDiff = player2 − player1` (AI minus human). AI ahead by ≥ 2 → `ACCURACY 0.6 / MISTAKE 0.15 / MAX_SPEED 0.10` (eases off); behind by ≥ 2 → `0.9 / 0.05 / 0.14` (tries harder); otherwise `0.8 / 0.10 / 0.12`. Before the second sweep `scoreDiff` was hard-coded to 0 and the constructor's tuning was overwritten on the first frame | `:733-755` |
 | Human input gating | `InputHandler` ignores ↑/↓ in AI mode (`handleKeyDown` returns early; `update()` skips paddle 2) so the AI paddle cannot be helped | `:507-575`, esp. `:530-533`, `:555-562` |
 | Names & history | player names `Player` / `AI` (`:738-739`); `saveMatchHistory` sends `opponent: "AI"` with game_type `PONG` | `:886-957` |
 | Physics the AI must anticipate | ball speed grows 5 % per paddle hit up to `maxBallSpeed 0.15`, spin from hit offset, wall bounces with damping | `GamePhysics` `:27-92` |
@@ -31,7 +31,7 @@ On the Pong page the mode-selection screen offers **Player vs Player** and **Pla
 * Tournament matches are always PvP (nicknames), never vs AI (`script.js:213` passes `'pvp'` when `currentMatchId` is set).
 
 ## Status after audit
-Verified in the headless-Chrome walkthrough (mode selection → "Player vs AI" → 3D scene renders, screenshot `11-pong-3d-vs-ai`); `save-match` with `opponent: "AI"` verified via the API flow. Known quirks (unchanged, say them if asked): `scoreDiff` is never computed so difficulty does not really adapt; `REACTION_DELAY` is stored but not used in the movement logic; the constructor's `ACCURACY = 0.85` is overwritten to `0.15` by the first `updateDifficulty()` call after 5 s (making the AI *less* precise than the initial value — the effect is tolerable because `predictionError` is scaled by `(1-ACCURACY)·1.0` on a 6-unit-wide table).
+Verified in the headless-Chrome walkthrough (mode selection → "Player vs AI" → 3D scene renders, screenshot `11-pong-3d-vs-ai`); `save-match` with `opponent: "AI"` verified via the API flow. **🆕 Second sweep:** the difficulty logic is real now — the AI eases off when it leads by two points and tightens up when it trails (values above, `pong.js:733-755`, verified with a Node harness); the unused `REACTION_DELAY` was removed; the once-per-second decision rule is unchanged. A finished vs-AI game now announces the winner ("Player wins! 3 - 0") in the HUD.
 
 ## Likely evaluator questions
 1. **How does your AI work?** Once per second it looks at the ball (position + velocity), computes where the ball will reach the paddle plane, adds error/mistakes, and then, every frame, "presses" up or down toward that target at a capped speed.

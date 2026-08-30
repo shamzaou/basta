@@ -230,3 +230,136 @@ class GdprTests(TestCase):
             call_command('delete_inactive_users', stdout=out)
         self.assertFalse(User.objects.filter(pk=old.pk).exists())
         self.assertTrue(User.objects.filter(pk=self.user.pk).exists())   # active user untouched
+
+
+PNG_1X1 = ('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==')
+
+
+class RegistrationAndLoginValidationTests(TestCase):
+    """Aug-2026 bug sweep: #3 duplicate accounts, #4 email case, #16 email format, #21 bad JSON, #27 similarity."""
+    PASSWORD = 'Str0ng!Passw0rd'
+
+    def register(self, **over):
+        body = {'username': 'newuser', 'email': 'new@example.com', 'password1': self.PASSWORD,
+                'password2': self.PASSWORD, 'enable_2fa': False}
+        body.update(over)
+        return Client().post('/api/auth/register/', body, content_type='application/json')
+
+    def test_duplicate_email_and_username_are_400_not_500(self):
+        User.objects.create_user(username='taken', email='taken@example.com', password=self.PASSWORD)
+        r = self.register(username='other', email='Taken@Example.com')
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()['message'], 'Email already registered')
+        r = self.register(username='TAKEN', email='fresh@example.com')
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()['message'], 'Username already taken')
+        self.assertNotIn('duplicate key', r.content.decode())
+
+    def test_invalid_email_rejected(self):
+        r = self.register(email='not-an-email')
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()['message'], 'Invalid email address')
+
+    def test_email_is_case_insensitive_for_login(self):
+        r = self.register(username='casey', email='Upper.Name@Example.com')
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(User.objects.get(username='casey').email, 'upper.name@example.com')
+        r = Client().post('/api/auth/login/', {'email': 'UPPER.name@example.com', 'password': self.PASSWORD},
+                          content_type='application/json')
+        self.assertEqual(r.status_code, 200, r.content)
+
+    def test_password_similar_to_username_is_rejected(self):
+        r = self.register(username='alicewonderland', email='alice@example.com',
+                          password1='Alicewonderland1!', password2='Alicewonderland1!')
+        self.assertEqual(r.status_code, 400)
+        self.assertTrue(any('similar' in e.lower() for e in r.json().get('errors', [])), r.content)
+
+    def test_login_with_malformed_json_is_400(self):
+        r = Client().post('/api/auth/login/', 'not json', content_type='application/json')
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()['message'], 'Invalid JSON format')
+
+
+class ProfileAndMatchValidationTests(TestCase):
+    """Aug-2026 bug sweep: #13 2FA toggle, #16 email, #17 ISO dates, #19 avatar checks, #20 match data, #28 inactive users."""
+    PASSWORD = 'Str0ng!Passw0rd'
+
+    def setUp(self):
+        from .models import MatchHistory
+        self.user = User.objects.create_user(username='erin', email='erin@example.com', password=self.PASSWORD)
+        MatchHistory.objects.create(user=self.user, game_type='PONG', opponent='AI', result='WIN', score='3-1')
+        self.client = Client()
+        self.client.force_login(self.user)
+
+    def put(self, body):
+        return self.client.put('/api/auth/profile/', body, content_type='application/json')
+
+    def test_two_factor_can_be_toggled_from_profile(self):
+        self.assertFalse(self.client.get('/api/auth/profile/').json()['two_factor_enabled'])
+        r = self.put({'two_factor_enabled': True})
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertTrue(r.json()['two_factor_enabled'])
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.two_factor_enabled)
+        self.put({'two_factor_enabled': False})
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.two_factor_enabled)
+
+    def test_profile_email_is_validated_and_lowercased(self):
+        self.assertEqual(self.put({'email': 'broken'}).status_code, 400)
+        r = self.put({'email': 'New.Mail@Example.com'})
+        self.assertEqual(r.status_code, 200, r.content)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, 'new.mail@example.com')
+
+    def test_match_dates_are_iso_8601(self):
+        from datetime import datetime
+        d = self.client.get('/api/auth/profile/').json()['match_history'][0]['date']
+        datetime.fromisoformat(d)
+        d = self.client.get('/api/auth/match-history/').json()['match_history'][0]['date']
+        datetime.fromisoformat(d)
+
+    def test_avatar_upload_validation(self):
+        import base64
+        big = 'data:image/png;base64,' + base64.b64encode(b'\x00' * (2 * 1024 * 1024 + 1)).decode()
+        r = self.put({'profile_picture': big})
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('too large', r.json()['message'])
+        fake = 'data:image/png;base64,' + base64.b64encode(b'definitely not a png').decode()
+        self.assertEqual(self.put({'profile_picture': fake}).json()['message'], 'Invalid image')
+        self.assertEqual(self.put({'profile_picture': PNG_1X1.replace('image/png', 'image/svg+xml')}).status_code, 400)
+        r = self.put({'profile_picture': PNG_1X1})
+        self.assertEqual(r.status_code, 200, r.content)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.profile_picture.name.count('profile_pictures/'), 1)
+        r = self.client.get(f'/api/auth/avatar/{self.user.id}/')
+        self.assertEqual(r['Content-Type'], 'image/png')
+
+    def test_save_match_rejects_bad_data(self):
+        post = lambda b: self.client.post('/api/auth/save-match/', b, content_type='application/json')
+        self.assertEqual(post({'game_type': 'PONG', 'opponent': 'AI', 'result': 'WINNER', 'score': '3-0'}).status_code, 400)
+        self.assertEqual(post({'game_type': 'PONG', 'opponent': 'AI', 'result': 'WIN', 'score': 'abc'}).status_code, 400)
+        self.assertEqual(post({'game_type': 'CHESS', 'opponent': 'AI', 'result': 'WIN', 'score': '1-0'}).status_code, 400)
+        self.assertEqual(post({'game_type': 'TICTACTOE', 'opponent': 'Player 2', 'result': 'DRAW', 'score': '0-0'}).status_code, 201)
+
+    def test_users_list_hides_inactive_accounts(self):
+        User.objects.create_user(username='ghost', email='ghost@example.com', password=self.PASSWORD, is_active=False)
+        User.objects.create_user(username='live', email='live@example.com', password=self.PASSWORD)
+        names = [u['username'] for u in self.client.get('/api/auth/users/').json()['users']]
+        self.assertIn('live', names)
+        self.assertNotIn('ghost', names)
+
+
+class InactiveCleanupResilienceTests(TestCase):
+    """Aug-2026 bug sweep #12: a failing mail server must not prevent GDPR deletion."""
+
+    @override_settings(EMAIL_BACKEND='userapp.tests.FailingEmailBackend')
+    def test_user_deleted_even_when_email_fails(self):
+        from datetime import timedelta
+        from io import StringIO
+        from django.core.management import call_command
+        from django.utils import timezone
+        old = User.objects.create_user(username='old', email='old@example.com', password='Str0ng!Passw0rd')
+        User.objects.filter(pk=old.pk).update(last_activity=timezone.now() - timedelta(days=30 * 7))
+        call_command('delete_inactive_users', stdout=StringIO())
+        self.assertFalse(User.objects.filter(pk=old.pk).exists())

@@ -40,35 +40,53 @@ class Tournament(models.Model):
         
         # If there's a tie and no additional matches yet, create them
         existing_additional = self.matches.filter(is_additional=True).exists()
-        
+
         if len(winners) > 1 and not existing_additional:
             self.create_additional_matches(winners)
             return winners  # Return list of tied players
-        
-        # Check if there's a winner in the additional matches
-        additional_matches = self.matches.filter(is_additional=True)
-        if additional_matches.exists() and all(match.is_complete for match in additional_matches):
-            # Count wins in additional matches
-            additional_wins = {}
-            for match in additional_matches:
-                if match.winner:
-                    additional_wins[match.winner] = additional_wins.get(match.winner, 0) + 1
-            
-            if additional_wins:
-                max_wins = max(additional_wins.values())
-                additional_winners = [player for player, wins in additional_wins.items() if wins == max_wins]
-                
-                if len(additional_winners) == 1:
-                    return additional_winners[0]
-        
+
+        # Tiebreakers are played in rounds. Only the latest round decides; if it is
+        # complete and still tied, a new round is created among the remaining players.
+        additional_matches = list(self.matches.filter(is_additional=True).order_by('id'))
+        if additional_matches and all(match.is_complete for match in additional_matches):
+            tied = winners
+            rounds = self._tiebreak_rounds(additional_matches, tied)
+            for round_matches in rounds:
+                wins = {p: 0 for p in tied}
+                for match in round_matches:
+                    if match.winner in wins:
+                        wins[match.winner] += 1
+                max_wins = max(wins.values())
+                tied = [p for p in tied if wins[p] == max_wins]
+                if len(tied) == 1:
+                    return tied[0]
+            # Every round finished and the leaders are still level: play another round
+            self.create_additional_matches(tied)
+            return tied
+
         # If we got here, there's still a tie or additional matches aren't complete
         return winners  # Return list of tied players
-    
+
+    def _tiebreak_rounds(self, additional_matches, tied):
+        """Split the additional matches (in creation order) into successive round-robins."""
+        rounds, remaining, players = [], list(additional_matches), list(tied)
+        while remaining:
+            size = len(players) * (len(players) - 1) // 2 or 1
+            round_matches, remaining = remaining[:size], remaining[size:]
+            rounds.append(round_matches)
+            wins = {p: 0 for p in players}
+            for match in round_matches:
+                if match.winner in wins:
+                    wins[match.winner] += 1
+            max_wins = max(wins.values()) if wins else 0
+            players = [p for p in players if wins[p] == max_wins]
+        return rounds
+
     def create_additional_matches(self, tied_players):
-        """Create round-robin additional matches between tied players."""
-        # Delete any existing additional matches
-        self.matches.filter(is_additional=True).delete()
-        
+        """Create a round-robin of additional (tiebreaker) matches between tied players."""
+        # Only unplayed leftovers are discarded; completed tiebreaker rounds are kept
+        self.matches.filter(is_additional=True, is_complete=False).delete()
+
         # Create new additional matches in round-robin format
         for i, player1 in enumerate(tied_players):
             for player2 in tied_players[i+1:]:

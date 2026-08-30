@@ -16,7 +16,7 @@ function showPage(pageId, pushState = true) {
     // Перенаправление при необходимости
     if (isLoggedIn && ['login', 'register'].includes(pageId)) {
         pageId = 'home';
-    } else if (!isLoggedIn && ['profile', 'settings'].includes(pageId)) {
+    } else if (!isLoggedIn && ['profile', 'settings', 'game', 'tictactoe', 'tournament'].includes(pageId)) {
         pageId = 'login';
     }
 
@@ -107,12 +107,26 @@ function showPage(pageId, pushState = true) {
 
     // Если это турнирная «страница», покажем первый подблок
     if (pageId === 'tournament') {
-        if (window.currentTournamentId) {
+        // Resume the tournament in progress (kept in localStorage so a refresh does not lose it)
+        const storedId = currentTournamentId || window.currentTournamentId || localStorage.getItem('currentTournamentId');
+        if (storedId) {
+            setCurrentTournament(storedId);
             showTournamentSubsection('view-tournament');
-            loadTournamentData(window.currentTournamentId);
+            loadTournamentData(currentTournamentId);
         } else {
             showTournamentSubsection('create-tournament');
         }
+    }
+}
+
+// One place that keeps the three copies of the tournament id in sync
+function setCurrentTournament(id) {
+    currentTournamentId = id ? parseInt(id, 10) : null;
+    window.currentTournamentId = currentTournamentId;
+    if (currentTournamentId) {
+        localStorage.setItem('currentTournamentId', String(currentTournamentId));
+    } else {
+        localStorage.removeItem('currentTournamentId');
     }
 }
 
@@ -129,14 +143,25 @@ window.addEventListener('popstate', (event) => {
     showPage(event.state.pageId, false);
 });
 
-window.addEventListener('load', () => {
+window.addEventListener('load', async () => {
     const path = window.location.pathname;
     const initialPage = path.substring(1) || 'home';
     if (!history.state) {
         history.replaceState({ pageId: initialPage }, '', path);
     }
+
+    // If the stored JWT already expired (60 min) try to refresh it before showing anything;
+    // if that fails the local login state is stale and is cleared.
+    if (localStorage.getItem('isLoggedIn') === 'true') {
+        const token = await getAccessToken();
+        if (token) {
+            scheduleTokenRefresh();
+        } else if (localStorage.getItem('isLoggedIn') === 'true') {
+            clearLocalSession();
+        }
+    }
+
     showPage(initialPage, false);
-// <<<<<<< master
     checkLoginState(); // Ensure login state is checked after page is shown
 
     // If user is logged in, fetch fresh profile data to update avatars
@@ -146,9 +171,6 @@ window.addEventListener('load', () => {
 
     // Clear avatar cache on page load
     clearAvatarCache();
-// =======
-    checkLoginState();
-// >>>>>>> 8ec6d59
 });
 
 document.addEventListener('click', (event) => {
@@ -235,20 +257,6 @@ function showTournamentSubsection(subSection) {
     }
 }
 
-// Загрузка данных турнира
-async function loadTournamentData(tournamentId) {
-    try {
-        const response = await fetch(`/tournaments/api/tournaments/${tournamentId}/`);
-        const data = await response.json();
-        const displayDiv = document.getElementById('tournament-data');
-        if (displayDiv) {
-            displayDiv.innerText = JSON.stringify(data, null, 2);
-        }
-    } catch (error) {
-        // console.error('Error loading tournament data:', error);
-    }
-}
-
 //================================================================================
 
 
@@ -292,6 +300,7 @@ async function handleLogin(event) {
                 localStorage.setItem('userData', JSON.stringify(data.user));
                 localStorage.setItem('authToken', data.access_token);
                 localStorage.setItem('refreshToken', data.refresh_token);  // ✅ Store refresh token
+                scheduleTokenRefresh();
                 checkLoginState();
                 showPage('home');
             }
@@ -358,6 +367,7 @@ async function handleOTPVerification(event) {
             localStorage.setItem('userData', JSON.stringify(data.user));
             localStorage.setItem('authToken', data.access_token);
             localStorage.setItem('refreshToken', data.refresh_token);  // ✅ Store refresh token
+            scheduleTokenRefresh();
 
             checkLoginState();
             showPage('home');
@@ -370,43 +380,45 @@ async function handleOTPVerification(event) {
     } finally {
         // Reset button state
         verifyButton.disabled = false;
-        verifyButton.textContent = 'Verify';
+        verifyButton.textContent = 'Verify Code';
     }
 }
 
 
 async function handleLogout() {
+    // Always end the Django session on the server, even if the JWT is gone/expired
     try {
-        const authToken = localStorage.getItem('authToken');
-
-        if (authToken) {
-            const response = await fetch('/api/auth/logout/', {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': getCookie('csrftoken'),
-                    'Authorization': `Bearer ${authToken}`
-                },
-                credentials: 'include'
-            });
-
-            if (!response.ok) {
-                console.warn('Logout request failed:', await response.text());
-            }
-        }
-
-        localStorage.removeItem('isLoggedIn');
-        localStorage.removeItem('userData');
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('refreshToken');
-
-        checkLoginState();
-        updateNavAvatar(); // drop the previous account's picture
-        showPage('login');
-
-        alert('You have been logged out.');
+        await fetch('/api/auth/logout/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            credentials: 'include'
+        });
     } catch (error) {
-        // console.error('Logout error:', error);
-        alert('Logout failed. Please try again.');
+        // console.error('Logout request failed:', error);
+    }
+
+    clearLocalSession();
+
+    checkLoginState();
+    updateNavAvatar(); // drop the previous account's picture
+    showPage('login');
+
+    alert('You have been logged out.');
+}
+
+// Forget everything about the current user on this browser (tokens, tournament, game globals)
+function clearLocalSession() {
+    ['isLoggedIn', 'userData', 'authToken', 'refreshToken', 'temp_email', 'currentTournamentId']
+        .forEach(key => localStorage.removeItem(key));
+    currentTournamentId = null;
+    window.currentTournamentId = null;
+    window.currentMatchId = null;
+    window.tournamentId = null;
+    window.currentMatchPlayers = null;
+    window.lastMatchScore = null;
+    if (window.__tokenRefreshTimer) {
+        clearTimeout(window.__tokenRefreshTimer);
+        window.__tokenRefreshTimer = null;
     }
 }
 
@@ -480,12 +492,10 @@ async function handleRegister(event) {
 }
 
 function startTournamentMatch(matchId) {
-    const authToken = localStorage.getItem('authToken');
     fetch(`/tournaments/api/tournaments/match/${matchId}/start/`, {
         method: 'POST',
         headers: {
             'X-CSRFToken': getCookie('csrftoken'),
-            'Authorization': `Token ${authToken}`,
             'Content-Type': 'application/json'
         },
         credentials: 'include'
@@ -512,37 +522,6 @@ function startTournamentMatch(matchId) {
     });
 }
 
-// Finish match (called from Pong game after completion)
-window.finishTournamentMatch = async function(scorePlayer1, scorePlayer2) {
-    const authToken = localStorage.getItem('authToken');
-    try {
-        const response = await fetch(`/tournaments/api/tournaments/${window.currentMatchId}/finish/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Token ${authToken}`,
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify({
-                score_player1: scorePlayer1,
-                score_player2: scorePlayer2
-            })
-        });
-
-        if (response.ok) {
-            showPage('tournament');
-            showTournamentSubsection('view-tournament');
-            loadTournamentData();
-        } else {
-            alert('Failed to finish match');
-        }
-    } catch (error) {
-        // console.error('Error finishing match:', error);
-        alert('Failed to finish match');
-    }
-};
-
-
 // Main initialization
 document.addEventListener('DOMContentLoaded', () => {
     // console.log('DOM loaded, setting up event listeners');
@@ -555,14 +534,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // console.log('Register form not found');
     }
 
-    // Check login state
+    // Check login state (the page itself is shown once, from the 'load' handler)
     checkLoginState();
-    
-    // Initial page load
-    const path = window.location.pathname;
-    const pageId = path.substring(1) || 'home';
-    showPage(pageId);
-    
+
     // Login form handler
     const loginForm = document.getElementById('loginForm');
     if (loginForm) {
@@ -573,15 +547,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const signInButton = document.getElementById('sign-in');
     if (signInButton) {
         signInButton.addEventListener('click', handleLogin);
-    }
-    
-    // Register button in navbar
-    const registerNavLink = document.querySelector('a[href="/register"]');
-    if (registerNavLink) {
-        registerNavLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            showPage('register');
-        });
     }
     
     // "Have no account" button in login form
@@ -633,12 +598,66 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Settings form handling
+    // Settings form handling: "Save Settings" persists the display name (and the 2FA switch)
     const settingsForm = document.getElementById('settings-form');
     if (settingsForm) {
-        settingsForm.addEventListener('submit', (e) => {
+        settingsForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            alert('Settings saved successfully!');
+            const displayNameInput = document.getElementById('display-name');
+            const twoFactorToggle = document.getElementById('two-factor-toggle');
+            const payload = { display_name: displayNameInput ? displayNameInput.value.trim() : '' };
+            if (twoFactorToggle) {
+                payload.two_factor_enabled = twoFactorToggle.checked;
+            }
+            try {
+                const response = await authFetch('/api/auth/profile/', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.message || 'Failed to save settings');
+                }
+                if (displayNameInput) {
+                    const container = displayNameInput.closest('.field-container');
+                    container.querySelector('.field-display').textContent = payload.display_name;
+                    container.classList.remove('editing');
+                    const editBtn = container.querySelector('.edit-btn');
+                    if (editBtn) editBtn.textContent = 'Edit';
+                }
+                const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+                userData.display_name = payload.display_name;
+                localStorage.setItem('userData', JSON.stringify(userData));
+                alert('Settings saved successfully!');
+            } catch (error) {
+                alert('Failed to save settings: ' + error.message);
+            }
+        });
+    }
+
+    // Two-factor authentication switch (Settings > Security)
+    const twoFactorToggle = document.getElementById('two-factor-toggle');
+    if (twoFactorToggle) {
+        twoFactorToggle.addEventListener('change', async () => {
+            const enabled = twoFactorToggle.checked;
+            try {
+                const response = await authFetch('/api/auth/profile/', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ two_factor_enabled: enabled })
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.message || 'Request failed');
+                }
+                alert(enabled
+                    ? 'Two-factor authentication enabled. You will receive a code by email at your next login.'
+                    : 'Two-factor authentication disabled.');
+            } catch (error) {
+                twoFactorToggle.checked = !enabled;
+                alert('Failed to update two-factor authentication: ' + error.message);
+            }
         });
     }
     
@@ -660,10 +679,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // console.log('Auth token:', authToken);
                 
                 try {
-                    const response = await fetch('/api/auth/profile/', {
+                    const response = await authFetch('/api/auth/profile/', {
                         method: 'PUT',
                         headers: {
-                            'Authorization': `Bearer ${authToken}`,
                             'Content-Type': 'application/json',
                             'X-CSRFToken': getCookie('csrftoken')
                         },
@@ -707,37 +725,39 @@ document.addEventListener('DOMContentLoaded', () => {
         avatarUpload.addEventListener('change', async (event) => {
             const file = event.target.files[0];
             if (file) {
-                try {
-                    // First show preview
-                    const reader = new FileReader();
-                    reader.onload = async (e) => {
+                // Validate before reading: images only, 2 MB max (the backend enforces the same)
+                if (!file.type || !file.type.startsWith('image/')) {
+                    alert('Please choose an image file.');
+                    event.target.value = '';
+                    return;
+                }
+                if (file.size > 2 * 1024 * 1024) {
+                    alert('Avatar must be 2 MB or smaller.');
+                    event.target.value = '';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onerror = () => alert('Failed to read the selected file.');
+                reader.onload = async (e) => {
+                    // Errors thrown inside the reader callback would otherwise be lost
+                    try {
                         // Set preview image
                         const imagePreview = document.querySelector('.current-avatar');
                         imagePreview.src = e.target.result;
-                        
-                        // Now send to server
-                        const authToken = localStorage.getItem('authToken');
-                        if (!authToken) {
-                            throw new Error('Not authenticated');
-                        }
-                        
-                        const response = await fetch('/api/auth/profile/', {
+
+                        const response = await authFetch('/api/auth/profile/', {
                             method: 'PUT',
-                            headers: {
-                                'Authorization': `Bearer ${authToken}`,
-                                'Content-Type': 'application/json',
-                                'X-CSRFToken': getCookie('csrftoken')
-                            },
+                            headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 profile_picture: e.target.result
                             })
                         });
-                        
+
                         if (!response.ok) {
                             const errorData = await response.json();
                             throw new Error(errorData.message || 'Failed to update avatar');
                         }
-                        
+
                         const data = await response.json();
                         
                         // Update the avatar in all places - check for both field names
@@ -773,12 +793,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         } else {
                             console.warn('No avatar path in response:', data);
                         }
-                    };
-                    reader.readAsDataURL(file);
-                } catch (error) {
-                    // console.error('Error updating avatar:', error);
-                    alert('Failed to update avatar: ' + error.message);
-                }
+                    } catch (error) {
+                        // console.error('Error updating avatar:', error);
+                        alert('Failed to update avatar: ' + error.message);
+                    }
+                };
+                reader.readAsDataURL(file);
             }
         });
     }
@@ -799,24 +819,16 @@ document.addEventListener('DOMContentLoaded', () => {
 		}
 	
 		try {
-			const response = await fetch('/api/auth/delete-account/', {
+			const response = await authFetch('/api/auth/delete-account/', {
 				method: 'DELETE',
-				headers: {
-					'Content-Type': 'application/json',
-					'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-					'X-CSRFToken': getCookie('csrftoken')
-				}
+				headers: { 'Content-Type': 'application/json' }
 			});
-	
+
 			if (response.ok) {
-				// Clear local storage
-				localStorage.removeItem('authToken');
-				localStorage.removeItem('userData');
-				localStorage.removeItem('isLoggedIn');
-				
+				clearLocalSession();
+				alert('Your account has been deleted successfully.');
 				// Redirect to login page
 				window.location.href = '/login';
-				alert('Your account has been deleted successfully.');
 			} else {
 				const data = await response.json();
 				throw new Error(data.message || 'Failed to delete account');
@@ -831,20 +843,25 @@ document.addEventListener('DOMContentLoaded', () => {
 	document.getElementById('delete-account').addEventListener('click', deleteAccount);
 
 
-    // OTP verification button
-    const verifyOTPButton = document.getElementById('verify-otp');
-    if (verifyOTPButton) {
-        verifyOTPButton.addEventListener('click', handleOTPVerification);
+    // OTP verification: the form submit handles both the button and the Enter key
+    const otpForm = document.getElementById('otp-form');
+    if (otpForm) {
+        otpForm.addEventListener('submit', handleOTPVerification);
+    } else {
+        const verifyOTPButton = document.getElementById('verify-otp');
+        if (verifyOTPButton) {
+            verifyOTPButton.addEventListener('click', handleOTPVerification);
+        }
     }
 
-    // Close modal when clicking outside
-    const modal = document.getElementById('otp-modal');
-    if (modal) {
-        window.onclick = function(event) {
-            if (event.target === modal) {
-                modal.style.display = 'none';
-            }
-        };
+    // Cancel closes the modal (clicking outside no longer does, so it cannot vanish by accident)
+    const otpCancel = document.getElementById('otp-cancel');
+    if (otpCancel) {
+        otpCancel.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('otp-modal').style.display = 'none';
+            document.getElementById('otp-input').value = '';
+        });
     }
 
     // OAuth button handler
@@ -894,6 +911,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tournamentButton.addEventListener('click', (e) => {
             e.preventDefault();
             if (localStorage.getItem('isLoggedIn') === 'true') {
+                setCurrentTournament(null); // the home button always starts a new tournament
                 showPage('tournament');
                 showTournamentSubsection('create-tournament');
             } else {
@@ -921,18 +939,13 @@ document.addEventListener('DOMContentLoaded', () => {
         downloadDataBtn.addEventListener('click', handleDownloadUserData);
     }
 
-    // TicTacToe button login check handler
-    const tictactoeButton = document.querySelector('a[href="/tictactoe"]');
-    if (tictactoeButton) {
-        tictactoeButton.addEventListener('click', (e) => {
+    // Tournament "Return to Home": the tournament is over, forget it
+    const tournamentHomeButton = document.getElementById('tournament-home-button');
+    if (tournamentHomeButton) {
+        tournamentHomeButton.addEventListener('click', (e) => {
             e.preventDefault();
-            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-            if (isLoggedIn) {
-                showPage('tictactoe');
-            } else {
-                alert('Please log in to play TicTacToe');
-                showPage('login');
-            }
+            setCurrentTournament(null);
+            showPage('home');
         });
     }
 });
@@ -1061,10 +1074,9 @@ async function loadProfileData() {
             return;
         }
 
-        const response = await fetch('/api/auth/profile/', {
+        const response = await authFetch('/api/auth/profile/', {
             method: 'GET',
             headers: {
-                'Authorization': `Bearer ${authToken}`,
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCookie('csrftoken')
             }
@@ -1155,7 +1167,7 @@ async function loadProfileData() {
                         // Try to parse and format the date
                         try {
                             const matchDate = new Date(match.date);
-                            dateSpan.textContent = matchDate.toLocaleDateString();
+                            dateSpan.textContent = isNaN(matchDate) ? match.date : matchDate.toLocaleDateString();
                         } catch (e) {
                             dateSpan.textContent = match.date;
                         }
@@ -1217,10 +1229,9 @@ async function loadSettingsData() {
             return;
         }
 
-        const response = await fetch('/api/auth/profile/', {
+        const response = await authFetch('/api/auth/profile/', {
             method: 'GET',
             headers: {
-                'Authorization': `Bearer ${authToken}`,
                 'Content-Type': 'application/json'
             }
         });
@@ -1282,6 +1293,11 @@ async function loadSettingsData() {
             if (displayNameInput) {
                 displayNameInput.value = data.display_name || '';
             }
+
+            const twoFactorToggle = document.getElementById('two-factor-toggle');
+            if (twoFactorToggle) {
+                twoFactorToggle.checked = !!data.two_factor_enabled;
+            }
         }
     } catch (error) {
         // console.error('Error loading settings:', error);
@@ -1321,10 +1337,9 @@ async function refreshUserData() {
         const authToken = localStorage.getItem('authToken');
         if (!authToken) return;
         
-        const response = await fetch('/api/auth/profile/', {
+        const response = await authFetch('/api/auth/profile/', {
             method: 'GET',
             headers: {
-                'Authorization': `Bearer ${authToken}`,
                 'Content-Type': 'application/json',
             }
         });
@@ -1346,12 +1361,6 @@ async function refreshUserData() {
                 
                 // Update UI immediately
                 updateNavAvatar();
-            }
-        } else if (response.status === 401) {
-            // Token expired, try to refresh it
-            const newToken = await refreshAccessToken();
-            if (newToken) {
-                refreshUserData(); // Try again with new token
             }
         }
     } catch (error) {
@@ -1380,11 +1389,10 @@ async function handleTournamentCreation(event) {
     }
 
     try {
-        const response = await fetch('/tournaments/api/tournaments/create/', { // Исправленный URL
+        const response = await authFetch('/tournaments/api/tournaments/create/', { // Исправленный URL
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${authToken}`,
                 'X-CSRFToken': getCookie('csrftoken')
             },
             body: JSON.stringify({ participants_count: parseInt(participantsCount) })
@@ -1392,7 +1400,7 @@ async function handleTournamentCreation(event) {
 
         const data = await response.json();
         if (response.ok) {
-            currentTournamentId = data.tournament_id;
+            setCurrentTournament(data.tournament_id);
             participantCount = parseInt(participantsCount, 10);
             generatePlayerInputs(participantCount);
             showTournamentSubsection('add-players');
@@ -1449,6 +1457,9 @@ async function refreshAccessToken() {
         const data = await response.json();
 
         localStorage.setItem("authToken", data.access);
+        if (data.refresh) {
+            localStorage.setItem("refreshToken", data.refresh);  // ROTATE_REFRESH_TOKENS is on
+        }
 
         return data.access;
     } catch (error) {
@@ -1466,15 +1477,51 @@ function scheduleTokenRefresh() {
     try {
         const payload = JSON.parse(atob(token.split('.')[1]));
         const expiresInMs = (payload.exp * 1000) - Date.now();
-        const refreshTime = expiresInMs - 60000; // Refresh 1 min before expiry
+        const refreshTime = Math.max(expiresInMs - 60000, 5000); // Refresh 1 min before expiry
 
-        if (refreshTime > 0) {
-            setTimeout(refreshAccessToken, refreshTime);
+        if (window.__tokenRefreshTimer) {
+            clearTimeout(window.__tokenRefreshTimer);
         }
+        window.__tokenRefreshTimer = setTimeout(async () => {
+            window.__tokenRefreshTimer = null;
+            const newToken = await refreshAccessToken();
+            if (newToken) {
+                scheduleTokenRefresh(); // keep the session alive as long as the tab is open
+            }
+        }, refreshTime);
     } catch (error) {
         // console.error("Error scheduling token refresh:", error);
     }
 }
+
+// fetch() for JWT-protected endpoints: always sends a valid access token (refreshing it when
+// expired), adds the CSRF header on writes, and retries once after a 401.
+async function authFetch(url, options = {}) {
+    const doFetch = async () => {
+        const token = await getAccessToken();
+        const headers = Object.assign({}, options.headers || {});
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        const method = (options.method || 'GET').toUpperCase();
+        if (method !== 'GET' && method !== 'HEAD' && !headers['X-CSRFToken']) {
+            headers['X-CSRFToken'] = getCookie('csrftoken');
+        }
+        return fetch(url, Object.assign({ credentials: 'include' }, options, { headers }));
+    };
+
+    let response = await doFetch();
+    if (response.status === 401 && localStorage.getItem('refreshToken')) {
+        const newToken = await refreshAccessToken();
+        if (newToken) {
+            response = await doFetch();
+        }
+    }
+    return response;
+}
+
+window.authFetch = authFetch;
+window.getAccessToken = getAccessToken;
 
 // Fix the duplicate timestamp in the URL
 function fixImageUrl(url) {
@@ -1533,10 +1580,9 @@ async function handleDownloadUserData() {
         downloadBtn.disabled = true;
 
         // Fetch complete user data including avatar from our export endpoint
-        const response = await fetch('/api/auth/export-data/', {
+        const response = await authFetch('/api/auth/export-data/', {
             method: 'GET',
             headers: {
-                'Authorization': `Bearer ${authToken}`,
                 'Content-Type': 'application/json'
             }
         });
@@ -1554,10 +1600,9 @@ async function handleDownloadUserData() {
                 const userId = userData.user_information.id;
                 
                 // Get avatar directly from our avatar endpoint to ensure we get the actual file
-                const avatarResponse = await fetch(`/api/auth/avatar/${userId}/`, {
+                const avatarResponse = await authFetch(`/api/auth/avatar/${userId}/`, {
                     method: 'GET',
                     headers: {
-                        'Authorization': `Bearer ${authToken}`
                     }
                 });
                 
@@ -1632,6 +1677,8 @@ async function handleDownloadUserData() {
 
 // Add these functions to handle friends functionality
 function setupFriendsTabs() {
+    if (window.__friendsTabsReady) return; // listeners are attached once, not on every profile load
+    window.__friendsTabsReady = true;
     const tabButtons = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
     
@@ -1710,10 +1757,9 @@ async function loadFriendsList() {
         // Show loading indicator
         friendsList.innerHTML = '<div class="loading-indicator">Loading your friends...</div>';
         
-        const response = await fetch('/api/auth/friends/', {
+        const response = await authFetch('/api/auth/friends/', {
             method: 'GET',
             headers: {
-                'Authorization': `Bearer ${authToken}`,
                 'Content-Type': 'application/json'
             }
         });
@@ -1758,10 +1804,9 @@ async function loadAllUsers() {
         // Show loading indicator
         usersList.innerHTML = '<div class="loading-indicator">Loading users...</div>';
         
-        const response = await fetch('/api/auth/users/', {
+        const response = await authFetch('/api/auth/users/', {
             method: 'GET',
             headers: {
-                'Authorization': `Bearer ${authToken}`,
                 'Content-Type': 'application/json'
             }
         });
@@ -1837,10 +1882,9 @@ async function addFriend(userId) {
             return;
         }
         
-        const response = await fetch(`/api/auth/friends/add/${userId}/`, {
+        const response = await authFetch(`/api/auth/friends/add/${userId}/`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${authToken}`,
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCookie('csrftoken')
             }
@@ -1880,10 +1924,9 @@ async function removeFriend(userId) {
             return;
         }
         
-        const response = await fetch(`/api/auth/friends/remove/${userId}/`, {
+        const response = await authFetch(`/api/auth/friends/remove/${userId}/`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${authToken}`,
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCookie('csrftoken')
             }
@@ -2059,10 +2102,6 @@ async function handleAddPlayers(event) {
     event.preventDefault();
 // >>>>>>> 8ec6d59
 
-    const authToken = localStorage.getItem('authToken');
-    // console.log('Add Players - Auth Token:', authToken);
-    const csrftoken = getCookie('csrftoken');
-    // console.log('Add Players - CSRF Token:', csrftoken); 
     
     // Изменяем селектор, чтобы выбирать только поля в #player-inputs
     const playerInputs = document.querySelectorAll('#player-inputs input');
@@ -2073,9 +2112,13 @@ async function handleAddPlayers(event) {
     // console.log('Expected participant count:', participantCount);
     // console.log('Nicknames:', nicknames);
 
-    if (nicknames.length !== participantCount) {
-        // console.log('problipaem with particntCount');
+    if (nicknames.length !== participantCount || nicknames.some(name => name === '')) {
         document.getElementById('add-players-error').textContent = 'Please fill in all player fields';
+        return;
+    }
+
+    if (nicknames.some(name => name.length > 50)) {
+        document.getElementById('add-players-error').textContent = 'Nicknames must be 50 characters or less';
         return;
     }
 
@@ -2090,9 +2133,9 @@ async function handleAddPlayers(event) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Token ${authToken}`,
                 'X-CSRFToken': getCookie('csrftoken')
             },
+            credentials: 'include',
             body: JSON.stringify({ nicknames })
         });
 
@@ -2117,7 +2160,7 @@ async function handleAddPlayers(event) {
             }
         } catch (jsonError) {
             // console.error('Error parsing JSON response:', jsonError);
-            document.getElementById('add-players-error').textContent = 'Сервер вернул некорректный ответ. Попробуйте еще раз.';
+            document.getElementById('add-players-error').textContent = 'The server returned an invalid response. Please try again.';
         }
     } catch (error) {
         // console.error('Error adding players:', error);
@@ -2127,14 +2170,20 @@ async function handleAddPlayers(event) {
 
 // Load and display tournament data
 // Полная функция загрузки и отображения данных турнира
-async function loadTournamentData() {
-    const authToken = localStorage.getItem('authToken');
+async function loadTournamentData(tournamentId) {
+    const id = tournamentId || currentTournamentId || localStorage.getItem('currentTournamentId');
+    if (!id) return;
+    setCurrentTournament(id);
     try {
         const response = await fetch(`/tournaments/api/tournaments/${currentTournamentId}/`, {
-            headers: {
-                'Authorization': `Token ${authToken}`
-            }
+            credentials: 'include'
         });
+        if (!response.ok) {
+            // The tournament no longer exists (deleted / wrong id): forget it and show the create form
+            setCurrentTournament(null);
+            showTournamentSubsection('create-tournament');
+            return;
+        }
         const data = await response.json();
 
         // console.log('Полученные данные турнира:', data);

@@ -24,6 +24,7 @@ from rest_framework.decorators import api_view
 import json
 import jwt
 import datetime
+from django.utils import timezone
 from .models import User, MatchHistory
 
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
@@ -32,13 +33,19 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.core.files.storage import default_storage
 import base64
+import io
 from django.core.files.base import ContentFile
 from rest_framework.authentication import SessionAuthentication, TokenAuthentication
 import uuid
 
 import os
+import re
+import mimetypes
 import threading
 from django.http import HttpResponse, FileResponse
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +124,7 @@ def profile_view(request):
                     'opponent': match.opponent,
                     'score': match.score,
                     'result': match.result,
-                    'date': match.date_played.strftime('%d %b %Y'),
+                    'date': match.date_played.isoformat(),
                     'game_type': match.game_type  # Ensure game_type is included
                 })
                 
@@ -127,6 +134,7 @@ def profile_view(request):
                 'display_name': user.display_name if hasattr(user, 'display_name') else user.username,
                 'avatar': user.profile_picture.url if user.profile_picture else None,
                 'date_joined': user.date_joined.strftime('%B %Y'),
+                'two_factor_enabled': user.two_factor_enabled,
                 'stats': {
                     'games_played': total_matches,
                     'win_rate': f"{win_rate}%",
@@ -153,12 +161,21 @@ def profile_view(request):
                 user.username = data['username']
             
             if 'email' in data:
-                if User.objects.exclude(pk=user.pk).filter(email=data['email']).exists():
+                new_email = str(data['email']).strip().lower()
+                try:
+                    validate_email(new_email)
+                except ValidationError:
+                    return Response({'status': 'error', 'message': 'Invalid email address'}, status=400)
+                if User.objects.exclude(pk=user.pk).filter(email__iexact=new_email).exists():
                     return Response({
                         'status': 'error',
                         'message': 'Email already taken'
                     }, status=400)
-                user.email = data['email']
+                user.email = new_email
+
+            # 2FA can be switched on/off from the settings page
+            if 'two_factor_enabled' in data:
+                user.two_factor_enabled = data['two_factor_enabled'] in (True, 'true', 'True', 1, '1')
             
             if 'display_name' in data:
                 # Direct update of display_name
@@ -175,12 +192,25 @@ def profile_view(request):
                     # Handle base64 image data
                     if data['profile_picture'].startswith('data:image'):
                         format, imgstr = data['profile_picture'].split(';base64,')
-                        ext = format.split('/')[-1]
-                        filename = f'profile_pictures/user_{user.id}.{ext}'
-                        data = ContentFile(base64.b64decode(imgstr))
+                        ext = format.split('/')[-1].lower()
+                        if ext == 'jpeg':
+                            ext = 'jpg'
+                        if ext not in ('png', 'jpg', 'gif', 'webp'):
+                            return Response({'status': 'error', 'message': 'Unsupported image type (use PNG, JPG, GIF or WEBP)'}, status=400)
+                        raw = base64.b64decode(imgstr)
+                        if len(raw) > 2 * 1024 * 1024:
+                            return Response({'status': 'error', 'message': 'Image too large (max 2 MB)'}, status=400)
+                        try:
+                            from PIL import Image
+                            Image.open(io.BytesIO(raw)).verify()
+                        except Exception:
+                            return Response({'status': 'error', 'message': 'Invalid image'}, status=400)
+                        # upload_to='profile_pictures/' already adds the directory
+                        filename = f'user_{user.id}.{ext}'
+                        data = ContentFile(raw)
                         user.profile_picture.save(filename, data, save=True)
                 except Exception as e:
-                    print(f"Error handling profile picture: {str(e)}")
+                    logger.warning("Error handling profile picture: %s", e)
                     return Response({
                         'status': 'error',
                         'message': 'Failed to update profile picture'
@@ -193,13 +223,14 @@ def profile_view(request):
                 'username': user.username,
                 'email': user.email,
                 'display_name': user.display_name or user.username,
-                'avatar': user.profile_picture.url if user.profile_picture else None
+                'avatar': user.profile_picture.url if user.profile_picture else None,
+                'two_factor_enabled': user.two_factor_enabled
             })
         except Exception as e:
-            print(f"Error updating profile: {str(e)}")
+            logger.warning("Error updating profile: %s", e)
             return Response({
                 'status': 'error',
-                'message': str(e)
+                'message': 'Failed to update profile'
             }, status=400)
 
 @api_view(['PUT'])
@@ -239,7 +270,7 @@ def update_profile(request):
 def login_view(request):
     try:
         data = json.loads(request.body)
-        email = data.get("email")
+        email = (data.get("email") or "").strip().lower()
         password = data.get("password")
 
         if not email or not password:
@@ -286,18 +317,19 @@ def login_view(request):
             }
         })
 
-    except Exception as e:
-        return JsonResponse({"status": "error", "message": str(e)}, status=500)
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "error", "message": "Invalid JSON format"}, status=400)
+    except Exception:
+        logger.exception("Login failed")
+        return JsonResponse({"status": "error", "message": "Login failed"}, status=500)
 
 @require_POST
 def verify_otp(request):
     try:
         data = json.loads(request.body)
-        email = data.get("email")
+        email = (data.get("email") or "").strip().lower()
         # Normalise: the frontend sends a string, but tolerate numbers and pasted whitespace
         otp = str(data.get("otp") or "").strip()
-
-        print(f"Verifying OTP - Email: {email}, OTP: {otp}")  # Debug log
 
         if not email or not otp:
             return JsonResponse({
@@ -306,10 +338,8 @@ def verify_otp(request):
             }, status=400)
 
         try:
-            user = User.objects.get(email=email)
-            print(f"Found user: {user.username}")  # Debug log
+            user = User.objects.get(email__iexact=email)
         except User.DoesNotExist:
-            print(f"No user found with email: {email}")  # Debug log
             return JsonResponse({
                 "status": "error",
                 "message": "User not found"
@@ -317,7 +347,6 @@ def verify_otp(request):
 
         cache_key = f"otp_{user.id}"
         cached_otp = cache.get(cache_key)
-        print(f"Cached OTP: {cached_otp}, Received OTP: {otp}")  # Debug log
 
         if cached_otp and str(cached_otp) == otp:
             # Login the user
@@ -353,11 +382,11 @@ def verify_otp(request):
             "status": "error",
             "message": "Invalid JSON format"
         }, status=400)
-    except Exception as e:
-        print(f"OTP verification error: {str(e)}")  # Debug log
+    except Exception:
+        logger.exception("OTP verification error")
         return JsonResponse({
             "status": "error",
-            "message": str(e)
+            "message": "OTP verification failed"
         }, status=500)
 
 @ensure_csrf_cookie
@@ -367,18 +396,13 @@ def register_view(request):
         
     if request.method == 'POST':
         try:
-            print("Received registration request")
-            print("Headers:", request.headers)
             data = json.loads(request.body)
-            print("Request data:", {**data, 'password1': '[HIDDEN]', 'password2': '[HIDDEN]'})
-            
-            email = data.get('email')
+
+            email = (data.get('email') or '').strip().lower()
             password1 = data.get('password1')
             password2 = data.get('password2')
-            username = data.get('username')
-            enable_2fa = data.get('enable_2fa', False)
-            
-            print(f"Registration attempt - Data received: {data}")
+            username = (data.get('username') or '').strip()
+            enable_2fa = data.get('enable_2fa', False) in (True, 'true', 'True', 1, '1')
         
             # Validate all required fields
             missing_fields = []
@@ -398,15 +422,24 @@ def register_view(request):
                     'status': 'error',
                     'message': 'Passwords do not match'
                 }, status=400)
-                
+
+            try:
+                validate_email(email)
+            except ValidationError:
+                return JsonResponse({'status': 'error', 'message': 'Invalid email address'}, status=400)
+            if User.objects.filter(email__iexact=email).exists():
+                return JsonResponse({'status': 'error', 'message': 'Email already registered'}, status=400)
+            if User.objects.filter(username__iexact=username).exists():
+                return JsonResponse({'status': 'error', 'message': 'Username already taken'}, status=400)
+
             try:
                 # Import password validators to check password strength
                 from django.contrib.auth.password_validation import validate_password
-                from django.core.exceptions import ValidationError
-                
-                # Validate password strength
+
+                # Validate password strength (pass the unsaved user so the
+                # username/email similarity validator actually runs)
                 try:
-                    validate_password(password1)
+                    validate_password(password1, user=User(username=username, email=email))
                 except ValidationError as e:
                     # Return validation errors as a list
                     return JsonResponse({
@@ -422,12 +455,10 @@ def register_view(request):
                     two_factor_enabled=enable_2fa
                 )
                 user.save()
-                print(f"User created successfully with ID: {user.id}")
-                
+
                 # Now try to log in
                 login(request, user)
                 request.session.save() # this is for the refresh login problem
-                print("User logged in successfully")
                 
                 return JsonResponse({
                     'status': 'success',
@@ -439,24 +470,28 @@ def register_view(request):
                     }
                 })
                 
-            except Exception as user_error:
-                print(f"Error creating user: {str(user_error)}")
+            except IntegrityError:
                 return JsonResponse({
                     'status': 'error',
-                    'message': f'User creation failed: {str(user_error)}'
+                    'message': 'Email or username already in use'
+                }, status=400)
+            except Exception as user_error:
+                logger.exception("Error creating user")
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'User creation failed'
                 }, status=500)
-                
-        except json.JSONDecodeError as e:
-            print(f"JSON Decode Error: {str(e)}")
+
+        except json.JSONDecodeError:
             return JsonResponse({
                 'status': 'error',
-                'message': f'Invalid JSON format: {str(e)}'
+                'message': 'Invalid JSON format'
             }, status=400)
-        except Exception as e:
-            print(f"Unexpected error: {str(e)}")
+        except Exception:
+            logger.exception("Unexpected registration error")
             return JsonResponse({
                 'status': 'error',
-                'message': f'Registration failed: {str(e)}'
+                'message': 'Registration failed'
             }, status=500)
 
     return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
@@ -492,19 +527,13 @@ def redirect_uri(request):
             client_id = settings.FORTYTWO_CLIENT_ID
             redirect_uri = settings.FORTYTWO_REDIRECT_URI
             
-            # Debug output
-            print(f"Using client_id: {client_id}")
-            print(f"Using redirect_uri: {redirect_uri}")
-            
             oauth_link = (
                 f"https://api.intra.42.fr/oauth/authorize"
                 f"?client_id={client_id}"
                 f"&redirect_uri={redirect_uri}"
                 f"&response_type=code"
             )
-            
-            print("Generated OAuth link:", oauth_link)
-            
+
             return JsonResponse({"oauth_link": oauth_link})
         except Exception as e:
             print("Error in redirect_uri:", str(e))
@@ -593,10 +622,6 @@ def get_token(request):
         if not code:
             return JsonResponse({'error': 'Authorization code is required'}, status=400)
 
-        # Debugging: Print settings values to verify they're loaded
-        print(f"FORTYTWO_CLIENT_ID: {settings.FORTYTWO_CLIENT_ID}")
-        print(f"FORTYTWO_REDIRECT_URI: {settings.FORTYTWO_REDIRECT_URI}")
-
         # Exchange code for access token with 42 API
         token_url = 'https://api.intra.42.fr/oauth/token'
         token_data = {
@@ -632,7 +657,6 @@ def get_token(request):
         email = user_data.get('email')
         username = user_data.get('login')
 
-        print(f"User data received: ID={fortytwo_id}, username={username}, email={email}")
 
         # Get or create user
         User = get_user_model()
@@ -756,7 +780,7 @@ def match_history_view(request):
             'opponent': match.opponent,
             'result': match.result,
             'score': match.score,
-            'date': match.date_played.strftime('%B %d, %Y')
+            'date': match.date_played.isoformat()
         }
         
         # Include metadata for tournament matches
@@ -774,20 +798,21 @@ def match_history_view(request):
 @permission_classes([IsAuthenticated])
 def save_match_view(request):
     """Save a new match result"""
-    print("Authorization Header:", request.headers.get('Authorization'))  # Debugging line
-
     user = request.user
     data = request.data
-
-    # Log incoming data
-    print("Received data:", json.dumps(data, indent=4))
 
     try:
         # Extract match data
         game_type = data.get('game_type', 'PONG')  # Default to PONG 5 specified
-        opponent = data.get('opponent', 'Unknown')
+        opponent = str(data.get('opponent', 'Unknown'))[:150]
         result = data.get('result', 'DRAW')
-        score = data.get('score', '0-0')
+        score = str(data.get('score', '0-0'))
+
+        # Validate against the model choices so stats can't be skewed by bad input
+        if game_type not in dict(MatchHistory.GAME_CHOICES) and game_type != 'TOURNAMENT':
+            return Response({'status': 'error', 'message': 'Invalid match data'}, status=status.HTTP_400_BAD_REQUEST)
+        if result not in dict(MatchHistory.RESULT_CHOICES) or not re.fullmatch(r'\d{1,4}-\d{1,4}', score):
+            return Response({'status': 'error', 'message': 'Invalid match data'}, status=status.HTTP_400_BAD_REQUEST)
         
         # Handle tournament-specific data
         tournament_id = data.get('tournament_id')
@@ -814,10 +839,11 @@ def save_match_view(request):
         
         return Response({'status': 'success'}, status=status.HTTP_201_CREATED)
 
-    except Exception as e:
+    except Exception:
+        logger.exception("save_match failed")
         return Response({
             'status': 'error',
-            'message': str(e)
+            'message': 'Failed to save match'
         }, status=status.HTTP_400_BAD_REQUEST)
 
 @csrf_exempt
@@ -828,22 +854,16 @@ def create_match(request):
     Initializes a new Tic-Tac-Toe match and returns a match_id.
     """
     try:
-        print("🚀 Received request to create match")  # Check if request reaches here
-        print("Headers:", request.headers)  # Check what headers are received
-        print("User:", request.user)  # Check if Django recognizes the user
-        print("Request Data:", request.data)  # Print incoming request data
-
         if not request.user.is_authenticated:
             return Response({'error': 'User not authenticated'}, status=401)
 
         match_id = str(uuid.uuid4())  # Generate a unique match ID
-        print(f"✅ Match Created: {match_id} for {request.user}")  # Confirm match creation
 
         return Response({'match_id': match_id, 'opponent': 'AI'}, status=201)
 
     except Exception as e:
-        print(f"🔥 ERROR in create_match(): {str(e)}")  # Print error message
-        return Response({'error': str(e)}, status=500)
+        logger.exception("create_match failed")
+        return Response({'error': 'Failed to create match'}, status=500)
 
 
 @api_view(['DELETE'])
@@ -873,11 +893,7 @@ def get_avatar_image(request, user_id):
             # Check if file exists
             if os.path.exists(file_path):
                 # Determine content type based on file extension
-                content_type = 'image/jpeg'  # Default
-                if file_path.lower().endswith('.png'):
-                    content_type = 'image/png'
-                elif file_path.lower().endswith('.gif'):
-                    content_type = 'image/gif'
+                content_type = mimetypes.guess_type(file_path)[0] or 'image/jpeg'
                 
                 # Use Django's FileResponse for better performance
                 return FileResponse(open(file_path, 'rb'), content_type=content_type)
@@ -978,7 +994,7 @@ def export_user_data(request):
                 'win_rate': f"{win_rate}%",
             },
             'match_history': matches,
-            'export_date': datetime.datetime.now().isoformat(),
+            'export_date': timezone.now().isoformat(),
         }
         
         return Response(user_data)
@@ -994,7 +1010,7 @@ def get_all_users(request):
     """Get list of all users except the current user"""
     try:
         # Exclude current user and maybe some system users
-        users = User.objects.exclude(id=request.user.id).exclude(is_superuser=True)
+        users = User.objects.exclude(id=request.user.id).exclude(is_superuser=True).filter(is_active=True)
         
         # Check which users are friends with the current user
         user_friends_ids = request.user.friends.values_list('id', flat=True)

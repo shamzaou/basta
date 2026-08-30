@@ -43,6 +43,9 @@ Answers describe the code **as it is after the Aug-2026 audit**. Items marked �
 31. **Friends?** Non-symmetric M2M; add/remove/list endpoints; "Find Users" tab. No online status.
 32. **How does the Pong AI work?** `PongAI` (`pong.js:585`): once per second (`UPDATE_INTERVAL = 1000`) it snapshots ball position + velocity, predicts where the ball crosses the paddle plane, adds an error scaled by `(1-ACCURACY)` and a 10 % random mistake, then every frame moves toward that target at ≤ `MAX_SPEED` — like a human holding a key. Human ↑/↓ are disabled for the AI paddle.
 33. **Why does it refresh only once per second?** Subject rule: the AI must simulate human perception and anticipate; the 1 s window forces prediction instead of tracking the ball perfectly.
+33b. **Does the AI adapt?** 🆕 Yes: every 5 s `updateDifficulty()` reads the live score — leading by ≥ 2 it plays sloppier (accuracy 0.6, slower), trailing by ≥ 2 it plays sharper (0.9, faster), otherwise 0.8 (`pong.js:733-755`).
+33c. **Can you play on a phone?** 🆕 Yes — drag on your half of the canvas (pointer events, `touch-action: none`, multi-touch for two players); keyboard on desktop (`pong.js:551-560`).
+33d. **What happens when the tiebreakers tie again?** 🆕 `Tournament.get_winner` plays tiebreak *rounds*: a fully played round that is still level creates a new round-robin among the remaining leaders, until one player has the most tiebreak wins (`tournaments/models.py:18-99`).
 34. **Why no A\*?** Pong has no graph to search; the AI uses kinematic prediction (linear extrapolation). A* is forbidden by the subject anyway.
 35. **How is AI difficulty tuned?** Constants `ACCURACY`, `MISTAKE_CHANCE`, `MAX_SPEED`; `updateDifficulty()` runs every 5 s but its score-based branch is stubbed (`scoreDiff = 0`) — say it honestly; making it read the real score is a listed improvement.
 36. **Can the AI lose?** Yes — prediction error, random mistakes, the 1 s blind window and the ball speeding up 5 % per hit; games are first to 3 points.
@@ -59,6 +62,7 @@ Answers describe the code **as it is after the Aug-2026 audit**. Items marked �
 
 45. **GDPR features?** Export JSON (`export-data/`, "local data management"), delete (`delete-account/`, hard delete that cascades to match history), inactivity warn 5 mo / delete 6 mo (`delete_inactive_users`, `make gdpr-cleanup`), privacy policy on About. **Why no anonymization?** The module title lists it, but the team chose full deletion: it removes *all* personal data, the strictest form of erasure. (An anonymize endpoint was prototyped during the audit and removed by the team's decision.)
 46. **Is the retention cron running?** Not inside the container (no cron in the image); `gdpr_cleanup_crontab` is provided for a host cron; run manually with `make gdpr-cleanup-run`.
+46b. **What happens when the JWT expires after 60 minutes?** 🆕 `authFetch` asks `getAccessToken()` for a fresh token (it refreshes via `/api/auth/token/refresh/` when `exp` has passed), the timer from `scheduleTokenRefresh()` renews it a minute early, the `load` handler refreshes on page open, and a 401 triggers one refresh-and-retry; if the refresh token is bad too, `clearLocalSession()` logs the user out cleanly (`script.js:1417-1523`).
 47. **How does the SPA router work?** `showPage(pageId)` (`script.js:13`) hides all `.page` divs and shows one, `history.pushState` updates the URL, `popstate` restores; global click handler intercepts `href="/..."` links; on load the path decides the initial page; Django's catch-all serves the same shell for any path. Login-gated pages redirect.
 48. **How are pages swapped without reload?** All pages are already in the server-rendered HTML; only `display` toggles. Games are created/destroyed by `initializeGameIfNeeded`.
 49. **SSR?** Django renders the whole shell server-side (templates, `{% static %}` hashed URLs, `{% csrf_token %}`); data is fetched client-side. Template-level SSR — say it precisely.
@@ -79,7 +83,7 @@ Answers describe the code **as it is after the Aug-2026 audit**. Items marked �
 ```bash
 make build && make up            # https://localhost  (accept the self-signed cert)
 make logs                        # container logs (entrypoint output)
-make test                        # 17 tests
+make test                        # 34 tests
 make shell                       # Django shell
 make db                          # psql into basta_db  (\dt to list tables)
 make gdpr-cleanup                # dry-run inactivity cleanup

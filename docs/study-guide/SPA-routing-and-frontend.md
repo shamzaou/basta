@@ -106,9 +106,9 @@ If asked "why Three.js and not Babylon.js": the subject allows Three.js/WebGL fo
 
 ## Token handling
 
-* After login the SPA stores `authToken` (access), `refreshToken`, `userData`, `isLoggedIn`. Most `fetch` calls add `Authorization: Bearer <authToken>`; tournament calls send `Token <authToken>` (wrong scheme, harmless because those views do not authenticate).
-* `getAccessToken()` (`:1403`) decodes the JWT payload (`atob` of the middle segment) and refreshes if `exp` passed; `refreshAccessToken()` (`:1424`) posts `{refresh}` to **🆕 `/api/auth/token/refresh/`** (`:1433`; it previously pointed at `/api/token/refresh/`, which the catch-all answered with HTML, and on failure called an undefined `logout()` — now `handleLogout()` `:1450`); `scheduleTokenRefresh()` (`:1455`) sets a timer 1 min before expiry — only wired in the OAuth path (`:1034`).
-* `handleLogout()` (`:378`) posts to `/api/auth/logout/` (clears the session) and wipes localStorage; the JWT itself simply expires (no blacklist).
+* After login the SPA stores `authToken` (access), `refreshToken`, `userData`, `isLoggedIn`. **🆕 Changed in the Aug-2026 second sweep:** every JWT-protected call goes through `authFetch(url, options)` (`script.js:1499-1523`, also exposed as `window.authFetch` for the game files) — it awaits `getAccessToken()`, adds `Authorization: Bearer …` (+ `X-CSRFToken` on writes, `credentials: 'include'`) and, on a 401, refreshes once and retries. The bogus `Token <jwt>` header on tournament calls was removed.
+* `getAccessToken()` (`:1417`) decodes the JWT payload (`atob` of the middle segment) and refreshes if `exp` passed; `refreshAccessToken()` (`:1438`) posts `{refresh}` to `/api/auth/token/refresh/` (fixed in the first audit — it used to hit the catch-all), stores the rotated `refresh` and logs out on failure; `scheduleTokenRefresh()` (`:1472`) arms a timer 1 min before expiry (`window.__tokenRefreshTimer`) and re-arms after each refresh. **🆕** It is now called after password login, after OTP verification and after 42 login, and the `load` handler (`:146`) refreshes an already-expired token before showing a logged-in page (falling back to `clearLocalSession()` `:410` if the refresh token is bad too). Before the sweep the timer existed only in the OAuth path, so after 60 minutes games silently stopped being saved.
+* `handleLogout()` posts to `/api/auth/logout/` (clears the session; **🆕** always, even without a token) and calls `clearLocalSession()` (`:410`), which wipes localStorage, the tournament/match globals and the refresh timer; the JWT itself simply expires (no blacklist).
 
 ## Avatars, friends, chart, export
 
@@ -123,11 +123,18 @@ If asked "why Three.js and not Babylon.js": the subject allows Three.js/WebGL fo
 * The Pong canvas keeps 4:3 inside `.game-container` (`height: 600px`, resize handler).
 * Browser compatibility: plain ES2017+ (async/await, modules, optional chaining `?.`), no transpiler; works in current Chrome, Edge, Firefox and Safari. Three.js r128 requires WebGL 1.
 
+## 🆕 Changed in the Aug-2026 second sweep (router, tournament, settings, OTP)
+
+* **Single initialisation** — only the `load` handler (`:146`) shows the initial page, with `pushState=false`; `DOMContentLoaded` (`:526`) just wires listeners. The inline `onclick="showPage(...)"` attributes were removed from the nav links, so the global click handler is the only router entry point. Result: one profile request per visit, one `match/create` per TicTacToe visit, and Back works with one press after a deep-link reload.
+* **Login gating** — `showPage` redirects logged-out users for `profile, settings, game, tictactoe, tournament` (`:19`).
+* **Tournament persistence** — `setCurrentTournament(id)` (`:123`) keeps the module variable, `window.currentTournamentId` and `localStorage.currentTournamentId` in sync; `showPage('tournament')` (`:111`) resumes a stored tournament after a refresh; `loadTournamentData(id)` (`:2174`) honours its argument and clears the stored id on 404; cleared on logout and by "Return to Home". `handleAddPlayers` rejects empty and >50-char nicknames (`:2121`) and shows English error messages.
+* **Settings** — "Save Settings" PUTs `{display_name, two_factor_enabled}`; the new Security section's `#two-factor-toggle` (`:640`, state loaded at `:1297`) PUTs `two_factor_enabled` on change; avatar uploads are checked client-side (`image/*`, ≤ 2 MB, `:734`).
+* **OTP modal** — `<form id="otp-form">` (`:847`) so Enter submits; Cancel button; no outside-click close.
+* **Dates** — the API now returns ISO 8601; `new Date()` results are guarded (raw string if invalid).
+
 ## Known frontend quirks (be ready to acknowledge)
 
 * Merge-conflict marker **comments** (`// <<<<<<< master`, `// =======`, `// >>>>>>> 8ec6d59`) remain at `script.js:23,49,56,139,149,151,1322,1391-1392,1436,2059,2088` — harmless (commented out) leftovers from a merge.
-* `loadTournamentData` is defined twice (`:239` and `:2124`); the later definition wins (function hoisting), which is the full one.
-* Feedback is `alert()`-based; the OTP modal closes on outside click.
+* Feedback is `alert()`-based (the OTP modal now has a form + Cancel button, **🆕**).
 * External CDN dependencies (Bootstrap, jQuery, Popper, Three.js, Google Fonts) — the demo machine needs internet, or these must be vendored.
-* `pong.js` `initializeMatch()`/`updateMatchState()` and `tictactoe.js` `updateMatchState()` post to non-existent or no-op endpoints; errors are swallowed.
 * `check-auth` is never called; auth state is inferred from localStorage plus API 401s.

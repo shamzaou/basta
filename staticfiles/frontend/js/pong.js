@@ -125,8 +125,24 @@ class GameRenderer {
         this.createGameObjects();
         this.createUI();
 
-        // Handle window resizing
-        window.addEventListener('resize', () => this.handleResize(), false);
+        // Handle window resizing (stored so dispose() can remove it)
+        this.onWindowResize = () => this.handleResize();
+        window.addEventListener('resize', this.onWindowResize, false);
+    }
+
+    dispose() {
+        // Release everything this renderer attached to the page / GPU
+        window.removeEventListener('resize', this.onWindowResize, false);
+        if (this.renderer) {
+            this.renderer.dispose();
+            if (this.renderer.domElement && this.renderer.domElement.parentNode) {
+                this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
+            }
+        }
+        ['score', 'instructions', 'player1-name', 'player2-name', 'game-controls'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el && el.parentNode === this.container) el.parentNode.removeChild(el);
+        });
     }
 
     createUI() {
@@ -141,7 +157,7 @@ class GameRenderer {
         const instructions = document.createElement('div');
         instructions.id = 'instructions';
         instructions.className = 'ui-element';
-        instructions.textContent = 'P1: W/S | P2: ↑/↓ | SPACE: Pause';
+        instructions.textContent = 'P1: W/S | P2: ↑/↓ | SPACE: Pause | Touch: drag on your side';
         this.container.appendChild(instructions);
 
         // Player names
@@ -357,6 +373,7 @@ class GameRenderer {
             margin: auto;
             max-width: 100%;
             height: auto;
+            touch-action: none;
         `;
         this.container.appendChild(this.renderer.domElement);
     }
@@ -481,12 +498,6 @@ class GameRenderer {
         this.scene.add(this.net);
     }
 
-    handleResize() {
-        this.camera.aspect = window.innerWidth / window.innerHeight;
-        this.camera.updateProjectionMatrix();
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
-    }
-
     render() {
         this.renderer.render(this.scene, this.camera);
     }
@@ -517,19 +528,67 @@ class GameRenderer {
 
 // Input handler class
 class InputHandler {
-    constructor(paddle1, paddle2, gameMode) {
+    constructor(paddle1, paddle2, gameMode, canvas = null) {
         this.paddle1 = paddle1;
         this.paddle2 = paddle2;
         this.gameMode = gameMode;
         this.keys = new Set();
-        
+        this.canvas = canvas;
+        this.pointers = new Map(); // pointerId -> 'left' | 'right'
+
         // Bind the handlers to maintain context
         this.handleKeyDown = this.handleKeyDown.bind(this);
         this.handleKeyUp = this.handleKeyUp.bind(this);
-        
+        this.clearKeys = () => this.keys.clear();           // #29: no stuck keys after alt-tab
+        this.handleVisibility = () => { if (document.hidden) this.keys.clear(); };
+        this.handlePointerDown = this.handlePointerDown.bind(this);
+        this.handlePointerMove = this.handlePointerMove.bind(this);
+        this.handlePointerUp = this.handlePointerUp.bind(this);
+
         // Add event listeners
         document.addEventListener('keydown', this.handleKeyDown);
         document.addEventListener('keyup', this.handleKeyUp);
+        window.addEventListener('blur', this.clearKeys);
+        document.addEventListener('visibilitychange', this.handleVisibility);
+
+        // Touch / pen / mouse drag on the canvas: left half = paddle 1, right half = paddle 2
+        if (this.canvas) {
+            this.canvas.addEventListener('pointerdown', this.handlePointerDown);
+            this.canvas.addEventListener('pointermove', this.handlePointerMove);
+            this.canvas.addEventListener('pointerup', this.handlePointerUp);
+            this.canvas.addEventListener('pointercancel', this.handlePointerUp);
+        }
+    }
+
+    // Map a pointer's vertical position on the canvas to a paddle z in [-2.1, 2.1]
+    pointerToPaddleZ(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const t = Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height));
+        return -2.1 + t * 4.2;
+    }
+
+    handlePointerDown(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const side = (e.clientX - rect.left) < rect.width / 2 ? 'left' : 'right';
+        if (side === 'right' && this.gameMode === 'ai') return; // the AI owns the right paddle
+        this.pointers.set(e.pointerId, side);
+        if (this.canvas.setPointerCapture) {
+            try { this.canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        }
+        this.handlePointerMove(e);
+        e.preventDefault();
+    }
+
+    handlePointerMove(e) {
+        const side = this.pointers.get(e.pointerId);
+        if (!side) return;
+        const z = this.pointerToPaddleZ(e);
+        (side === 'left' ? this.paddle1 : this.paddle2).position.z = z;
+        e.preventDefault();
+    }
+
+    handlePointerUp(e) {
+        this.pointers.delete(e.pointerId);
     }
 
     handleKeyDown(e) {
@@ -590,20 +649,30 @@ class InputHandler {
         // Remove event listeners when game is destroyed
         document.removeEventListener('keydown', this.handleKeyDown);
         document.removeEventListener('keyup', this.handleKeyUp);
+        window.removeEventListener('blur', this.clearKeys);
+        document.removeEventListener('visibilitychange', this.handleVisibility);
+        if (this.canvas) {
+            this.canvas.removeEventListener('pointerdown', this.handlePointerDown);
+            this.canvas.removeEventListener('pointermove', this.handlePointerMove);
+            this.canvas.removeEventListener('pointerup', this.handlePointerUp);
+            this.canvas.removeEventListener('pointercancel', this.handlePointerUp);
+        }
+        this.pointers.clear();
+        this.keys.clear();
     }
 }
 
 // AI class
 class PongAI {
-    constructor(paddle) {
+    constructor(paddle, getScore = null) {
         this.paddle = paddle;
+        this.getScore = getScore;           // () => { player1, player2 } — live score for difficulty tuning
         this.lastUpdateTime = 0;
-        this.UPDATE_INTERVAL = 1000;
-        this.REACTION_DELAY = 1500;
+        this.UPDATE_INTERVAL = 1000;        // the AI may only look at the game once per second
         this.lastSeenBallPosition = null;
         this.lastSeenBallVelocity = null;
-        this.ACCURACY = 0.85;
-        this.MAX_SPEED = 0.10;
+        this.ACCURACY = 0.8;
+        this.MAX_SPEED = 0.12;
         this.MISTAKE_CHANCE = 0.10;
         this.difficultyUpdateTime = 0;
         this.difficultyUpdateInterval = 5000;
@@ -662,26 +731,24 @@ class PongAI {
     }
 
     updateDifficulty() {
-        // This would be updated based on the actual game score
-        const scoreDiff = 0;
+        // Rubber-banding on the real score: AI (player2) minus human (player1)
+        const score = this.getScore ? this.getScore() : null;
+        const scoreDiff = score ? (score.player2 || 0) - (score.player1 || 0) : 0;
 
-        if (scoreDiff > 3) {
+        if (scoreDiff >= 2) {
             // Make AI worse if winning by too much
-            this.ACCURACY = 0.15;
+            this.ACCURACY = 0.6;
             this.MISTAKE_CHANCE = 0.15;
-            this.REACTION_DELAY = 2000;
             this.MAX_SPEED = 0.10;
-        } else if (scoreDiff < -3) {
+        } else if (scoreDiff <= -2) {
             // Make AI better if losing by too much
-            this.ACCURACY = 0.15;
+            this.ACCURACY = 0.9;
             this.MISTAKE_CHANCE = 0.05;
-            this.REACTION_DELAY = 1000;
             this.MAX_SPEED = 0.14;
         } else {
             // Default values for close games
-            this.ACCURACY = 0.15;
+            this.ACCURACY = 0.8;
             this.MISTAKE_CHANCE = 0.10;
-            this.REACTION_DELAY = 1500;
             this.MAX_SPEED = 0.12;
         }
     }
@@ -715,8 +782,9 @@ class PongGame {
         // Initialize game components
         this.renderer = new GameRenderer(canvasContainer);
         this.physics = new GamePhysics(GAME_CONFIG);
-        this.inputHandler = new InputHandler(this.renderer.paddle1, this.renderer.paddle2, gameMode);
-        this.ai = gameMode === 'ai' ? new PongAI(this.renderer.paddle2) : null;
+        this.inputHandler = new InputHandler(this.renderer.paddle1, this.renderer.paddle2, gameMode, this.renderer.renderer.domElement);
+        this.ai = gameMode === 'ai' ? new PongAI(this.renderer.paddle2, () => this.state.score) : null;
+        this.lastStateUpdate = 0; // #24: periodic state updates (tournament matches only)
         
         // Set initial ball velocity
         this.renderer.ball.position.copy(this.physics.resetBall());
@@ -810,7 +878,8 @@ class PongGame {
     }
 
     async updateMatchState() {
-        if (!this.state.matchId) return;
+        // Only tournament matches have a server-side match id; normal games have nothing to update
+        if (!Number.isInteger(this.state.matchId)) return;
 
         try {
             // await fetch(`/tournaments/api/game/match/${this.state.matchId}/state`, {
@@ -848,6 +917,7 @@ class PongGame {
             console.log("Finishing match with ID:", matchId);
             console.log("Tournament ID:", tournamentId);
             console.log("Scores:", this.state.score);
+            this.showWinner(this.state.winner);
 
             // For tournament matches
             if (tournamentId) {
@@ -933,14 +1003,13 @@ class PongGame {
             auth: authToken ? "Present" : "Missing"
         });
         
-        // Send result to backend
-        const response = await fetch('/api/auth/save-match/', {
+        // Send result to backend (authFetch refreshes an expired JWT and retries; plain fetch as fallback)
+        const doFetch = window.authFetch || fetch;
+        const headers = { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') };
+        if (!window.authFetch) headers['Authorization'] = `Bearer ${authToken}`;
+        const response = await doFetch('/api/auth/save-match/', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${authToken}`,
-                'X-CSRFToken': getCookie('csrftoken')
-            },
+            headers,
             body: JSON.stringify({
                 game_type: 'PONG',
                 opponent: opponent,
@@ -966,6 +1035,19 @@ class PongGame {
         }
         
         return true;
+    }
+
+    // #25: announce the winner in the instructions line (null restores the controls hint)
+    showWinner(winnerKey) {
+        const instructions = document.getElementById('instructions');
+        if (!instructions) return;
+        if (!winnerKey) {
+            instructions.textContent = 'P1: W/S | P2: ↑/↓ | SPACE: Pause | Touch: drag on your side';
+            return;
+        }
+        const nameEl = document.getElementById(winnerKey === 'player1' ? 'player1-name' : 'player2-name');
+        const name = nameEl && nameEl.textContent.trim() ? nameEl.textContent.trim() : (winnerKey === 'player1' ? 'Player 1' : 'Player 2');
+        instructions.textContent = `${name} wins! ${this.state.score.player1} - ${this.state.score.player2}`;
     }
 
     showRestartButton() {
@@ -997,24 +1079,23 @@ class PongGame {
                     
                     console.log('Saving score:', window.lastMatchScore);
                 }
+                // #22: this match is over - never let Back/"/game" reopen it
+                window.currentMatchId = null;
+                window.tournamentId = null;
+                window.currentMatchPlayers = null;
                 window.showPage('tournament');
             };
         }
     }
 
     async restartGame() {
-        // If this is a normal (non-tournament) game and has finished, save the current results before resetting
-        if (!window.tournamentId && !window.currentMatchId && this.state.gameStatus === 'finished') {
-            try {
-                // Generate a unique match ID for the new game
-                this.state.matchId = 'game_' + Date.now();
-                this.state.matchStartTime = new Date();
-                console.log("Starting new game with ID:", this.state.matchId);
-            } catch (error) {
-                console.error('Error initializing new match:', error);
-            }
+        // Normal (non-tournament) games have no server-side match id; nothing to create here
+        if (!window.tournamentId && !window.currentMatchId) {
+            this.state.matchId = null;
+            this.state.matchStartTime = new Date();
         }
-        
+        this.showWinner(null); // #25: restore the instructions line
+
         // Reset game state
         this.state.score = { player1: 0, player2: 0 };
         this.state.gameStatus = 'playing';
@@ -1059,12 +1140,14 @@ class PongGame {
     }
 
     setupEventHandlers() {
-        document.addEventListener('keydown', (e) => {
+        // Stored so cleanup() can remove it - otherwise every past game keeps toggling pause
+        this.pauseHandler = (e) => {
             if (e.code === 'Space' && this.state.gameStatus !== 'finished') {
                 e.preventDefault();
                 this.togglePause();
             }
-        });
+        };
+        document.addEventListener('keydown', this.pauseHandler);
     }
 
     togglePause() {
@@ -1111,12 +1194,23 @@ class PongGame {
 
     cleanup() {
         // Cleanup when game is destroyed
+        this.state.gameStatus = 'finished'; // stop the update loop even if a frame is pending
         if (this.inputHandler) {
             this.inputHandler.cleanup();
         }
+        if (this.pauseHandler) {
+            document.removeEventListener('keydown', this.pauseHandler);
+            this.pauseHandler = null;
+        }
+        const overlay = document.getElementById('pauseOverlay');
+        if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
         // Stop animation frame if needed
         if (this.animationFrameId) {
             cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+        }
+        if (this.renderer && this.renderer.dispose) {
+            this.renderer.dispose(); // #7: drop the resize listener, canvas and GPU context
         }
     }
 

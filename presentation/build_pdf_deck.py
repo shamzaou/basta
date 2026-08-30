@@ -309,7 +309,7 @@ left("photo-shield.jpg", "GDPR Compliance",
 section("07", "Testing &amp; Evolution")
 banner("banner-team.jpg", "Testing Strategy",
        "Several levels of testing, each with its own focus, keep the application stable and secure.",
-       cards([("Unit tests", "Django test suite — 17 tests covering login and the whole 2FA flow, GDPR export / delete, the inactive-account command and tournament tiebreakers (<code>make test</code>)."),
+       cards([("Unit tests", "Django test suite — 34 tests covering login and the whole 2FA flow, GDPR export / delete, the inactive-account command and tournament tiebreakers (<code>make test</code>)."),
               ("Integration tests", "Scripted end-to-end API flow: register → login → profile → matches → friends → export → tournament → delete."),
               ("Browser walkthrough", "Headless Chrome drives every page on desktop and phone, plays both games and checks for JavaScript errors."),
               ("Manual / acceptance", "Team members continuously tested each other’s features from an end-user perspective.")], 4))
@@ -318,7 +318,7 @@ left("photo-code.jpg", "Pre-Evaluation Audit (August 2026)",
      cards([("“The 2FA code is sometimes rejected”", "The one-time code was kept in Django’s default in-memory cache, which is private to each process — and Gunicorn runs three workers. The verification request often reached a worker that had never seen the code. Fix: a database-backed cache shared by all workers."),
             ("“The 2FA e-mail is very slow”", "The e-mail was sent synchronously inside the login request with no timeout, so the response waited for the whole SMTP round-trip (and failed with 500 on any error). Fix: send in a background thread with a 10 s timeout — login now answers in ~80 ms."),
             ("Also fixed", "<code>make test</code> configuration, stale static files, the token-refresh URL in the SPA, a settings-page bug that saved a placeholder display name, the Pong ball getting stuck gliding along the top/bottom wall (wall bounce now clamps the ball and keeps a minimum angle), and the previous account's avatar remaining visible after switching users."),
-            ("Result", "17/17 tests pass, clean build from scratch verified, 0 JavaScript errors across the full browser walkthrough.")], 2))
+            ("Result", "A second sweep on request found and fixed 30 more bugs (silent JWT expiry after 60 min, secrets in logs, duplicate-registration errors, tournament persistence and repeated tiebreakers, Save Settings, 2FA toggle, Pong resize/touch/pause leaks, input validation). 34/34 tests pass, clean build verified, 0 JavaScript errors across the full browser walkthrough.")], 2))
 banner("banner-meeting.jpg", "Challenges and Lessons Learned",
        "Building a complete application from scratch provided technical and organisational hurdles — and lasting lessons.",
        cards([("Tournament logic", "Generating fair schedules and resolving ties correctly required careful data modelling and state management."),

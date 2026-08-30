@@ -18,7 +18,7 @@
     <header>
         <div class="container">
             <nav>
-                <a href="/home" onclick="showPage('home'); return false;" class="logo">FAST_PONG</a>
+                <a href="/home" class="logo">FAST_PONG</a>
                 <div class="hamburger" id="hamburger-menu">
                     <span></span>
                     <span></span>
@@ -27,23 +27,23 @@
                 
                 <!-- logged-out navigation -->
                 <ul class="nav-links logged-out">
-                    <li><a href="/" onclick="showPage('home'); return false;" class="active">Home</a></li>
-                    <li><a href="/about" onclick="showPage('about'); return false;">About</a></li>
-                    <li><a href="/login" onclick="showPage('login'); return false;" class="btn-nav">Log in</a></li>
-                    <li><a href="/register" onclick="showPage('register'); return false;" class="btn-nav">Register</a></li>
+                    <li><a href="/" class="active">Home</a></li>
+                    <li><a href="/about">About</a></li>
+                    <li><a href="/login" class="btn-nav">Log in</a></li>
+                    <li><a href="/register" class="btn-nav">Register</a></li>
                 </ul>
 
                 <!-- logged-in navigation -->
                 <ul class="nav-links logged-in">
-                    <li><a href="/" onclick="showPage('home'); return false;" class="active">Home</a></li>
-                    <li><a href="/tictactoe" onclick="showPage('tictactoe'); return false;">TicTacToe</a></li>
-                    <li><a href="/about" onclick="showPage('about'); return false;">About</a></li>
-                    <li><a href="/profile" onclick="showPage('profile'); return false;">Profile</a></li>
+                    <li><a href="/" class="active">Home</a></li>
+                    <li><a href="/tictactoe">TicTacToe</a></li>
+                    <li><a href="/about">About</a></li>
+                    <li><a href="/profile">Profile</a></li>
                     <li class="avatar-dropdown">
                         <div class="avatar-container">
                             <img src="{% static 'frontend/assets/man.png' %}" alt="User Avatar" class="nav-avatar">
                             <div class="dropdown-content">
-                                <a href="/settings" onclick="showPage('settings'); return false;" class="dropdown-item">Settings</a>
+                                <a href="/settings" class="dropdown-item">Settings</a>
                                 <a href="#" onclick="handleLogout(); return false;" class="dropdown-item logout">Logout</a>
                             </div>
                         </div>
@@ -208,7 +208,21 @@
                             </div>
                             <div class="gdpr-notice">
                                 Note: Uploaded avatars are stored securely and will be automatically compressed. 
-                                Maximum file size: 5MB.
+                                Maximum file size: 2 MB.
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <h2>Security</h2>
+                            <div class="form-group security-toggle">
+                                <label for="two-factor-toggle">
+                                    <input type="checkbox" id="two-factor-toggle" name="two-factor-toggle">
+                                    Two-factor authentication (email code at login)
+                                </label>
+                                <div class="gdpr-notice">
+                                    When enabled, a 6-digit code is sent to your email address every time you sign in.
+                                    Make sure your email address above is correct before enabling it.
+                                </div>
                             </div>
                         </div>
 
@@ -568,7 +582,7 @@
                     </div>
                     <div class="winner-section" id="winner-section" style="display: none;">
                         <h2 id="winner-text"></h2>
-                        <button onclick="showPage('home')" class="home-button">Return to Home</button>
+                        <button type="button" id="tournament-home-button" class="home-button">Return to Home</button>
                     </div>
                 </div>
             </div>
@@ -581,10 +595,13 @@
         <div class="modal-content">
             <h2>Two-Factor Authentication Required</h2>
             <p>A verification code has been sent to your email.</p>
-            <div class="input-container">
-                <input type="text" id="otp-input" pattern="[0-9]{6}" maxlength="6" placeholder="Enter 6-digit code">
-            </div>
-            <button id="verify-otp" class="auth-button">Verify Code</button>
+            <form id="otp-form">
+                <div class="input-container">
+                    <input type="text" id="otp-input" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="Enter 6-digit code" autocomplete="one-time-code" required>
+                </div>
+                <button type="submit" id="verify-otp" class="auth-button">Verify Code</button>
+                <button type="button" id="otp-cancel" class="modal-cancel">Cancel</button>
+            </form>
         </div>
     </div>
 

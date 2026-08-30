@@ -30,7 +30,7 @@ Django is the *entire* server side: routing, ORM/migrations against PostgreSQL, 
 | Process manager | Gunicorn, 3 sync workers, TLS on 443 | `scripts/entrypoint.sh:56-59` |
 | Management command | `userapp/management/commands/delete_inactive_users.py` | `Command` `:12` |
 | Admin | `userapp/admin.py`, `gameapp/admin.py` | `User` registered with `UserAdmin`; Game/Player/Score registered |
-| Tests | `userapp/tests.py`, `tournaments/tests.py` | run via `make test` (17 tests) |
+| Tests | `userapp/tests.py`, `tournaments/tests.py` | run via `make test` (34 tests) |
 
 ### Two styles of view coexist
 * **Plain Django views** (`@require_POST`, `JsonResponse`, `json.loads(request.body)`): `login_view` `userapp/views.py:239`, `verify_otp` `:293`, `register_view` `:364`, `logout_view` `:465`, `redirect_uri` `:481`, `get_token` `:586`, and all of `tournaments/views.py`.
@@ -44,7 +44,7 @@ Django is the *entire* server side: routing, ORM/migrations against PostgreSQL, 
 **🆕 Changed in Aug-2026 audit:** `scripts/entrypoint.sh:48` now runs `createcachetable` (backs the shared OTP cache) and `:52` runs `collectstatic` on every container start (previously skipped, so `staticfiles/` had drifted from `static/`). `docker-compose.yml:18` now exports `DJANGO_SETTINGS_MODULE=backend.settings` so `make test/migrate/shell` use the same settings as Gunicorn; `production_settings.py:35` falls back to the `.env` secret key instead of crashing.
 
 ## Status after audit
-Works ✅. Known oddities (left as-is, documented in `docs/audit-report.md`): `production_settings.py`, `wsgi_utils.py`, `check_wsgi.py`, `scripts/init_db.sh` and the Dockerfile `CMD` are unused leftovers (the compose `entrypoint` overrides them); `gameapp` models (`Game`, `Player`, `Score`) are registered in admin but never written to by the app; `check_auth` uses a different JWT secret and is dead code.
+Works ✅. **🆕 Second sweep:** input validation everywhere a user can type (`validate_email`, duplicate checks, `save_match` choices/score regex, avatar size/type/Pillow check, tournament nickname/score checks), no secrets in the log, generic error messages on `/login/` and `/register/`, 34 tests. Known oddities (left as-is, documented in `docs/audit-report.md`): `production_settings.py`, `wsgi_utils.py`, `check_wsgi.py`, `scripts/init_db.sh` and the Dockerfile `CMD` are unused leftovers (the compose `entrypoint` overrides them); `gameapp` models (`Game`, `Player`, `Score`) are registered in admin but never written to by the app; `check_auth` uses a different JWT secret and is dead code.
 
 ## Likely evaluator questions
 1. **Why Django?** Batteries included: ORM + migrations, a mature auth system we could extend (`AbstractUser` at `userapp/models.py:6`), CSRF/session security, admin for debugging, and DRF/SimpleJWT for the API — all in Python, which the team already knew from the 42 curriculum. It let five people ship auth, 2FA, OAuth, GDPR and tournaments in ~7 weeks.

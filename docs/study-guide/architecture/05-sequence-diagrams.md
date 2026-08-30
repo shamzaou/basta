@@ -26,12 +26,13 @@ sequenceDiagram
         API->>DJ: login(request, user) (:272)  → django_session row + sessionid cookie
         API->>JWT: RefreshToken.for_user(user) (:275)
         API-->>SPA: 200 {access_token, refresh_token, requires_2fa:false, user{id,email,username,profile_picture}}
-        SPA->>SPA: localStorage: isLoggedIn=true, userData, authToken, refreshToken (:291-294)
+        SPA->>SPA: localStorage: isLoggedIn=true, userData, authToken, refreshToken
+        SPA->>SPA: scheduleTokenRefresh() 🆕 (timer 1 min before exp)
         SPA->>SPA: checkLoginState(); showPage('home')
     end
 ```
 
-Token lifetimes: access 60 min, refresh 7 days (`backend/settings.py:65-71`). The frontend decodes `exp` from the access token to decide when to refresh (`script.js:1403-1472`).
+Token lifetimes: access 60 min, refresh 7 days (`backend/settings.py:65-71`). The frontend decodes `exp` from the access token to decide when to refresh (`script.js:1417-1497`). See diagram (g) for the refresh path added in the second sweep.
 
 ## (b) 42 OAuth (authorization-code flow) — *Remote authentication* Major module
 
@@ -223,3 +224,36 @@ sequenceDiagram
 ```
 
 **Inactivity cleanup** (`userapp/management/commands/delete_inactive_users.py`): `last_activity` is maintained by `UserActivityMiddleware`; the command computes `warning_threshold = now − 150 days` and `inactive_threshold = now − 180 days` (`:36-37`); users between the two get a warning email once per 30 days (`last_warned_date`, `:57`); users past 180 days get a deletion email and `user.delete()`; staff/superusers are excluded. `--dry-run` prints only; `--notify-only` skips deletion. Scheduled weekly by `gdpr_cleanup_crontab` *on a host cron* — the container has no cron; 🆕 `make gdpr-cleanup` / `make gdpr-cleanup-run` run it. Tested in `GdprTests.test_inactive_user_cleanup_command`.
+
+## (g) 🆕 Access-token refresh (second sweep, Aug 2026)
+
+```mermaid
+sequenceDiagram
+    participant SPA as script.js authFetch (:1499)
+    participant GT as getAccessToken (:1417)
+    participant RT as refreshAccessToken (:1438)
+    participant API as POST /api/auth/token/refresh/ (simplejwt TokenRefreshView)
+    participant EP as protected endpoint (JWTAuthentication)
+
+    SPA->>GT: need a token
+    GT->>GT: decode exp from localStorage.authToken
+    alt not expired
+        GT-->>SPA: access token
+    else expired / missing
+        GT->>RT: refresh
+        RT->>API: {refresh}
+        API-->>RT: 200 {access, refresh (rotated)} or 401
+        RT->>RT: store both; scheduleTokenRefresh() again — or clearLocalSession() + login page on failure
+        RT-->>SPA: new access token
+    end
+    SPA->>EP: request with Authorization: Bearer + X-CSRFToken
+    alt 401 (token revoked mid-flight)
+        SPA->>RT: refresh once
+        SPA->>EP: retry with the new token
+    end
+    EP-->>SPA: response
+```
+
+Triggers: `scheduleTokenRefresh()` after password login, OTP verification and 42 login; the `load`
+handler (`:146`) when `isLoggedIn` is set and the stored token is already expired; and any 401.
+The games call the same wrapper through `window.authFetch` (`pong.js:1007`, `tictactoe.js:145`).

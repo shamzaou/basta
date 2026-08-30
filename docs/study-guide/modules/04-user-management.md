@@ -50,7 +50,17 @@ Users can securely subscribe, log in, choose a unique display name for tournamen
 **🆕 Fixed in Aug-2026 audit — display name "The Champion":** `templates/frontend/index.html` shipped the Settings display-name input with a hard-coded `value="The Champion"` (and the read-only box with the text "nickname"), and `loadSettingsData` only overwrote them when the user *already had* a display name (`if (… && data.display_name)`). A user without one therefore saw "The Champion" pre-filled after clicking *Edit* and saved it unchanged. Fix: the template value is now empty with a placeholder (`index.html:196`) and `loadSettingsData` always syncs both elements from the server (`data.display_name || ''`, `script.js:1274-1281`). The About page now lists Ali as "Backend Developer".
 
 ## Status after audit
-Works ✅ for everything listed above (verified by the curl smoke flow and a headless-Chrome walkthrough; screenshots `08-profile`, `09-settings`, `15-find-users`). Caveats to admit if asked:
+Works ✅ for everything listed above (verified by the curl smoke flow and a headless-Chrome walkthrough; screenshots `08-profile`, `09-settings`, `15-find-users`).
+
+**🆕 Changed in the Aug-2026 second sweep (`userapp/views.py` unless noted):**
+* Registration: duplicate e-mail/username → 400 "Email already registered" / "Username already taken" (`:430-433`, case-insensitive) instead of a 500 with raw DB text; e-mail validated with `validate_email` (`:427`) and lower-cased; the similarity validator now runs (`validate_password(..., user=User(...))` `:442`).
+* Login/OTP: e-mail normalised and matched case-insensitively (`verify_otp` `:341`).
+* Profile PUT: e-mail validated and checked case-insensitively (`:166-169`); `two_factor_enabled` is returned by GET (`:137`) and settable by PUT (`:177-178`) — the Settings page has a **Security** checkbox and the **Save Settings** button really saves (`script.js`); avatar uploads are limited to png/jpg/gif/webp, ≤ 2 MB and verified with Pillow (`:195-210`), served with the right content-type (`:896`).
+* `save-match` validates `game_type`/`result`/`score` (`:799-815`); match dates are ISO 8601 (`:127`, `:783`); "Find Users" hides inactive accounts (`:1013`); no secrets are printed to the log.
+* Tournaments (`tournaments/views.py`): `add_players` rejects blank/too-long/duplicate nicknames and a second registration (`:42-81`, atomic); `finish_match` casts scores to `int`, rejects negatives and ties (`:174-200`); `Tournament.get_winner` plays further tiebreaker rounds until one winner remains (`tournaments/models.py:18-99`); the SPA keeps the tournament id in `localStorage` so a refresh no longer loses it.
+* Previous account's avatar / "The Champion" display-name bugs (first sweep) remain fixed.
+
+Caveats to admit if asked:
 * **Friend "online status"** is not implemented (friends list shows name/username only).
 * **Display name uniqueness** is not enforced (only `username`/`email` are unique).
 * **Tournament players are aliases**, not linked to accounts; stats exclude tournament games by design (`profile_view` `.exclude(game_type='TOURNAMENT')` `:82-86`).

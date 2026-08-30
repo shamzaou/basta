@@ -4,7 +4,7 @@
 
 ## What the app is
 
-FAST_PONG is our 42 Abu Dhabi ft_transcendence capstone: a single-page web app where a registered user plays **3D Pong** (Three.js) against another person on the same keyboard or against an AI, (with a **Player-vs-Player** mode or an **AI opponent**), sees match history and a **stats dashboard** on a profile (plus a bonus TicTacToe mini-game that is *not* a claimed module), manages friends, runs local **round-robin tournaments** with tiebreakers, logs in with **email/password + optional email 2FA** or with **42 OAuth**, and exercises **GDPR rights** (export, anonymize, delete). Branding in the UI is "FAST_PONG"; the repo/compose project is named `basta`.
+FAST_PONG is our 42 Abu Dhabi ft_transcendence capstone: a single-page web app where a registered user plays **3D Pong** (Three.js) against another person on the same keyboard or against an AI, (with a **Player-vs-Player** mode or an **AI opponent**), sees match history and a **stats dashboard** on a profile (plus a bonus TicTacToe mini-game that is *not* a claimed module), manages friends, runs local **round-robin tournaments** with tiebreakers, logs in with **email/password + optional email 2FA** or with **42 OAuth**, and exercises **GDPR rights** (export, delete). Branding in the UI is "FAST_PONG"; the repo/compose project is named `basta`.
 
 ## The stack (as deployed by `docker-compose.yml`)
 
@@ -28,7 +28,7 @@ FAST_PONG is our 42 Abu Dhabi ft_transcendence capstone: a single-page web app w
 make build      # docker-compose build
 make up         # docker-compose up -d  -> https://localhost  (accept the self-signed cert)
 make logs       # follow container logs (note: Gunicorn stdout goes to gunicorn-error.log, see below)
-make test       # docker-compose exec web python manage.py test   (17 tests, all green)
+make test       # docker-compose exec web python manage.py test   (34 tests, all green)
 make migrate    # apply migrations inside the container
 make shell      # Django shell
 make down       # stop

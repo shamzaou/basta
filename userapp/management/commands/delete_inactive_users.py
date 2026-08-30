@@ -72,10 +72,12 @@ class Command(BaseCommand):
             for user in users_to_delete:
                 self.stdout.write(f"Deleting inactive user: {user.email}, last active: {user.last_activity}")
                 if not dry_run:
+                    # Best-effort notification: a mail failure must never keep the data
                     try:
-                        # Send deletion notification
                         self._send_deletion_email(user)
-                        # Delete the user
+                    except Exception as e:
+                        logger.error(f"Failed to notify user {user.email} before deletion: {str(e)}")
+                    try:
                         user.delete()
                     except Exception as e:
                         logger.error(f"Failed to delete user {user.email}: {str(e)}")

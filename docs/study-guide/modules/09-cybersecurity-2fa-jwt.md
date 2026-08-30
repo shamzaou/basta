@@ -18,10 +18,10 @@ Implement 2FA as an additional security layer (e.g. a one-time code by e-mail/SM
 ### JWT
 * Library: `djangorestframework-simplejwt`; settings `SIMPLE_JWT` (`backend/settings.py:65-71`): access 60 min, refresh 7 days, `ROTATE_REFRESH_TOKENS`, `BLACKLIST_AFTER_ROTATION` (blacklist app not installed → rotation happens, blacklisting is a no-op).
 * Issued with `RefreshToken.for_user(user)` in `login_view` `:275`, `verify_otp` `:329`, `get_token` (42 OAuth) `:653`, `oauth_callback` `:559`.
-* Stored by the SPA in `localStorage` (`authToken`, `refreshToken`, `script.js:293-294`, `:359-360`, `:1057-1063`) and sent as `Authorization: Bearer <access>` on API calls (e.g. `script.js:1067`, `pong.js:929`, `tictactoe.js:142`).
+* Stored by the SPA in `localStorage` (`authToken`, `refreshToken`) and sent as `Authorization: Bearer <access>` by `authFetch` (`script.js:1499`; the games use `window.authFetch`, `pong.js:1007`, `tictactoe.js:145`).
 * Validated by DRF's `JWTAuthentication` (first in `REST_FRAMEWORK` defaults, `settings.py:56-63`) on every `@api_view` view that does **not** override `authentication_classes`: `match_history_view`, `save_match_view`, `create_match`, `delete_account`, `export_user_data`, `get_all_users`, `get_friends`, `add_friend`, `remove_friend`.
 * `profile_view` and `user_settings_view` override to `[TokenAuthentication, SessionAuthentication]` (`views.py:75`, `:701`) → in the browser they authenticate through the **session cookie** created by `login()`; the Bearer header is ignored there. Be honest about this.
-* Refresh: `TokenRefreshView` at `/api/auth/token/refresh/` (`userapp/urls.py:21`); SPA `refreshAccessToken` (`script.js:1425-1453`) and `scheduleTokenRefresh` (refresh 1 min before `exp`, `:1490-1506`); `getAccessToken` decodes the payload to check expiry (`:1438-1457`).
+* Refresh: `TokenRefreshView` at `/api/auth/token/refresh/` (`userapp/urls.py:21`); SPA `refreshAccessToken` (`script.js:1438`), `scheduleTokenRefresh` (refresh 1 min before `exp`, `:1472`) and `getAccessToken` (`:1417`). **🆕 Second sweep:** these are now actually used — every JWT call goes through `authFetch` (`:1499`, retries once after a 401), the timer is armed after password/OTP/42 login and an expired token is refreshed on page load; before, only the 42 path armed the timer and the app silently failed after 60 minutes.
 * Also issued: `TokenObtainPairView` at `/api/auth/token/` (`urls.py:19`) — not used by the SPA. `oauth_callback` (`views.py:515-582`) sets HttpOnly JWT cookies but that route is not used (42 redirects to the SPA, which uses `get_token`).
 * Legacy: `userapp/utils.py:6` `jwt_required` verifies with `JWT_SETTINGS['JWT_SECRET_KEY']` (different key from SimpleJWT's `SECRET_KEY`) → `check_auth` (`views.py:470`) always rejects; dead code, not called by the SPA.
 
@@ -65,6 +65,8 @@ Every authenticated feature (profile, games, friends, GDPR, tournaments page gat
 
 ## Status after audit
 Code path verified with the locmem backend (tests), the console backend (live, OTP read from `gunicorn-error.log`) and the real SMTP backend (login returns 200 and logs the Gmail 534 error). **Actual Gmail delivery** needs a new app password for `transcendance.2fa@gmail.com` — only the team can do that. For the demo without Gmail: set `EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend` in `.env`, `make restart`, read the code from `gunicorn-error.log`.
+
+**🆕 Second sweep:** users can turn 2FA on/off in Settings (checkbox → `PUT /api/auth/profile/ {two_factor_enabled}`, `userapp/views.py:177-178`); the e-mail is normalised (`strip().lower()`, `email__iexact`) at registration, login and OTP verification, so `Upper.Name@X.com` can log in as `upper.name@x.com`; a bad JSON body to `/login/` returns 400 and unexpected errors a generic 500 (`views.py:321-324`); OTP values are no longer printed to the log.
 
 Limitations to admit: tokens in `localStorage` (XSS-readable) rather than HttpOnly cookies; no rate limiting on `verify-otp` (6 digits, 10 min → brute-force feasible; mitigation: attempt counter in the cache); `SESSION_COOKIE_SECURE=False`; the refresh-token blacklist app is not installed; `check_auth` is dead.
 

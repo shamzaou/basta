@@ -65,7 +65,6 @@ test:
 clean:
 	@echo "$(GREEN)Cleaning up...$(RESET)"
 	docker-compose down -v
-	rm -rf postgres_data
 	find . -type d -name "__pycache__" -exec rm -r {} +
 	find . -type f -name "*.pyc" -delete
 

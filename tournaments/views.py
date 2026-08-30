@@ -4,6 +4,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_protect, csrf_exempt
 from django.shortcuts import get_object_or_404
+from django.db import transaction, IntegrityError, DataError
 import json
 from itertools import combinations
 from .models import Tournament, Player, Match
@@ -48,27 +49,35 @@ def add_players(request, tournament_id):
     tournament = get_object_or_404(Tournament, id=tournament_id)
     try:
         data = json.loads(request.body)
-        nicknames = data['nicknames']
+        nicknames = [str(n).strip() for n in data['nicknames']]
+        # Players can only be added once per tournament
+        if tournament.players.exists():
+            return JsonResponse({'success': False, 'error': 'Players already added'}, status=400)
         # Проверяем, что количество ников соответствует participants_count
         if len(nicknames) != tournament.participants_count:
             return JsonResponse({'success': False, 'error': 'Number of nicknames must match participants_count'}, status=400)
-        
+        if any(not n for n in nicknames):
+            return JsonResponse({'success': False, 'error': 'Nicknames cannot be empty'}, status=400)
+        if any(len(n) > 50 for n in nicknames):
+            return JsonResponse({'success': False, 'error': 'Nickname too long (max 50)'}, status=400)
+
         # Проверяем дубли
         if len(set(nicknames)) != len(nicknames):
             return JsonResponse({'success': False, 'error': 'Duplicate nicknames detected'}, status=400)
-        
-        # Создаём объекты Player
-        players = []
-        for nickname in nicknames:
-            player = Player.objects.create(tournament=tournament, nickname=nickname)
-            players.append(player)
-        
-        # Генерируем все матчи в стиле "каждый с каждым"
-        for p1, p2 in combinations(players, 2):
-            Match.objects.create(tournament=tournament, player1=p1, player2=p2)
-        
+
+        with transaction.atomic():
+            # Создаём объекты Player
+            players = []
+            for nickname in nicknames:
+                player = Player.objects.create(tournament=tournament, nickname=nickname)
+                players.append(player)
+
+            # Генерируем все матчи в стиле "каждый с каждым"
+            for p1, p2 in combinations(players, 2):
+                Match.objects.create(tournament=tournament, player1=p1, player2=p2)
+
         return JsonResponse({'success': True})
-    except (KeyError, ValueError, json.JSONDecodeError):
+    except (KeyError, ValueError, TypeError, json.JSONDecodeError, IntegrityError, DataError):
         return JsonResponse({'success': False, 'error': 'Invalid data'}, status=400)
 
 def view_tournament(request, tournament_id):
@@ -175,22 +184,30 @@ def finish_match(request, match_id):
             return JsonResponse({'success': False, 'message': 'Match is already completed'}, status=400)
         
         data = json.loads(request.body)
-        match.score_player1 = data['score_player1']
-        match.score_player2 = data['score_player2']
-        
-        if data['score_player1'] > data['score_player2']:
-            match.winner = match.player1
-        elif data['score_player1'] < data['score_player2']:
-            match.winner = match.player2
-        else:
-            match.winner = None  # Ничья (на всякий случай)
-        
+        try:
+            score1 = int(data['score_player1'])
+            score2 = int(data['score_player2'])
+        except (KeyError, ValueError, TypeError):
+            return JsonResponse({'success': False, 'message': 'Scores must be integers'}, status=400)
+        if score1 < 0 or score2 < 0:
+            return JsonResponse({'success': False, 'message': 'Scores cannot be negative'}, status=400)
+        if score1 == score2:
+            return JsonResponse({'success': False, 'message': 'Scores cannot be equal'}, status=400)
+
+        match.score_player1 = score1
+        match.score_player2 = score2
+        match.winner = match.player1 if score1 > score2 else match.player2
+
         match.is_complete = True
         match.save()
-        
+
         return JsonResponse({'success': True})
-    except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+    except Match.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Match not found'}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON'}, status=400)
+    except Exception:
+        return JsonResponse({'success': False, 'message': 'Failed to finish match'}, status=500)
 
 
 @require_POST

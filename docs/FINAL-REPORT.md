@@ -2,7 +2,7 @@
 
 Everything below was done on `master` in small commits. `make build && make up` works from a
 clean checkout with a fresh database volume, the site serves at https://localhost, and
-`make test` passes (17 tests). Screenshots of every page were captured from the running site
+`make test` passes (34 tests). Screenshots of every page were captured from the running site
 with headless Chrome (0 JavaScript errors).
 
 ## 1. What was fixed (with root causes)
@@ -19,9 +19,19 @@ with headless Chrome (0 JavaScript errors).
 | Avatar of the previous account stayed after switching users | nav/settings avatar `src` was only set when the current account had a picture; never reset inside the SPA | `static/frontend/js/script.js` (`updateNavAvatar`, `loadSettingsData`, `handleLogout`) |
 | Silent token refresh broken | wrong URL + undefined `logout()` | `static/frontend/js/script.js` |
 | GDPR cron not runnable | no cron in the image | `Makefile` (`gdpr-cleanup`, `gdpr-cleanup-run`) |
+| **Second sweep (30 bugs, 30 Aug 2026)** — auth: app silently broke after the 60-min JWT expiry | refresh timer only armed after 42 login; `getAccessToken()` unused | `script.js` `window.authFetch` (fresh token, 401 retry), `scheduleTokenRefresh` after every login, refresh on page load |
+| Registration / email validation | raw DB error on duplicates, case-sensitive email, no format check, similarity validator skipped | `userapp/views.py` (`register_view`, `login_view`, `verify_otp`, `profile_view`) |
+| Secrets in the server log | debug `print`s of passwords, headers, OTP codes | `userapp/views.py` |
+| Tournaments: bracket corruption, blank/long names, string score comparison, unresolved second tie, lost on refresh | no input validation, single tiebreak round, id only in memory | `tournaments/views.py`, `tournaments/models.py::get_winner`, `script.js::setCurrentTournament` |
+| Settings: Save button did nothing, no way to toggle 2FA | handler only alerted; no endpoint/UI | `script.js`, `index.html` Security section, `profile_view` PUT `two_factor_enabled` |
+| Pong: canvas broke on resize, no touch controls, pause key leak, no winner text, dead AI difficulty code, stuck keys on alt-tab | duplicate `handleResize`, keyboard-only input, listeners never removed, `scoreDiff = 0` | `static/frontend/js/pong.js` (`GameRenderer.dispose`, `InputHandler` pointer events, `PongAI`, `showWinner`) |
+| TicTacToe cleanup was a no-op; bogus state POSTs from both games | unbound handlers, leftover calls | `static/frontend/js/tictactoe.js`, `pong.js` |
+| GDPR cleanup never deleted while email failed | deletion mail sent before `delete()` in the same `try` | `delete_inactive_users.py` |
+| Misc: double page initialisation / double Back, OTP modal (Enter, Cancel), avatar size/type checks, logged-out access to game pages, save-match validation, inactive users listed, invalid dates in Firefox, alert/logout ordering, `make clean` | — | `script.js`, `index.html`, `userapp/views.py`, `Makefile` |
 
-Regression tests: `userapp/tests.py` (14 tests: 2FA flow, slow/failing email backends, GDPR
-export/delete/cleanup command, plain login) and `tournaments/tests.py` (3).
+Regression tests: `userapp/tests.py` (26 tests: 2FA flow, slow/failing email backends, GDPR
+export/delete/cleanup command, registration/email validation, profile PUT, save-match validation,
+avatar limits) and `tournaments/tests.py` (8: tiebreak rounds, player/score validation).
 Full details, severities and the deferred-issue list: `docs/audit-report.md`.
 
 ## 2. What remains for the humans

@@ -24,15 +24,16 @@ Use advanced 3D techniques (Three.js/WebGL) to render the Pong game, providing a
 | Paddles | `BoxGeometry(0.2,0.8,1.4)`, emissive cyan Phong material, at x = ±4.9 | `pong.js:443-458` |
 | Net | `BoxGeometry(0.05,0.4,6)` | `pong.js:460-470` |
 | Physics | `GamePhysics.updatePhysics` — velocity + spin (`ballSpin.z` bends trajectory `:64`), mesh rotation `:70-71`, wall bounce with clamp-back 🆕 `:77-83`, paddle hit-box `:86-93`, scoring `:96-97`; `handlePaddleCollision` computes bounce angle from hit offset (`bounceAngle = relativeIntersectZ·π/4`) and speeds up 5 % per hit; `resetBall` serves with |vz| ∈ [0.01, 0.03] 🆕 `:35-45` | `pong.js:27-100` |
-| Input | `InputHandler` — W/S and ↑/↓ via a `Set` of pressed keys, arrow keys ignored in AI mode, cleanup removes listeners | `pong.js:507-582` |
-| AI | `PongAI` — samples ball once per second (`UPDATE_INTERVAL`), predicts intercept with error (`ACCURACY`) and `MISTAKE_CHANCE`, speed-limited moves | `pong.js:585-676` |
+| Input | `InputHandler` — W/S and ↑/↓ via a `Set` of pressed keys, arrow keys ignored in AI mode; 🆕 pointer/touch: `pointerdown/move/up` on the canvas (`touch-action: none`), left half → paddle 1, right half → paddle 2 (ignored vs AI), multi-touch by `pointerId`, vertical position → z ∈ [−2.1, 2.1]; keys cleared on `blur`/`visibilitychange`; cleanup removes every listener | `pong.js:540-660` (pointer `:556`, blur `:551-552`) |
+| AI | `PongAI` — samples ball once per second (`UPDATE_INTERVAL`), predicts intercept with error (`ACCURACY`) and `MISTAKE_CHANCE`, speed-limited moves, 🆕 difficulty driven by the live score | `pong.js:666-755` |
 | Game loop | `animate()` → `requestAnimationFrame`, `update()` only when `playing`, `render()` each frame | `pong.js:1111-1121`, `:1071-1098` |
-| Pause | Space toggles `#pauseOverlay` | `pong.js:1049-1069`, overlay `:744-771` |
+| Pause | Space toggles `#pauseOverlay`; 🆕 the handler is stored as `pauseHandler` and removed (with the overlay) in `cleanup()` | `pong.js:1144-1150`, `:1201-1213` |
 | HUD overlay | DOM elements absolutely positioned over the canvas: score, instructions, player names, controls; CSS injected by `injectStyles` | `pong.js:120-159`, `:161-314` |
 | Mode selection | `initializeGame` shows "Player vs Player / Player vs AI" unless a tournament match is active | `pong.js:1123-1173` |
-| Resize | `window 'resize'` → `handleResize` (note: two definitions; the later one at `:472` overrides and resizes to the window) | `pong.js:117`, `:352-357`, `:472-476` |
+| Resize | `window 'resize'` → the single `handleResize` (4:3 inside the container); 🆕 the duplicate window-sized definition was removed and `GameRenderer.dispose()` removes the listener, canvas, HUD and GPU context | `pong.js:128-140`, `:381` |
 | Result persistence | `finishMatch` → tournament `finish/` or `saveMatchHistory` → `/api/auth/save-match/` | `pong.js:826-957` |
-| Cleanup on route change | `cleanup()` cancels the animation frame and removes key listeners | `pong.js:1100-1109`; called from `script.js:100-103` |
+| Cleanup on route change | `cleanup()` cancels the animation frame, removes key/pointer/pause listeners, the overlay and disposes the renderer | `pong.js:1195-1215`; called from `script.js` `initializeGameIfNeeded` |
+| Winner text 🆕 | `showWinner(key)` writes "`<name>` wins! p1 - p2" into `#instructions`; restart restores the hint | `pong.js:1041-1047` |
 
 **🆕 Fixed in Aug-2026 audit — ball stuck on the wall:** the original wall check ran after the ball had moved and only flipped `ballVelocity.z` (×0.9 damping) without pushing the ball back inside the ±2.9 table. If the ball overshot the wall by more than 0.9 × its z-speed it was still outside on the next frame, flipped again, and so on — the vertical speed decayed to zero and the ball glided along the wall in a straight line (a Node harness driving the real `GamePhysics` reproduced it: final z 3.05, vz 0.0000). Serves were also nearly flat about a quarter of the time (vz drawn uniformly in ±0.02). The fix clamps `ball.position.z` to the wall, sets `ballVelocity.z` explicitly away from it with a 0.01 minimum, and serves with |vz| between 0.01 and 0.03 (`pong.js:35-45`, `:74-83`). Post-fix harness: 0 stuck rallies, 0 flat serves.
 
@@ -41,10 +42,10 @@ Use advanced 3D techniques (Three.js/WebGL) to render the Pong game, providing a
 * Normal games post to `save-match/` with the JWT (`:925`), feeding profile stats.
 * Depends on the CDN `three.min.js`; no bundler, so `pong.js` is an ES module that expects the global `THREE`.
 
-**🆕 Changed in Aug-2026 audit:** none in this module. Verified by a headless-Chrome walkthrough that clicked "Player vs AI" and rendered the WebGL scene (screenshot `11-pong-3d-vs-ai`).
+**🆕 Changed in the Aug-2026 second sweep:** duplicate `handleResize` removed + `dispose()`; pointer/touch controls; pause-handler and overlay cleanup; winner announcement; state POSTs only for integer tournament match ids (`:882`) and no invented ids on restart (`:787`); tournament globals cleared on NEXT GAME (`:1083`). Verified live: canvas stays 800×600 after a viewport resize, `touch-action: none`, no leftover overlay/canvas after leaving the page.
 
 ## Status after audit
-Works ✅ in Chrome (SwiftShader headless) and real GPUs. Caveats: CDN dependency (offline → `THREE is not defined`); the second `handleResize` (`:472`) resizes to the full window instead of the container (visual quirk only on resize); `updateDifficulty` uses a hard-coded `scoreDiff = 0` (`:654`) so the AI never adapts; `initializeMatch` (`:773`) posts to a non-existent route and is not called.
+Works ✅ in Chrome (SwiftShader headless) and real GPUs, keyboard and touch. Remaining caveat: CDN dependency (offline → `THREE is not defined`).
 
 ## Likely evaluator questions
 1. **Why Three.js?** A thin, well-documented scene-graph API over WebGL: cameras, lights, materials and geometries without writing shaders, loadable from a `<script>` tag (no build step, consistent with our vanilla-JS front-end).

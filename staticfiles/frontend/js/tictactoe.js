@@ -22,13 +22,20 @@ class TicTacToeGame {
             [0, 4, 8], [2, 4, 6]
         ];
 
+        // Bound once so cleanup() can remove exactly these listeners
+        this.onCellClick = (e) => this.handleCellClick(e.target);
+        this.onRestart = () => this.handleRestart();
+
         this.setupStyles();
         this.setupGameBoard();
         this.initializeMatch();
     }
 
     setupStyles() {
+        // Inject the game styles once per page, not once per game instance
+        if (document.getElementById('tictactoe-styles')) return;
         const style = document.createElement('style');
+        style.id = 'tictactoe-styles';
         style.textContent = `
             #game-board {
                 display: grid;
@@ -106,7 +113,7 @@ class TicTacToeGame {
             const cell = document.createElement('div');
             cell.className = 'cell';
             cell.setAttribute('data-cell-index', i);
-            cell.addEventListener('click', (e) => this.handleCellClick(e.target));
+            cell.addEventListener('click', this.onCellClick);
             this.gameBoard.appendChild(cell);
         }
         this.container.appendChild(this.gameBoard);
@@ -115,7 +122,7 @@ class TicTacToeGame {
         this.resetButton = document.createElement('button');
         this.resetButton.id = 'reset-btn';
         this.resetButton.textContent = 'RESET GAME';
-        this.resetButton.addEventListener('click', () => this.handleRestart());
+        this.resetButton.addEventListener('click', this.onRestart);
         this.container.appendChild(this.resetButton);
 
         this.updateStatusDisplay();
@@ -134,14 +141,14 @@ class TicTacToeGame {
     async initializeMatch() {
         try {
             const token = localStorage.getItem('authToken');
-    
-            const response = await fetch('/api/auth/match/create/', {
+            // authFetch (script.js) refreshes an expired JWT and retries; plain fetch as fallback
+            const doFetch = window.authFetch || fetch;
+            const headers = { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') };
+            if (!window.authFetch) headers['Authorization'] = `Bearer ${token}`;
+
+            const response = await doFetch('/api/auth/match/create/', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,  // Add JWT authentication
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
+                headers,
                 body: JSON.stringify({
                     game_type: 'TICTACTOE',
                     mode: 'vsAI'
@@ -162,30 +169,6 @@ class TicTacToeGame {
         } catch (error) {
             console.error('Failed to initialize Tic-Tac-Toe match:', error);
             return null;
-        }
-    }
-
-    async updateMatchState() {
-        if (!this.state.matchId) return;
-
-        try {
-            await fetch(`/api/game/match/${this.state.matchId}/state`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify({
-                    state: {
-                        board: this.gameState,
-                        current_player: this.currentPlayer,
-                        game_status: this.state.gameStatus,
-                        score: this.state.score
-                    }
-                })
-            });
-        } catch (error) {
-            console.error('Failed to update match state:', error);
         }
     }
 
@@ -217,15 +200,14 @@ class TicTacToeGame {
             const scoreString = `${userScore}-${opponentScore}`;
     
             const tokenFM = localStorage.getItem('authToken');
-            
+            const doFetch = window.authFetch || fetch;
+            const headers = { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') };
+            if (!window.authFetch) headers['Authorization'] = `Bearer ${tokenFM}`;
+
             // Send result to backend
-            const response = await fetch('/api/auth/save-match/', {
+            const response = await doFetch('/api/auth/save-match/', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${tokenFM}`,
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
+                headers,
                 body: JSON.stringify({
                     game_type: 'TICTACTOE',
                     opponent: opponent,
@@ -259,7 +241,6 @@ class TicTacToeGame {
         clickedCell.innerHTML = this.currentPlayer;
 
         this.checkResult();
-        this.updateMatchState();
     }
 
     checkResult() {
@@ -315,9 +296,9 @@ class TicTacToeGame {
 
     cleanup() {
         document.querySelectorAll('.cell').forEach(cell => {
-            cell.removeEventListener('click', this.handleCellClick);
+            cell.removeEventListener('click', this.onCellClick);
         });
-        this.resetButton?.removeEventListener('click', this.handleRestart);
+        this.resetButton?.removeEventListener('click', this.onRestart);
     }
 }
 

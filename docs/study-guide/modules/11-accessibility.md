@@ -19,14 +19,15 @@
 | Base font scaling | `body,html { font-size: 14px }` under 768 px | `styles.css` (inside the first 768 px block) |
 | Hamburger menu | `.hamburger` hidden on desktop (`:206`), shown ≤768 px (`:756`); nav lists hidden until `.active`; JS toggle + click-outside close | `styles.css`, `static/frontend/js/script.js:600-633` |
 | Fluid grids | profile stats `repeat(auto-fit, minmax(200px,1fr))`; profile/friends two columns → one column at 920 px; team grid | `styles.css` (grep `auto-fit`, `920px`) |
-| Game canvas | `calculateSize()` keeps 4:3 inside the container, max 800×600; `resize` listener | `static/frontend/js/pong.js:316-331`, `:117` |
+| Game canvas | `calculateSize()` keeps 4:3 inside the container, max 800×600; single `resize` listener removed on dispose (🆕) | `static/frontend/js/pong.js:381`, `:128-140` |
+| Touch controls 🆕 | pointer events on the canvas (`touch-action: none`): drag on your half to move your paddle (left = P1, right = P2; vs AI only the left half) | `pong.js:551-560` |
 | TicTacToe board (extra feature) | CSS grid `max-width:300px`, `aspect-ratio:1` cells | `static/frontend/js/tictactoe.js:33-53` |
 | Tables | `.table-container` wrappers for tournament tables | `templates/frontend/index.html:530-565` |
 | Bootstrap `.container` | responsive max-widths | `index.html` (37 uses) |
 
 Verified: screenshots `16-mobile-home`, `17-mobile-menu-open`, `18-mobile-profile` (390 px wide) and the desktop set.
 
-Q&A: *How do you handle phones?* Media queries at 768/480 px, hamburger nav, fluid grids, viewport meta. *Can you play Pong on a phone?* It renders and scales, but controls are keyboard-only (W/S, arrows) — limitation; touch controls are a listed improvement. *Why custom breakpoints instead of the Bootstrap grid?* CSS Grid/Flexbox gave finer control for the arcade layout; Bootstrap supplies `.container` and buttons.
+Q&A: *How do you handle phones?* Media queries at 768/480 px, hamburger nav, fluid grids, viewport meta. *Can you play Pong on a phone?* Yes — 🆕 since the second sweep you drag on your half of the canvas (pointer events, multi-touch for two players on one tablet); keyboard still works on desktop. *Why custom breakpoints instead of the Bootstrap grid?* CSS Grid/Flexbox gave finer control for the arcade layout; Bootstrap supplies `.container` and buttons.
 
 ## 2. Expanding browser compatibility
 
@@ -54,4 +55,4 @@ Honest framing: "template-level SSR of the application shell with server-resolve
 Q&A: *Where is SSR?* `index()` + Django templates; view-source shows full HTML, not an empty `<div id="root">`. *Why not Next/Nuxt?* The subject forbids front-end frameworks beyond the toolkit; Django templates are the sanctioned server renderer. *What is rendered on the server vs client?* Shell/markup/text/asset URLs server-side; user data client-side. *Does SEO benefit?* Public pages (home, about incl. privacy policy) are fully crawlable.
 
 ## Status after audit (all three)
-Responsive ✅, browsers ✅, SSR partial ⚠️. Nothing in these modules was changed by the audit.
+Responsive ✅ (🆕 Pong now has touch controls), browsers ✅ (🆕 match dates are ISO 8601, so `new Date()` parses them in Firefox/Safari too), SSR partial ⚠️.
