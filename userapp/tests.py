@@ -443,3 +443,24 @@ class AnonymizationTests(TestCase):
         u, created = get_or_create_42_user({'id': 777, 'login': 'hank', 'email': 'hank@student.42.fr'})
         self.assertTrue(created)
         self.assertEqual(u.username, 'hank_777')
+
+
+class FortyTwoTwoFactorTests(TestCase):
+    """2FA is a password-login feature: 42 OAuth accounts cannot switch it on."""
+
+    def test_42_accounts_cannot_enable_2fa(self):
+        u = User.objects.create_user(username='intra42', email='intra42@example.com', password=None,
+                                     is_42_user=True, intra_id='4242')
+        c = Client(); c.force_login(u)
+        r = c.put('/api/auth/profile/', {'two_factor_enabled': True}, content_type='application/json')
+        self.assertEqual(r.status_code, 400, r.content)
+        u.refresh_from_db(); self.assertFalse(u.two_factor_enabled)
+        self.assertTrue(c.get('/api/auth/profile/').json()['is_42_user'])
+
+    def test_password_accounts_can_enable_2fa(self):
+        u = User.objects.create_user(username='local42', email='local42@example.com', password='Str0ng!Passw0rd')
+        c = Client(); c.force_login(u)
+        r = c.put('/api/auth/profile/', {'two_factor_enabled': True}, content_type='application/json')
+        self.assertEqual(r.status_code, 200, r.content)
+        u.refresh_from_db(); self.assertTrue(u.two_factor_enabled)
+        self.assertFalse(c.get('/api/auth/profile/').json()['is_42_user'])

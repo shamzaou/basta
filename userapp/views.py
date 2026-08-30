@@ -172,6 +172,7 @@ def profile_view(request):
                 'avatar': user.profile_picture.url if user.profile_picture else None,
                 'date_joined': summary['date_joined'],
                 'two_factor_enabled': user.two_factor_enabled,
+                'is_42_user': user.is_42_user,
                 'stats': summary['stats'],
                 'match_history': matches
             })
@@ -206,9 +207,16 @@ def profile_view(request):
                     }, status=400)
                 user.email = new_email
 
-            # 2FA can be switched on/off from the settings page
+            # 2FA can be switched on/off from the settings page - except for 42 OAuth
+            # accounts: they never type a password here, so an e-mail code protects nothing.
             if 'two_factor_enabled' in data:
-                user.two_factor_enabled = data['two_factor_enabled'] in (True, 'true', 'True', 1, '1')
+                wanted = data['two_factor_enabled'] in (True, 'true', 'True', 1, '1')
+                if wanted and user.is_42_user:
+                    return Response({
+                        'status': 'error',
+                        'message': 'Two-factor authentication is not available for 42 accounts'
+                    }, status=400)
+                user.two_factor_enabled = wanted
             
             if 'display_name' in data:
                 # Direct update of display_name

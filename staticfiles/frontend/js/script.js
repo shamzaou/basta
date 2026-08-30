@@ -618,8 +618,10 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const displayNameInput = document.getElementById('display-name');
             const twoFactorToggle = document.getElementById('two-factor-toggle');
+            const securitySection = document.getElementById('security-section');
             const payload = { display_name: displayNameInput ? displayNameInput.value.trim() : '' };
-            if (twoFactorToggle) {
+            // 42 OAuth accounts have no 2FA option (the section is hidden for them)
+            if (twoFactorToggle && !(securitySection && securitySection.hidden)) {
                 payload.two_factor_enabled = twoFactorToggle.checked;
             }
             try {
@@ -1341,6 +1343,12 @@ async function loadSettingsData() {
             const twoFactorToggle = document.getElementById('two-factor-toggle');
             if (twoFactorToggle) {
                 twoFactorToggle.checked = !!data.two_factor_enabled;
+            }
+            // Accounts that sign in through 42 never use a password here, so the
+            // e-mail second factor does not apply - hide the whole Security section.
+            const securitySection = document.getElementById('security-section');
+            if (securitySection) {
+                securitySection.hidden = !!data.is_42_user;
             }
         }
     } catch (error) {

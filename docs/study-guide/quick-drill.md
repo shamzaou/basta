@@ -83,7 +83,7 @@ Answers describe the code **as it is after the Aug-2026 audit**. Items marked ðŸ
 ```bash
 make build && make up            # https://localhost  (accept the self-signed cert)
 make logs                        # container logs (entrypoint output)
-make test                        # 54 tests
+make test                        # 56 tests
 make shell                       # Django shell
 make db                          # psql into basta_db  (\dt to list tables)
 make gdpr-cleanup                # dry-run inactivity cleanup
