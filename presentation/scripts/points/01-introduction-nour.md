@@ -1,4 +1,4 @@
-# 01 · Introduction — Nour (slides 3–6, about 2 minutes)
+# 01 · Introduction — Nour (slides 3–5, about 1.5 minutes)
 
 ## Slide 3 — Section divider
 - Say hello. Say your name. Say: "I present the introduction."
@@ -21,9 +21,4 @@
   4. Tournament mode — 3 to 8 players, everyone plays everyone.
   5. Security and GDPR — protection from attacks; export, anonymize, delete data.
   6. Team work — Agile, Git branches, code review.
-
-## Slide 6 — Scope of the Project
-- Read the 8 cards quickly (one line each):
-  - User management · Pong 3D · Tic-Tac-Toe · Tournaments
-  - Profiles & statistics · Security & privacy · Deployment (Docker) · Team process
-- Finish: "Now Ali will talk about how we organised the work."
+- Finish: "Now Ali will explain how we organised the work."

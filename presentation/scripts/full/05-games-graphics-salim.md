@@ -1,14 +1,14 @@
-# 05 · Games & Graphics — Salim (slides 22–25, about 3.5 minutes)
+# 05 · Games & Graphics — Salim (slides 20–23, about 3.5 minutes)
 
 ---
 
-## Slide 22 — Section divider
+## Slide 20 — Section divider
 
 Thanks, Nasser. Back to me for the games: the 3D Pong with its AI opponent — that's the Graphics and AI modules — and Tic-Tac-Toe, the "another game" module.
 
 ---
 
-## Slide 23 — 3D Pong and the AI opponent
+## Slide 21 — 3D Pong and the AI opponent
 
 When you open Pong you choose a mode. **Player vs Player** — two people on one keyboard, W/S and the arrow keys, or on a touch screen by dragging on your half of the canvas. **Player vs AI** — the right paddle is driven by our PongAI.
 
@@ -18,7 +18,7 @@ When a game ends, the result is posted to `/api/auth/save-match/` with the JWT, 
 
 ---
 
-## Slide 24 — Inside the graphics and the AI
+## Slide 22 — Inside the graphics and the AI
 
 **The scene.** A `PerspectiveCamera` with a 75-degree field of view looks down at the table from above and behind. Lighting is an ambient light plus a spot light, so the Phong materials show specular highlights on the glossy table. The paddles are emissive cyan, the net is a thin box, and the table has neon edge lines built from `EdgesGeometry`. The ball's magenta stripes are painted on an HTML canvas at start-up and used as a `CanvasTexture` — that's why it visibly spins. The renderer is antialiased, and the HUD is DOM elements composited over the canvas.
 
@@ -36,7 +36,7 @@ And no A\*, which the subject forbids: A\* searches a graph, and Pong has no gra
 
 ---
 
-## Slide 25 — Tic-Tac-Toe: the second game, history and matchmaking
+## Slide 23 — Tic-Tac-Toe: the second game, history and matchmaking
 
 The "add another game" module asks for three things: a game distinct from Pong, user history tracking, and a matchmaking system.
 

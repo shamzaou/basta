@@ -1,20 +1,20 @@
 # Nour — speaking script (full)
 
-You present **2 section(s)**, total ≈ **4 min** of speaking time. They come in this order during the talk:
+You present **2 section(s)**, total ≈ **~3.5 min** of speaking time, in this order during the talk:
 
 | Order | Your section | Slides | Time |
 |---|---|---|---|
-| 01 | Introduction | 3–6 | 2 min |
-| 06 | Tournaments | 26–28 | 2 min |
+| 01 | Introduction | 3–5 | 1.5 min |
+| 06 | Tournaments | 24–26 | 2 min |
 
-Other people speak between your sections — wait for the hand-over, then take the clicker. The `full/` wording is to rehearse, not to read aloud on the day; keep the `points/` version in your hand.
+Other people speak between your sections — wait for the hand-over, then take the clicker. The `full/` wording is to rehearse, not to read aloud; keep the `points/` version in your hand.
 
 
 
 ---
 ---
 
-# 01 · Introduction — Nour (slides 3–6, about 2 minutes)
+# 01 · Introduction — Nour (slides 3–5, about 1.5 minutes)
 
 > Simple English. Short sentences. Speak slowly. It is OK to look at the slide.
 
@@ -69,21 +69,6 @@ At the beginning, we set six goals.
 
 **Six** — team work. We used Agile, Git branches, and code review.
 
----
-
-## Slide 6 — Scope of the Project
-
-This slide shows the full scope. I will go quickly.
-
-- **User management** — register, login, 42 login, edit your profile, upload an avatar, friends.
-- **Pong 3D** — two players on one keyboard, or one player against the AI.
-- **Tic-Tac-Toe** — two players on one computer; results saved in the history.
-- **Tournaments** — create, add nicknames, automatic matches, tiebreakers, winner.
-- **Profiles and statistics** — games played, win rate, best score, recent matches, and export as JSON.
-- **Security and privacy** — hashed passwords, HTTPS, CSRF, 2FA, JWT, and GDPR tools.
-- **Deployment** — two Docker containers. One command to start.
-- **Team process** — Agile, Git branches, pull requests, peer review.
-
 That is the introduction. Now **Ali** will explain how we organised the work.
 
 ---
@@ -99,19 +84,19 @@ That is the introduction. Now **Ali** will explain how we organised the work.
 ---
 ---
 
-# 06 · Tournaments — Nour (slides 26–28, about 2 minutes)
+# 06 · Tournaments — Nour (slides 24–26, about 2 minutes)
 
 > Simple English. Short sentences. You built this part — you know it best.
 
 ---
 
-## Slide 26 — Section divider
+## Slide 24 — Section divider
 
 Thank you, Salim. I am Nour again. I made the tournament system. I will show you how it works.
 
 ---
 
-## Slide 27 — Tournament screenshots
+## Slide 25 — Tournament screenshots
 
 On the left, you create a tournament. First, you must be logged in. You choose the number of players: **from three to eight**.
 
@@ -131,7 +116,7 @@ When all matches are finished, the page shows the **winner**.
 
 ---
 
-## Slide 28 — Tournament flow
+## Slide 26 — Tournament flow
 
 Here is the full flow in six steps.
 

@@ -1,16 +1,16 @@
-# 06 · Tournaments — Nour (slides 26–28, about 2 minutes)
+# 06 · Tournaments — Nour (slides 24–26, about 2 minutes)
 
 > Simple English. Short sentences. You built this part — you know it best.
 
 ---
 
-## Slide 26 — Section divider
+## Slide 24 — Section divider
 
 Thank you, Salim. I am Nour again. I made the tournament system. I will show you how it works.
 
 ---
 
-## Slide 27 — Tournament screenshots
+## Slide 25 — Tournament screenshots
 
 On the left, you create a tournament. First, you must be logged in. You choose the number of players: **from three to eight**.
 
@@ -30,7 +30,7 @@ When all matches are finished, the page shows the **winner**.
 
 ---
 
-## Slide 28 — Tournament flow
+## Slide 26 — Tournament flow
 
 Here is the full flow in six steps.
 

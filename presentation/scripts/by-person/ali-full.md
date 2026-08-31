@@ -1,33 +1,33 @@
 # Ali — speaking script (full)
 
-You present **3 section(s)**, total ≈ **6.5 min** of speaking time. They come in this order during the talk:
+You present **3 section(s)**, total ≈ **~6.5 min** of speaking time, in this order during the talk:
 
 | Order | Your section | Slides | Time |
 |---|---|---|---|
-| 02 | Software Development Life Cycle | 7–11 | 2.5 min |
-| 07 | Profiles, Statistics & Friends | 29–31 | 2.5 min |
-| 10 | Team & Conclusion | 40–43 | 1.5 min |
+| 02 | Software Development Life Cycle | 6–10 | 2.5 min |
+| 07 | Profiles, Statistics & Friends | 27–29 | 2.5 min |
+| 09 | Team & Conclusion | 33–36 | 1.5 min |
 
-Other people speak between your sections — wait for the hand-over, then take the clicker. The `full/` wording is to rehearse, not to read aloud on the day; keep the `points/` version in your hand.
+Other people speak between your sections — wait for the hand-over, then take the clicker. The `full/` wording is to rehearse, not to read aloud; keep the `points/` version in your hand.
 
 
 
 ---
 ---
 
-# 02 · Software Development Life Cycle — Ali (slides 7–11, about 2.5 minutes)
+# 02 · Software Development Life Cycle — Ali (slides 6–10, about 2.5 minutes)
 
 > Plain English, short sentences. This section is about *how* we worked, not about code.
 
 ---
 
-## Slide 7 — Section divider
+## Slide 6 — Section divider
 
 Thank you, Nour. My name is Ali. I will explain how we organised the development — our software development life cycle.
 
 ---
 
-## Slide 8 — Chosen SDLC model: Agile
+## Slide 7 — Chosen SDLC model: Agile
 
 We chose an **Agile** model. It is iterative and incremental.
 
@@ -45,11 +45,11 @@ Four ideas describe our process.
 
 **Fourth, collaboration and feedback.** We had daily check-ins. We worked in pairs on the difficult parts. Every merge was reviewed by another team member.
 
-You can see the evidence in the repository: 86 commits between February and April 2025, and 15 pull requests merged from feature branches. In 2026 we added the pre-evaluation sweeps, which Nasser will present later.
+You can see the evidence in the repository: 86 commits between February and April 2025, and 15 pull requests merged from feature branches. In 2026 we also did several pre-evaluation sweeps to fix bugs and tighten security.
 
 ---
 
-## Slide 9 — Phases and iterations
+## Slide 8 — Phases and iterations
 
 We did not use formal sprints with fixed dates. But every feature went through the same six phases.
 
@@ -67,21 +67,19 @@ We did not use formal sprints with fixed dates. But every feature went through t
 
 ---
 
-## Slide 10 — Team collaboration and version control
+## Slide 9 — Challenges and Lessons Learned
 
-Four people worked in parallel, so we needed clear rules and tools.
+Not everything went to plan. Two problems taught us the most.
 
-**Version control.** We used Git, with GitHub as the central repository. Every change is tracked and can be reverted.
+**First, we wanted microservices.** DevOps has a module to design the backend as microservices — many small services instead of one. We tried it. But the containers could not communicate and coordinate well, and making them work together took too much of our time.
 
-**Branching strategy.** Feature branches — OAuth, tournaments, profile-page, and so on. Work in progress stayed away from master.
+So we made a decision. We built a **modular monolith** instead: one Django backend with three clean apps — userapp, gameapp and tournaments. It gives the same separation of concerns, and — most important — it actually runs. A working monolith is better than a half-built microservices system.
 
-**Code reviews.** Every branch went through a pull request before merging. Fifteen pull requests in total.
+**Second, we lost some work on GitHub.** At the start we did not use Git well together. We edited the same files without branches. So when we merged, our changes overwrote each other, and some progress was lost.
 
-**Communication.** A WhatsApp group for quick questions, and regular meetings on campus.
+The **lesson** we learned: one branch for each feature, always pull before you push, and merge only through a pull request that a teammate reviews. After we followed these rules we never lost work again — and it is exactly why we can trust our git history today.
 
----
-
-## Slide 11 — Gantt chart
+## Slide 10 — Gantt chart
 
 This is our Gantt chart. It shows the project over time.
 
@@ -97,25 +95,28 @@ That is our process. Now **Salim** will present the modules we selected and the 
 
 - *"Why not Scrum with sprints?"* — "We had irregular schedules because of other 42 projects. Feature cycles fit better than fixed two-week sprints."
 - *"How did you handle merge conflicts?"* — "Small branches, frequent merges from master, and the reviewer checked the diff before merging."
+- *"Why didn't you do the microservices module?"* — "We tried it, but our containers could not communicate and coordinate reliably in the time we had. A working modular monolith — one Django backend, three apps — was the better choice, and it is not a module we claim."
+- *"How exactly did you lose work on GitHub?"* — "Early on we edited the same files without branches, so a merge overwrote a teammate's changes. We then moved to one branch per feature and reviewed pull requests, and it stopped happening."
+- *"What would you do differently?"* — "Set up the Git discipline — branches, pull-before-push, pull requests — from day one, and decide the architecture up front instead of trying microservices late."
 - *"Did you write tests during development?"* — "Yes for the backend logic — tournaments and user views. Most of the current 54 tests were added in the 2026 audit."
 
 
 ---
 ---
 
-# 07 · Profiles, Statistics & Friends — Ali (slides 29–31, about 2.5 minutes)
+# 07 · Profiles, Statistics & Friends — Ali (slides 27–29, about 2.5 minutes)
 
 > Plain English. This is your own work — user data, history and statistics.
 
 ---
 
-## Slide 29 — Section divider
+## Slide 27 — Section divider
 
 Thank you, Nour. I'm Ali again. I worked on the user data — the profile information, the match history and the statistics. This section covers the user-management module and the stats-dashboard module, seen from the user's side.
 
 ---
 
-## Slide 30 — Player profile and stats dashboard
+## Slide 28 — Player profile and stats dashboard
 
 Every finished game is saved: Pong against a player, Pong against the AI, and Tic-Tac-Toe. Each game creates one row in the **MatchHistory** table.
 
@@ -131,11 +132,11 @@ Below, the **recent matches**: a badge with the game type — PONG or TICTACTOE 
 
 On the right, the **friends** panel with a "Find Users" button. Every friend has a small dot: green means online, grey means offline.
 
-The second screenshot is the **Settings** page. Here the user can change the display name, the e-mail and the avatar, switch two-factor authentication on or off — only for password accounts, a 42 account has no switch — and use the GDPR tools: Download my data, Anonymize, and Delete account. Salim will explain the GDPR tools.
+The second screenshot is the **Settings** page. Here the user can change the display name, the e-mail and the avatar, switch two-factor authentication on or off — only for password accounts, a 42 account has no switch — and use the GDPR tools: Download my data, Anonymize, and Delete account. Nasser will explain the GDPR tools.
 
 ---
 
-## Slide 31 — Friends, match history and user data
+## Slide 29 — Friends, match history and user data
 
 Some details.
 
@@ -149,7 +150,7 @@ Some details.
 
 One design decision: **tournament games are kept separate**. Tournament players are nicknames, not accounts, so we cannot add a tournament match to a user's personal record. The tournament has its own score table.
 
-Now Salim will present GDPR and accessibility.
+Now Nasser will present GDPR and accessibility.
 
 ---
 
@@ -165,19 +166,19 @@ Now Salim will present GDPR and accessibility.
 ---
 ---
 
-# 10 · Team & Conclusion — Ali (slides 40–43, about 1.5 minutes)
+# 09 · Team & Conclusion — Ali (slides 33–36, about 1.5 minutes)
 
 > Plain English, short. This is the closing — end with energy.
 
 ---
 
-## Slide 40 — Section divider
+## Slide 33 — Section divider
 
 Thank you, Nasser. I'm Ali. I will close the presentation with the team and the conclusion.
 
 ---
 
-## Slide 41 — Contribution of each member
+## Slide 34 — Contribution of each member
 
 Each member owned a group of modules from end to end — backend, frontend and tests — and reviewed the pull requests of the others.
 
@@ -191,7 +192,7 @@ Each member owned a group of modules from end to end — backend, frontend and t
 
 ---
 
-## Slide 42 — Conclusion
+## Slide 35 — Conclusion
 
 Ft_transcendence is a complete, secure and fun web gaming platform. It satisfies all the modules we selected: **seven Major and six Minor — ten major-equivalents**, where seven are required.
 
@@ -201,7 +202,7 @@ The modular structure is a solid base for the next evolution: remote play, chat 
 
 ---
 
-## Slide 43 — Thank you
+## Slide 36 — Thank you
 
 Thank you for your attention. We are happy to answer your questions and to show you the demo.
 

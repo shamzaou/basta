@@ -1,14 +1,14 @@
-# 03 · Selected Modules & Design — Salim (slides 12–17, about 3.5 minutes)
+# 03 · Selected Modules & Design — Salim (slides 11–15, about 3.5 minutes)
 
 ---
 
-## Slide 12 — Section divider
+## Slide 11 — Section divider
 
 Thanks, Ali. I'm Salim. I'll present the modules we selected — this is the slide the evaluation is graded on — and then the design of the system.
 
 ---
 
-## Slide 13 — Selected modules
+## Slide 12 — Selected modules
 
 The subject requires seven major modules for 100 %. Two minors count as one major.
 
@@ -36,25 +36,7 @@ Every module gets its own slide in the next sections.
 
 ---
 
-## Slide 14 — Technology stack
-
-Our stack, briefly. Most of it is fixed by the subject for the modules we chose — Django, Bootstrap, PostgreSQL, Three.js — and the rest follows from those choices.
-
-Backend: Python 3.11, Django 4.2, Django REST Framework, SimpleJWT, and python-decouple to read configuration from a `.env` file.
-
-Server: Gunicorn terminates TLS itself on port 443 with a self-signed certificate — there is no nginx — and WhiteNoise serves hashed static files.
-
-Database: PostgreSQL 13 in its own container.
-
-Frontend: a vanilla-JavaScript single page application with HTML5, CSS3 and Bootstrap 4.5.
-
-3D: Three.js release 128 on WebGL; the ball texture is generated on an HTML canvas.
-
-DevOps: Docker Compose, a Makefile, and GitHub pull requests.
-
----
-
-## Slide 15 — System architecture
+## Slide 13 — System architecture
 
 The application is a monolith with a clear separation between frontend and backend, running in two containers.
 
@@ -68,7 +50,7 @@ Docker Compose defines the two services, the private network and the database vo
 
 ---
 
-## Slide 16 — Database and API design
+## Slide 14 — Database and API design
 
 The schema is defined with Django models, grouped into three apps.
 
@@ -82,7 +64,7 @@ On the right, the API. Authentication: register, login, logout, verify-otp, toke
 
 ---
 
-## Slide 17 — UI / UX design
+## Slide 15 — UI / UX design
 
 The interface is built around clarity and feedback, with a retro arcade look — one colour scheme, one layout on every page.
 

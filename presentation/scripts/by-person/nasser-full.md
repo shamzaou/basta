@@ -1,30 +1,30 @@
 # Nasser — speaking script (full)
 
-You present **2 section(s)**, total ≈ **7 min** of speaking time. They come in this order during the talk:
+You present **2 section(s)**, total ≈ **~6 min** of speaking time, in this order during the talk:
 
 | Order | Your section | Slides | Time |
 |---|---|---|---|
-| 04 | Authentication & Security | 18–21 | 3.5 min |
-| 09 | Testing & Evolution | 35–39 | 3.5 min |
+| 04 | Authentication & Security | 16–19 | 3.5 min |
+| 08 | GDPR & Accessibility | 30–32 | 2.5 min |
 
-Other people speak between your sections — wait for the hand-over, then take the clicker. The `full/` wording is to rehearse, not to read aloud on the day; keep the `points/` version in your hand.
+Other people speak between your sections — wait for the hand-over, then take the clicker. The `full/` wording is to rehearse, not to read aloud; keep the `points/` version in your hand.
 
 
-
----
----
-
-# 04 · Authentication & Security — Nasser (slides 18–21, about 3.5 minutes)
 
 ---
+---
 
-## Slide 18 — Section divider
+# 04 · Authentication & Security — Nasser (slides 16–19, about 3.5 minutes)
+
+---
+
+## Slide 16 — Section divider
 
 Thanks, Salim. I'm Nasser. I built authentication: the accounts, the 42 OAuth login, two-factor authentication and the JWT layer. This section covers three modules: standard authentication, remote authentication, and 2FA + JWT.
 
 ---
 
-## Slide 19 — Registration, login and 2FA
+## Slide 17 — Registration, login and 2FA
 
 Three screens.
 
@@ -36,7 +36,7 @@ Three screens.
 
 ---
 
-## Slide 20 — How a login works
+## Slide 18 — How a login works
 
 Three flows, one outcome: a logged-in user with a session and a JWT pair.
 
@@ -50,7 +50,7 @@ Both paths end in the same state: an HttpOnly session cookie plus the JWT pair. 
 
 ---
 
-## Slide 21 — Cybersecurity features
+## Slide 19 — Cybersecurity features
 
 Security in layers.
 
@@ -85,70 +85,48 @@ Salim will now show the games and the graphics.
 ---
 ---
 
-# 09 · Testing & Evolution — Nasser (slides 35–39, about 3.5 minutes)
+# 08 · GDPR & Accessibility — Nasser (slides 30–32, about 2.5 minutes)
 
 ---
 
-## Slide 35 — Section divider
+## Slide 30 — Section divider
 
-Thanks, Salim. Last technical section: how we test, what the pre-evaluation audit found, what we learned, and what we would do next.
-
----
-
-## Slide 36 — Testing strategy
-
-Four levels.
-
-**Unit tests** — the Django test suite, `make test`. Fifty-four tests across the three apps: forty-one in `userapp`, ten in `tournaments`, three in `gameapp`. They cover login and the whole 2FA flow — including a slow mail backend and a failing one — the OAuth `state` check, the presence heartbeat, unique display names, rule-by-rule password feedback, the missing 2FA toggle for 42 accounts, JWT on the profile, GDPR export, anonymize and delete, the inactive-account command, tournament tiebreaker rounds, and server-side rendering.
-
-**Integration** — a scripted end-to-end API flow: register, login, profile, matches, friends, export, tournament, delete — every step expected 2xx.
-
-**Browser walkthrough** — headless Chrome drives every page at desktop and phone sizes, plays both games and asserts zero JavaScript errors.
-
-**Manual acceptance** — we tested each other's features as end users, in Chrome and Firefox.
+Thanks, Ali. Nasser again — I will continue on the privacy and accessibility side: the GDPR minor module, and the two accessibility minors — browser compatibility and server-side rendering.
 
 ---
 
-## Slide 37 — Pre-evaluation audit
+## Slide 31 — GDPR compliance
 
-Before the evaluation we audited the code end-to-end. Two bugs that users had reported were traced to root causes and fixed with regression tests — I'll tell both stories because they're instructive.
+The module title lists three things: anonymization, local data management and account deletion. We have all three, plus retention.
 
-**"The 2FA code is sometimes rejected."** The one-time code was stored in Django's default cache, `LocMemCache`, which is memory private to each process. Gunicorn runs three workers. Login stored the code in worker A; the verify request landed on worker B or C, which had never seen it — so roughly two out of three correct codes were rejected. We reproduced it inside the container: worker A sets, worker B reads `None`. The fix is a database-backed cache shared by all workers, plus three secondary fixes: re-clicking Sign In reuses the still-valid code instead of generating a new one, the TTL went from five to ten minutes, and the comparison normalises whitespace and type. There's a test asserting the cache backend is not LocMem, and five out of five live rounds across different worker PIDs passed.
+**Anonymization.** "Anonymize My Account" in Settings strips every personal identifier: the username and e-mail become `anon_` plus a random token, the avatar file is deleted, the display name is cleared, the 42 link is removed, the friends lists are cleared, the password is made unusable and the account is disabled and logged out. The non-personal game statistics stay in the database — that is the point of anonymization versus deletion. It works for 42 accounts too: because the 42 e-mail and intra id are removed, the next 42 login creates a fresh account.
 
-**"The 2FA e-mail is very slow."** `send_mail` ran synchronously inside the login request with no timeout. The response waited for the full SMTP round trip — 1.9 seconds just to be rejected by Gmail — and any SMTP error became a 500. With three sync workers, one slow mail call also blocked a third of the server. The fix: send from a daemon thread with `EMAIL_TIMEOUT` of ten seconds; failures are logged. Login now answers in about eighty milliseconds; a test with a 1.5-second fake mail backend proves the response returns first.
+**Local data management.** "Download my data" returns a JSON file with the profile, the statistics and the full match history; the SPA adds the avatar as base64. Users can view and edit their display name, e-mail and avatar in Settings.
 
-Then the smaller items — `make test` configuration, stale static files, the token-refresh URL, a settings bug that saved the placeholder "The Champion" as the display name, the Pong ball gliding along the wall, the previous account's avatar staying visible.
+**Account deletion.** A hard delete after confirmation. The user row goes, and the database cascades: match history, friend links and tokens.
 
-A second sweep found and fixed thirty more bugs — the silent JWT expiry after sixty minutes, secrets in logs, duplicate-registration errors, tournament persistence, Save Settings, the 2FA toggle, Pong resize, touch and pause leaks, input validation.
+**Retention.** A management command, `delete_inactive_users`, warns by e-mail after five months of inactivity and deletes after six. A middleware stamps `last_activity` at most every fifteen minutes so it doesn't cost a write per request. It runs with `make gdpr-cleanup`.
 
-And a third pass checked every module against the subject text: a stored XSS through tournament nicknames was fixed, the AI now presses simulated keys at player speed and anticipates bounces, database credentials moved to `.env`, the tournament API requires login, the next-match announcement was added, GDPR anonymization was made 42-safe, 42 accounts lost the 2FA toggle, password errors became rule-specific, and real SSR was completed. A final pass added the OAuth `state` parameter, the online/offline status of friends, unique display names and JWT on the profile — and removed an online Tic-Tac-Toe prototype again, because the project has no online play by design and matchmaking is the tournament system. Fifty-four of fifty-four tests pass, zero JavaScript errors.
-
----
-
-## Slide 38 — Challenges and lessons learned
-
-Tournament logic — fair schedules and correct tie resolution needed careful modelling. State in vanilla JS — without a framework, login state, routing and views are managed by hand. Asynchronous flows — OAuth redirects, 2FA, the presence heartbeat. Docker networking. And the one I'd underline: **multi-process bugs** — the 2FA cache bug does not exist with one worker; it only appears on the real deployment. Test on what you ship.
-
-Lessons: a well-defined API, a mature framework, a disciplined Git workflow and security from day one all paid off.
+And information: the privacy policy on the About page lists the data we collect, why, how long, and the user's rights.
 
 ---
 
-## Slide 39 — Limitations and future enhancements
+## Slide 32 — Browser compatibility and server-side rendering
 
-I'd rather state these than have you find them.
+**Expanding browser compatibility.** Our primary browser is Chrome, with Edge as the same engine. The additional browser is **Firefox**. The application uses only standard web APIs — ES modules, `fetch`, `localStorage`, the History API, CSS Grid and Flexbox, WebGL 1 — with no vendor prefixes and no polyfills. We did hit Firefox-specific issues and fixed them: match dates are now ISO-8601 so `new Date()` parses them in Firefox, input uses pointer events instead of separate mouse and touch events, and fonts have fallbacks. Testing was manual in both browsers, plus an automated headless-Chrome walkthrough of every page.
 
-Both games are local by design — the remote-players module is not selected, so there is no online play; friends only get an online status. JWTs are in `localStorage`. There is no rate limit on the 2FA code. Third-party assets come from CDNs. The 2FA mailbox needs a valid Gmail app password. Pong scores are reported by the client. The GDPR cleanup command is run by hand, not by a cron inside the image.
+**Server-side rendering.** Every URL is answered by Django's `index` view, which renders the *requested* page as complete HTML: the right section is already active, the navigation reflects whether you are logged in, the `<title>` and meta description are set per page, and for a logged-in user the profile — username, statistics, recent matches — is rendered into the HTML on the server before any JavaScript runs. Then the SPA hydrates and takes over routing. If you view-source `/profile` while logged in, you see real content, not an empty `div`. That gives a faster first paint and crawlable public pages.
 
-Next steps, in order: rate limiting on login and 2FA, plus recovery codes; server-authoritative Pong scores; a selectable AI difficulty; leaderboards and achievements; and — only if the remote-players module were added — real-time online play with WebSockets through Django Channels.
+**Responsive layout** is on the slide because people will ask: breakpoints at 1100, 920, 768 and 480 pixels, a hamburger menu, a fluid game canvas and touch controls. We kept it as a feature; "support on all devices" is not a module we claim.
 
-Ali will close with the team and the conclusion.
+Now Ali will close with the team and the conclusion.
 
 ---
 
 ## If they ask
 
-- *"Show me the tests."* — `make test` → "Ran 54 tests … OK". Files: `userapp/tests.py`, `gameapp/tests.py`, `tournaments/tests.py`.
-- *"How do you demo 2FA if Gmail is down?"* — `EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend` in `.env`, restart, read the code from `gunicorn-error.log`. The code path is identical.
-- *"Why a thread and not Celery?"* — One short SMTP call per login doesn't justify a broker and a worker; the thread returns immediately and the timeout bounds it. Trade-off: if the process dies mid-send the mail is lost — it's logged.
-- *"Why not Redis for the cache?"* — Zero new infrastructure; the DB cache is shared and fast enough for a code per login. Redis is the scale-up.
-- *"Why is the tournament API session-based and the games JWT-based?"* — History: the tournament app predates the JWT module. Both require login now; unifying on JWT is on the backlog.
+- *"Anonymize or delete — which one satisfies the module?"* — Both exist; anonymization is what the title names, deletion is the stricter "right to be forgotten".
+- *"Is the cleanup cron running in the container?"* — Honestly: the crontab file is provided and the command works, but cron is not installed in the image; retention is enforced when `make gdpr-cleanup-run` is executed. That's a listed limitation.
+- *"Is consent collected?"* — Registration implies acceptance; the policy is public. An explicit checkbox and cookie notice would be the improvement; we only use first-party functional cookies.
+- *"Why not a real SSR framework?"* — The subject forbids front-end frameworks beyond the toolkit; Django's template engine is the sanctioned server renderer, and it now renders page state, not just a shell.
+- *"What breaks on old browsers?"* — ES modules and `aspect-ratio` on IE or very old Safari — out of scope.

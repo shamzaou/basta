@@ -7,9 +7,9 @@ Each teammate has everything they say, in speaking order, in one file. Two versi
 
 | Person | Sections (in order) | Total | Files |
 |---|---|---|---|
-| **Nour** | 01 Introduction, 06 Tournaments | 4 min | `nour-points.md` · `nour-full.md` |
-| **Ali** | 02 Software Development Life Cycle, 07 Profiles, Statistics & Friends, 10 Team & Conclusion | 6.5 min | `ali-points.md` · `ali-full.md` |
-| **Salim** | 03 Selected Modules & Design, 05 Games & Graphics, 08 GDPR & Accessibility | 9.5 min | `salim-points.md` · `salim-full.md` |
-| **Nasser** | 04 Authentication & Security, 09 Testing & Evolution | 7 min | `nasser-points.md` · `nasser-full.md` |
+| **Nour** | 01 Introduction, 06 Tournaments | ~3.5 min | `nour-points.md` · `nour-full.md` |
+| **Ali** | 02 Software Development Life Cycle, 07 Profiles, Statistics & Friends, 09 Team & Conclusion | ~6.5 min | `ali-points.md` · `ali-full.md` |
+| **Salim** | 03 Selected Modules & Design, 05 Games & Graphics | ~6.5 min | `salim-points.md` · `salim-full.md` |
+| **Nasser** | 04 Authentication & Security, 08 GDPR & Accessibility | ~6 min | `nasser-points.md` · `nasser-full.md` |
 
-The full running order (who follows whom, with slide numbers and timings) is in `../README.md`. The per-section files still live in `../points/` and `../full/` if you want them split by topic.
+The full running order (who follows whom, with slide numbers and timings) is in `../README.md`. The per-section files still live in `../points/` and `../full/`.

@@ -1,13 +1,13 @@
-# 05 · Games & Graphics — Salim (slides 22–25, about 3.5 minutes)
+# 05 · Games & Graphics — Salim (slides 20–23, about 3.5 minutes)
 
-## Slide 22 — Section divider
+## Slide 20 — Section divider
 
-## Slide 23 — 3D Pong and the AI opponent (screenshots)
+## Slide 21 — 3D Pong and the AI opponent (screenshots)
 - Mode select: Player vs Player (one keyboard W/S vs ↑/↓, or touch — drag on your half) or Player vs AI.
 - First to 3 points; HUD shows score, names, winner; Space pauses.
 - Results posted to `/api/auth/save-match/` with the JWT → profile stats.
 
-## Slide 24 — Inside the graphics and the AI
+## Slide 22 — Inside the graphics and the AI
 - **Scene**: PerspectiveCamera 75° above the table; ambient + spot light; Phong materials (specular highlights); emissive cyan paddles; ball texture painted on an HTML canvas → `CanvasTexture`; neon edge lines; antialiasing; DOM HUD over the canvas.
 - **Physics**: bounce angle from hit offset (±45°); +5 % speed per hit (capped); spin bends the path and rotates the mesh; wall clamp + reflect; 4:3 canvas on resize.
 - **AI rule 1 — once per second**: snapshot of ball position + velocity every 1000 ms; acts on the last decision in between.
@@ -15,7 +15,7 @@
 - **AI rule 3 — simulated keyboard**: decision = hold ArrowUp/ArrowDown in the same InputHandler as a human → identical paddle speed. Every 5 s the score tunes judgement: 2 ahead → accuracy 0.6 / mistakes 15 %; 2 behind → 0.9 / 5 %.
 - **No A\***: Pong has no graph to search; it's kinematic prediction.
 
-## Slide 25 — Tic-Tac-Toe: the second game, history and matchmaking (the "another game" module)
+## Slide 23 — Tic-Tac-Toe: the second game, history and matchmaking (the "another game" module)
 - **A game distinct from Pong**: turn-based, two players on one device; X and O alternate; win lines / draw detected in the browser; illegal moves ignored; "Reset game".
 - **User history**: result posted to `/api/auth/save-match/` with the JWT → one `MatchHistory` row (TICTACTOE, WIN/LOSS/DRAW) → profile, win-rate chart, JSON export.
 - **Matchmaking = the tournament system**: round-robin pairings, "Next match: A vs B" announced, tiebreaker rounds until one winner (Nour's section).

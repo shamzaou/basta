@@ -1,16 +1,16 @@
-# 07 · Profiles, Statistics & Friends — Ali (slides 29–31, about 2.5 minutes)
+# 07 · Profiles, Statistics & Friends — Ali (slides 27–29, about 2.5 minutes)
 
 > Plain English. This is your own work — user data, history and statistics.
 
 ---
 
-## Slide 29 — Section divider
+## Slide 27 — Section divider
 
 Thank you, Nour. I'm Ali again. I worked on the user data — the profile information, the match history and the statistics. This section covers the user-management module and the stats-dashboard module, seen from the user's side.
 
 ---
 
-## Slide 30 — Player profile and stats dashboard
+## Slide 28 — Player profile and stats dashboard
 
 Every finished game is saved: Pong against a player, Pong against the AI, and Tic-Tac-Toe. Each game creates one row in the **MatchHistory** table.
 
@@ -26,11 +26,11 @@ Below, the **recent matches**: a badge with the game type — PONG or TICTACTOE 
 
 On the right, the **friends** panel with a "Find Users" button. Every friend has a small dot: green means online, grey means offline.
 
-The second screenshot is the **Settings** page. Here the user can change the display name, the e-mail and the avatar, switch two-factor authentication on or off — only for password accounts, a 42 account has no switch — and use the GDPR tools: Download my data, Anonymize, and Delete account. Salim will explain the GDPR tools.
+The second screenshot is the **Settings** page. Here the user can change the display name, the e-mail and the avatar, switch two-factor authentication on or off — only for password accounts, a 42 account has no switch — and use the GDPR tools: Download my data, Anonymize, and Delete account. Nasser will explain the GDPR tools.
 
 ---
 
-## Slide 31 — Friends, match history and user data
+## Slide 29 — Friends, match history and user data
 
 Some details.
 
@@ -44,7 +44,7 @@ Some details.
 
 One design decision: **tournament games are kept separate**. Tournament players are nicknames, not accounts, so we cannot add a tournament match to a user's personal record. The tournament has its own score table.
 
-Now Salim will present GDPR and accessibility.
+Now Nasser will present GDPR and accessibility.
 
 ---
 

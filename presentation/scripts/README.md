@@ -1,6 +1,6 @@
 # Speaker scripts — FAST_PONG staff evaluation
 
-Deck: `presentation/FAST_PONG-presentation.pdf` (43 slides, rebuilt with `python presentation/build_pdf_deck.py`).
+Deck: `presentation/FAST_PONG-presentation.pdf` (36 slides, rebuilt with `python presentation/build_pdf_deck.py`).
 Every section divider names its presenter and every content slide repeats it in the footer.
 
 **Organised by person:** `by-person/` has one file per teammate with all of their sections stitched together in speaking order — `by-person/<name>-points.md` (hold this) and `by-person/<name>-full.md` (rehearse this). Start there. The per-section files below stay for anyone who prefers them split by topic.
@@ -16,26 +16,27 @@ Two versions of every section:
 
 | # | Section | Slides | Presenter | Time |
 |---|---|---|---|---|
-| 01 | Introduction | 3–6 | **Nour** | 2 min |
-| 02 | Software Development Life Cycle | 7–11 | **Ali** | 2.5 min |
-| 03 | Selected Modules & Design | 12–17 | **Salim** | 3.5 min |
-| 04 | Authentication & Security | 18–21 | **Nasser** | 3.5 min |
-| 05 | Games & Graphics | 22–25 | **Salim** | 3.5 min |
-| 06 | Tournaments | 26–28 | **Nour** | 2 min |
-| 07 | Profiles, Statistics & Friends | 29–31 | **Ali** | 2.5 min |
-| 08 | GDPR & Accessibility | 32–34 | **Salim** | 2.5 min |
-| 09 | Testing & Evolution | 35–39 | **Nasser** | 3.5 min |
-| 10 | Team & Conclusion | 40–43 | **Ali** | 1.5 min |
+| 01 | Introduction | 3–5 | **Nour** | 1.5 min |
+| 02 | Software Development Life Cycle | 6–10 | **Ali** | 2.5 min |
+| 03 | Selected Modules & Design | 11–15 | **Salim** | 3.5 min |
+| 04 | Authentication & Security | 16–19 | **Nasser** | 3.5 min |
+| 05 | Games & Graphics | 20–23 | **Salim** | 3.5 min |
+| 06 | Tournaments | 24–26 | **Nour** | 2 min |
+| 07 | Profiles, Statistics & Friends | 27–29 | **Ali** | 2.5 min |
+| 08 | GDPR & Accessibility | 30–32 | **Nasser** | 2.5 min |
+| 09 | Team & Conclusion | 33–36 | **Ali** | 1.5 min |
 
-Total ≈ 27 minutes with hand-overs. Slides 1–2 (title, contents): Nour says one sentence — "This is our team and here is the plan" — then starts section 01.
+Total ≈ 23 minutes with hand-overs. Slides 1–2 (title, contents): Nour says one sentence — "This is our team and here is the plan" — then starts section 01.
 
-Per person: Nour 4 min · Ali 6.5 min · Salim 9.5 min · Nasser 7 min.
+Per person: Nour ≈ 3.5 min · Ali ≈ 6.5 min · Salim ≈ 6.5 min · Nasser ≈ 6 min.
+
+Section 02 (SDLC) now includes a "Challenges and Lessons Learned" slide (the microservices attempt and the Git-collaboration lesson). There is no separate Testing section any more.
 
 ## Why this split
 
-* Nour and Ali present the parts with the least technical Q&A risk and the parts they built (tournaments; profile / statistics / user data). Their scripts use short sentences and plain vocabulary.
-* Nasser takes the sections most likely to draw hard questions: authentication (OAuth, 2FA, JWT) and the audit / limitations.
-* Salim takes what remains: the module table, design, both games and graphics, GDPR and accessibility.
+* Nour and Ali present the parts with the least technical Q&A risk and the parts they built (introduction and tournaments; SDLC, profile / statistics / user data, and the closing). Their scripts use short sentences and plain vocabulary.
+* Nasser takes the sections most likely to draw hard security questions: authentication (OAuth, 2FA, JWT) and GDPR / accessibility.
+* Salim takes the module table and design, and both games and graphics.
 
 Questions can come at any time. If a question lands on the wrong person, say "Good question — <name> owns that part" and hand it over; the "If they ask" lists at the end of every full script say who can answer what.
 

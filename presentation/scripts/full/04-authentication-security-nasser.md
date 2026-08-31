@@ -1,14 +1,14 @@
-# 04 · Authentication & Security — Nasser (slides 18–21, about 3.5 minutes)
+# 04 · Authentication & Security — Nasser (slides 16–19, about 3.5 minutes)
 
 ---
 
-## Slide 18 — Section divider
+## Slide 16 — Section divider
 
 Thanks, Salim. I'm Nasser. I built authentication: the accounts, the 42 OAuth login, two-factor authentication and the JWT layer. This section covers three modules: standard authentication, remote authentication, and 2FA + JWT.
 
 ---
 
-## Slide 19 — Registration, login and 2FA
+## Slide 17 — Registration, login and 2FA
 
 Three screens.
 
@@ -20,7 +20,7 @@ Three screens.
 
 ---
 
-## Slide 20 — How a login works
+## Slide 18 — How a login works
 
 Three flows, one outcome: a logged-in user with a session and a JWT pair.
 
@@ -34,7 +34,7 @@ Both paths end in the same state: an HttpOnly session cookie plus the JWT pair. 
 
 ---
 
-## Slide 21 — Cybersecurity features
+## Slide 19 — Cybersecurity features
 
 Security in layers.
 

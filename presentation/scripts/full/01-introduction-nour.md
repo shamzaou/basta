@@ -1,4 +1,4 @@
-# 01 · Introduction — Nour (slides 3–6, about 2 minutes)
+# 01 · Introduction — Nour (slides 3–5, about 1.5 minutes)
 
 > Simple English. Short sentences. Speak slowly. It is OK to look at the slide.
 
@@ -52,21 +52,6 @@ At the beginning, we set six goals.
 **Five** — security and GDPR. Protection against attacks like SQL injection and XSS. And users can export, anonymize, or delete their data.
 
 **Six** — team work. We used Agile, Git branches, and code review.
-
----
-
-## Slide 6 — Scope of the Project
-
-This slide shows the full scope. I will go quickly.
-
-- **User management** — register, login, 42 login, edit your profile, upload an avatar, friends.
-- **Pong 3D** — two players on one keyboard, or one player against the AI.
-- **Tic-Tac-Toe** — two players on one computer; results saved in the history.
-- **Tournaments** — create, add nicknames, automatic matches, tiebreakers, winner.
-- **Profiles and statistics** — games played, win rate, best score, recent matches, and export as JSON.
-- **Security and privacy** — hashed passwords, HTTPS, CSRF, 2FA, JWT, and GDPR tools.
-- **Deployment** — two Docker containers. One command to start.
-- **Team process** — Agile, Git branches, pull requests, peer review.
 
 That is the introduction. Now **Ali** will explain how we organised the work.
 

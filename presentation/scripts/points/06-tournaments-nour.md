@@ -1,9 +1,9 @@
-# 06 · Tournaments — Nour (slides 26–28, about 2 minutes)
+# 06 · Tournaments — Nour (slides 24–26, about 2 minutes)
 
-## Slide 26 — Section divider
+## Slide 24 — Section divider
 - "I made the tournament system. I will show it now."
 
-## Slide 27 — Tournament screenshots
+## Slide 25 — Tournament screenshots
 - Left picture: create a tournament. Choose the number of players: **3 to 8**.
 - Type a **nickname** for each player. Your own display name is filled in for player 1. Nicknames must be different. Empty names are not allowed.
 - Right picture: the tournament page.
@@ -13,7 +13,7 @@
   - "Next match" text tells who plays next.
   - At the end: the **winner** is shown.
 
-## Slide 28 — Tournament flow (6 steps)
+## Slide 26 — Tournament flow (6 steps)
 1. **Create** — a logged-in user gives a name and the number of players.
 2. **Register** — every player writes a nickname.
 3. **Schedule** — the server makes all the matches.

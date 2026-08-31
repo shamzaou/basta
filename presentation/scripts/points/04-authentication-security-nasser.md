@@ -1,14 +1,14 @@
-# 04 · Authentication & Security — Nasser (slides 18–21, about 3.5 minutes)
+# 04 · Authentication & Security — Nasser (slides 16–19, about 3.5 minutes)
 
-## Slide 18 — Section divider
+## Slide 16 — Section divider
 
-## Slide 19 — Registration, login and 2FA (screenshots)
+## Slide 17 — Registration, login and 2FA (screenshots)
 - Register: e-mail + username + password; policy ≥ 10 chars, upper-case, digit, symbol, not similar to the username, not common — every failing rule is reported separately.
 - Duplicate e-mail/username → clear 400 error (case-insensitive).
 - Login: e-mail + password, or "Sign in with 42".
 - 2FA: optional at registration; password accounts can toggle it in Settings (42 accounts: no toggle); 6-digit code by e-mail, 10 min, single use.
 
-## Slide 20 — How a login works (three flows, one outcome)
+## Slide 18 — How a login works (three flows, one outcome)
 1. **Password + 2FA**
    - `POST /login/` → `authenticate()` (PBKDF2).
    - 2FA on → code stored in a **shared database cache** (10 min), e-mail sent from a background thread → `requires_2fa`.
@@ -22,7 +22,7 @@
    - `Authorization: Bearer` on every API call; `authFetch` refreshes 1 min before expiry and retries once on 401.
 - Both paths end the same: HttpOnly session cookie + JWT pair.
 
-## Slide 21 — Cybersecurity features
+## Slide 19 — Cybersecurity features
 - Password storage: PBKDF2 hash + salt, validator.
 - 2FA + JWT (above). 42 OAuth: signed `state` (login CSRF) + server-side exchange.
 - SQL injection: ORM only, parameterised queries.

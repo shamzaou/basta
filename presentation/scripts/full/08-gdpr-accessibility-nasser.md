@@ -1,14 +1,14 @@
-# 08 · GDPR & Accessibility — Salim (slides 32–34, about 2.5 minutes)
+# 08 · GDPR & Accessibility — Nasser (slides 30–32, about 2.5 minutes)
 
 ---
 
-## Slide 32 — Section divider
+## Slide 30 — Section divider
 
-Thanks, Ali. Two short topics from me: the GDPR minor module, and the two accessibility minors — browser compatibility and server-side rendering.
+Thanks, Ali. Nasser again — I will continue on the privacy and accessibility side: the GDPR minor module, and the two accessibility minors — browser compatibility and server-side rendering.
 
 ---
 
-## Slide 33 — GDPR compliance
+## Slide 31 — GDPR compliance
 
 The module title lists three things: anonymization, local data management and account deletion. We have all three, plus retention.
 
@@ -24,7 +24,7 @@ And information: the privacy policy on the About page lists the data we collect,
 
 ---
 
-## Slide 34 — Browser compatibility and server-side rendering
+## Slide 32 — Browser compatibility and server-side rendering
 
 **Expanding browser compatibility.** Our primary browser is Chrome, with Edge as the same engine. The additional browser is **Firefox**. The application uses only standard web APIs — ES modules, `fetch`, `localStorage`, the History API, CSS Grid and Flexbox, WebGL 1 — with no vendor prefixes and no polyfills. We did hit Firefox-specific issues and fixed them: match dates are now ISO-8601 so `new Date()` parses them in Firefox, input uses pointer events instead of separate mouse and touch events, and fonts have fallbacks. Testing was manual in both browsers, plus an automated headless-Chrome walkthrough of every page.
 
@@ -32,7 +32,7 @@ And information: the privacy policy on the About page lists the data we collect,
 
 **Responsive layout** is on the slide because people will ask: breakpoints at 1100, 920, 768 and 480 pixels, a hamburger menu, a fluid game canvas and touch controls. We kept it as a feature; "support on all devices" is not a module we claim.
 
-Nasser closes with testing and evolution.
+Now Ali will close with the team and the conclusion.
 
 ---
 

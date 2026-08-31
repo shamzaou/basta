@@ -1,16 +1,16 @@
-# 10 · Team & Conclusion — Ali (slides 40–43, about 1.5 minutes)
+# 09 · Team & Conclusion — Ali (slides 33–36, about 1.5 minutes)
 
 > Plain English, short. This is the closing — end with energy.
 
 ---
 
-## Slide 40 — Section divider
+## Slide 33 — Section divider
 
 Thank you, Nasser. I'm Ali. I will close the presentation with the team and the conclusion.
 
 ---
 
-## Slide 41 — Contribution of each member
+## Slide 34 — Contribution of each member
 
 Each member owned a group of modules from end to end — backend, frontend and tests — and reviewed the pull requests of the others.
 
@@ -24,7 +24,7 @@ Each member owned a group of modules from end to end — backend, frontend and t
 
 ---
 
-## Slide 42 — Conclusion
+## Slide 35 — Conclusion
 
 Ft_transcendence is a complete, secure and fun web gaming platform. It satisfies all the modules we selected: **seven Major and six Minor — ten major-equivalents**, where seven are required.
 
@@ -34,7 +34,7 @@ The modular structure is a solid base for the next evolution: remote play, chat 
 
 ---
 
-## Slide 43 — Thank you
+## Slide 36 — Thank you
 
 Thank you for your attention. We are happy to answer your questions and to show you the demo.
 

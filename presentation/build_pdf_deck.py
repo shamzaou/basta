@@ -153,9 +153,8 @@ SECTIONS = [("01", "Introduction", NOUR),
             ("05", "Games &amp; Graphics", SALIM),
             ("06", "Tournaments", NOUR),
             ("07", "Profiles, Statistics &amp; Friends", ALI),
-            ("08", "GDPR &amp; Accessibility", SALIM),
-            ("09", "Testing &amp; Evolution", NASSER),
-            ("10", "Team &amp; Conclusion", ALI)]
+            ("08", "GDPR &amp; Accessibility", NASSER),
+            ("09", "Team &amp; Conclusion", ALI)]
 SEC = {n: (t, w) for n, t, w in SECTIONS}
 
 
@@ -197,16 +196,6 @@ left("photo-devs.jpg", "Project Objectives",
             ("Tournament mode", "Create a tournament of 3–8 nicknames, play a round-robin of Pong matches and determine a winner."),
             ("Application security &amp; GDPR", "Protection against SQL injection, XSS and CSRF; data export, anonymization and account deletion."),
             ("Collaborative development", "An Agile, feature-branch workflow with code reviews, Docker and a maintainable codebase.")], 3))
-left("photo-holo.jpg", "Scope of the Project",
-     "The scope covers every essential aspect of a modern web application, from user management to gameplay and deployment:",
-     cards([("User management", "Registration, login, 42 OAuth, profile editing, avatar upload, friends list."),
-            ("Pong (3D)", "Local two-player mode on one keyboard and a single-player mode against the AI opponent."),
-            ("Tic-Tac-Toe", "Second game, played locally on one device; each result is saved to the user's match history."),
-            ("Tournaments", "Creation, nickname registration, automatic match generation, tiebreakers, winner."),
-            ("Profiles &amp; statistics", "Games played, win rate, best score, recent matches, JSON export of all data."),
-            ("Security &amp; privacy", "Hashed passwords, HTTPS, CSRF, 2FA + JWT, GDPR anonymize / export / delete."),
-            ("Deployment", "Two containers (web, db) orchestrated with Docker Compose; one command to run."),
-            ("Team process", "Agile iterations, Git feature branches, pull requests and peer review.")], 4))
 
 # ================================================================ 02 SDLC — Ali
 sec("02")
@@ -227,12 +216,12 @@ left("photo-meeting.jpg", "Phases and Iterations",
             ("Developer testing", "Unit tests for backend logic and functional checks by the developer."),
             ("Integration &amp; review", "Peer code review, then merge of the feature branch into master."),
             ("System testing", "Test the feature inside the whole application to catch regressions.")], 3, numbered=True))
-banner("banner-hands.jpg", "Team Collaboration and Version Control",
-       "Clear processes and modern tools kept four developers working in parallel without stepping on each other.",
-       cards([("Version control", "Git with GitHub as the central repository — every change tracked and reversible."),
-              ("Branching strategy", "Feature-based branches (OAuth, tournaments, profile-page …) isolated work in progress from master."),
-              ("Code reviews", "Every branch was reviewed through a pull request before merging — 15 PRs in total."),
-              ("Communication", "A WhatsApp group for quick coordination and regular in-person meetings on campus.")], 4))
+banner("banner-meeting.jpg", "Challenges and Lessons Learned",
+       "Not everything went to plan — two setbacks shaped how we finished the project.",
+       cards([("We aimed for microservices", "We first planned the DevOps <b>microservices</b> module — splitting the backend into separate services. In practice the containers could not communicate and coordinate reliably, and wiring them together ate into our time."),
+              ("So we chose a modular monolith", "We stepped back to one Django service with three clean apps (userapp, gameapp, tournaments). It gave us the same separation of concerns, but it actually ran — a working monolith beats a half-built microservices setup."),
+              ("We lost work on GitHub", "Early on we did not use Git well together: we edited the same files without branches, so merges overwrote each other and some progress was lost."),
+              ("Lesson learned", "One branch per feature, always pull before you push, and merge only through a reviewed pull request. After we adopted that discipline we never lost work again — and it is exactly why we can trust our history today.")], 4))
 full("Project Timeline (Gantt Chart)",
      f'<div class="figs" style="grid-template-columns:1fr"><figure><img src="{A("gantt.jpg", max_w=1500)}" style="max-height:4.6in;object-fit:contain"><figcaption>Figure 1: Project Gantt chart — planning &amp; setup, core frontend, core backend, feature implementation, testing &amp; integration, deployment.</figcaption></figure></div>',
      intro="The Gantt chart planned and tracked the project over time: task durations, dependencies and milestones.")
@@ -257,14 +246,6 @@ full("Selected Modules",
      f'<table><tr><th>Category</th><th>Module</th><th>Type</th><th>How it is implemented</th></tr>{rows}</table>'
      '<p class="cap" style="margin-top:12px"><b>7 Major + 6 Minor (× 0.5) = 10 major-equivalents</b> — 7 are required for 100 %. '
      'Not selected: support on all devices (responsive layout and touch remain features), remote players, live chat, microservices, multiple languages.</p>')
-left("photo-dev-screens.jpg", "Technology Stack",
-     "Chosen for robustness, simplicity and the learning objectives of the curriculum — and because the subject fixes Django, Bootstrap, PostgreSQL and Three.js for the modules we selected.",
-     cards([("Backend", "Python 3.11, Django 4.2, Django REST Framework, SimpleJWT, python-decouple for configuration"),
-            ("Server", "Gunicorn with TLS on port 443 (self-signed certificate), WhiteNoise for hashed static files"),
-            ("Database", "PostgreSQL 13 in its own container, accessed through the Django ORM and migrations"),
-            ("Frontend", "Vanilla JavaScript SPA, HTML5, CSS3, Bootstrap 4.5"),
-            ("3D graphics", "Three.js r128 (WebGL) for the Pong scene; HTML5 canvas for procedural textures"),
-            ("DevOps", "Docker Compose, Makefile targets, Git / GitHub with pull requests")], 2))
 full("System Architecture",
      f'<div class="two" style="grid-template-columns:1fr 1.35fr;align-items:center">'
      '<div><p class="intro">The application is a monolith with a clear separation between frontend and backend, running in containers:</p>'
@@ -400,37 +381,8 @@ full("Accessibility — Browser Compatibility and Server-Side Rendering",
               ("Responsive layout (feature)", "Media queries at 1100 / 920 / 768 / 480 px, hamburger navigation, stacked cards, a fluid game canvas and touch controls for Pong — kept as a feature although “support on all devices” is not a claimed module.")], 1)
      + f'<figure class="figs"><img src="{S("18-mobile-profile.jpg", max_w=800)}" style="max-height:5.4in;object-fit:cover;object-position:top"><figcaption>Profile on a 390 px phone</figcaption></figure></div>')
 
-# ================================================================ 09 Testing & Evolution — Nasser
+# ================================================================ 09 Team & Conclusion — Ali
 sec("09")
-banner("banner-team.jpg", "Testing Strategy",
-       "Several levels of testing, each with its own focus, keep the application stable and secure.",
-       cards([("Unit tests", "Django test suite (<code>make test</code>) — 54 tests (userapp 41, tournaments 10, gameapp 3): login and the whole 2FA flow, the OAuth <i>state</i> check, presence, unique display names, rule-by-rule password feedback, GDPR export / anonymize / delete, the inactive-account command, tournament tiebreakers, server-side rendering."),
-              ("Integration tests", "Scripted end-to-end API flow: register → login → profile → matches → friends → export → tournament → delete."),
-              ("Browser walkthrough", "Headless Chrome drives every page on desktop and phone, plays both games and checks for JavaScript errors."),
-              ("Manual / acceptance", "Team members continuously tested each other’s features from an end-user perspective, in Chrome and Firefox.")], 4))
-left("photo-code.jpg", "Pre-Evaluation Audit (August 2026)",
-     "Before the evaluation the codebase was audited end-to-end. Two bugs reported by users were traced to their root causes and fixed with regression tests:",
-     cards([("“The 2FA code is sometimes rejected”", "The one-time code was kept in Django’s default in-memory cache, which is private to each process — and Gunicorn runs three workers. The verification request often reached a worker that had never seen the code. Fix: a database-backed cache shared by all workers."),
-            ("“The 2FA e-mail is very slow”", "The e-mail was sent synchronously inside the login request with no timeout, so the response waited for the whole SMTP round-trip (and failed with 500 on any error). Fix: send in a background thread with a 10 s timeout — login now answers in ~80 ms."),
-            ("Also fixed", "<code>make test</code> configuration, stale static files, the token-refresh URL in the SPA, a settings-page bug that saved a placeholder display name, the Pong ball gliding along a wall (bounce now clamps the ball and keeps a minimum angle), and the previous account's avatar remaining visible after switching users."),
-            ("Result", "A second sweep found and fixed 30 more bugs (silent JWT expiry after 60 min, secrets in logs, duplicate-registration errors, tournament persistence and repeated tiebreakers, Save Settings, 2FA toggle, Pong resize / touch / pause leaks, input validation). A third pass checked every module against the subject: stored XSS via tournament nicknames fixed, AI presses simulated keys at player speed and anticipates bounces, DB credentials moved to .env, tournament API requires login, next-match announcement, GDPR anonymization (42-safe), no 2FA toggle for 42 accounts, rule-by-rule password feedback, unique display names, online / offline status of friends, the OAuth <i>state</i> parameter, real SSR — and an online Tic-Tac-Toe prototype was removed again: no online play by design, matchmaking is the tournament system. 54/54 tests pass, 0 JavaScript errors.")], 2))
-banner("banner-meeting.jpg", "Challenges and Lessons Learned",
-       "Building a complete application from scratch provided technical and organisational hurdles — and lasting lessons.",
-       cards([("Tournament logic", "Generating fair schedules and resolving ties correctly required careful data modelling and state management."),
-              ("State in vanilla JS", "Without a framework, login state, routing and views had to be managed by hand with disciplined code structure."),
-              ("Asynchronous flows", "OAuth redirects, 2FA, the presence heartbeat and API calls demanded a solid grasp of Promises and loading states."),
-              ("Docker networking", "Getting the web and database containers, volumes and environment variables to cooperate took iteration."),
-              ("Multi-process bugs", "The 2FA cache bug only appears with several Gunicorn workers — a lesson in testing on the real deployment."),
-              ("Lessons", "A well-defined API, a mature framework, a disciplined Git workflow and security from day one all paid off.")], 3))
-left("photo-future.jpg", "Limitations and Future Enhancements",
-     "The current version meets every selected module; the following points are known limitations and the improvements we would make next.",
-     '<div class="two">' + cards([("Known limitations", "Both games are local by design — no online or remote play (the remote-players module is not selected); JWT stored in localStorage; "
-                                    "no rate limit on the 2FA code; third-party assets load from CDNs; the 2FA mailbox needs a valid Gmail app password; Pong scores are reported by the client; the GDPR cleanup command is run by hand, not by a cron inside the image.")], 1)
-     + cards([("Next steps", "1. Rate limiting on login / 2FA and 2FA recovery codes. 2. Server-authoritative Pong scores. "
-                             "3. Selectable AI difficulty. 4. Leaderboards and achievements. 5. Only if the remote-players module were added: real-time online Pong and chat with WebSockets (Django Channels).")], 1) + '</div>')
-
-# ================================================================ 10 Team & Conclusion — Ali
-sec("10")
 left("photo-team-table.jpg", "Contribution of Each Member",
      "Each member owned a group of modules end-to-end — backend, frontend and tests — and reviewed the others’ pull requests.",
      cards([("Salim Hamzaoui", "<b>Graphics</b> — 3D Pong with Three.js and its physics; <b>Gameplay</b> — the second game, Tic-Tac-Toe, with match history and tournament matchmaking; <b>Cybersecurity &amp; GDPR</b> — anonymization, data export, account deletion, retention cleanup, privacy policy."),

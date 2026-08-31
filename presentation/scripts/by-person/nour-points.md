@@ -1,11 +1,11 @@
 # Nour — speaking script (points)
 
-You present **2 section(s)**, total ≈ **4 min** of speaking time. They come in this order during the talk:
+You present **2 section(s)**, total ≈ **~3.5 min** of speaking time, in this order during the talk:
 
 | Order | Your section | Slides | Time |
 |---|---|---|---|
-| 01 | Introduction | 3–6 | 2 min |
-| 06 | Tournaments | 26–28 | 2 min |
+| 01 | Introduction | 3–5 | 1.5 min |
+| 06 | Tournaments | 24–26 | 2 min |
 
 Bullet points only — what to cover on each of your slides. Print this and hold it. Other people speak between your sections.
 
@@ -14,7 +14,7 @@ Bullet points only — what to cover on each of your slides. Print this and hold
 ---
 ---
 
-# 01 · Introduction — Nour (slides 3–6, about 2 minutes)
+# 01 · Introduction — Nour (slides 3–5, about 1.5 minutes)
 
 ## Slide 3 — Section divider
 - Say hello. Say your name. Say: "I present the introduction."
@@ -37,23 +37,18 @@ Bullet points only — what to cover on each of your slides. Print this and hold
   4. Tournament mode — 3 to 8 players, everyone plays everyone.
   5. Security and GDPR — protection from attacks; export, anonymize, delete data.
   6. Team work — Agile, Git branches, code review.
-
-## Slide 6 — Scope of the Project
-- Read the 8 cards quickly (one line each):
-  - User management · Pong 3D · Tic-Tac-Toe · Tournaments
-  - Profiles & statistics · Security & privacy · Deployment (Docker) · Team process
-- Finish: "Now Ali will talk about how we organised the work."
+- Finish: "Now Ali will explain how we organised the work."
 
 
 ---
 ---
 
-# 06 · Tournaments — Nour (slides 26–28, about 2 minutes)
+# 06 · Tournaments — Nour (slides 24–26, about 2 minutes)
 
-## Slide 26 — Section divider
+## Slide 24 — Section divider
 - "I made the tournament system. I will show it now."
 
-## Slide 27 — Tournament screenshots
+## Slide 25 — Tournament screenshots
 - Left picture: create a tournament. Choose the number of players: **3 to 8**.
 - Type a **nickname** for each player. Your own display name is filled in for player 1. Nicknames must be different. Empty names are not allowed.
 - Right picture: the tournament page.
@@ -63,7 +58,7 @@ Bullet points only — what to cover on each of your slides. Print this and hold
   - "Next match" text tells who plays next.
   - At the end: the **winner** is shown.
 
-## Slide 28 — Tournament flow (6 steps)
+## Slide 26 — Tournament flow (6 steps)
 1. **Create** — a logged-in user gives a name and the number of players.
 2. **Register** — every player writes a nickname.
 3. **Schedule** — the server makes all the matches.
