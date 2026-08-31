@@ -2,8 +2,8 @@
 
 // Game configurations and constants
 const GAME_CONFIG = {
-    maxBallSpeed: 0.15,
-    minBallSpeed: 0.1,
+    maxBallSpeed: 0.12,
+    minBallSpeed: 0.08,
     paddleSpeed: 0.15,
     aiUpdateInterval: 1000,
     pointsToWin: 3
