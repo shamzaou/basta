@@ -3,6 +3,8 @@
 Deck: `presentation/FAST_PONG-presentation.pdf` (43 slides, rebuilt with `python presentation/build_pdf_deck.py`).
 Every section divider names its presenter and every content slide repeats it in the footer.
 
+**Organised by person:** `by-person/` has one file per teammate with all of their sections stitched together in speaking order — `by-person/<name>-points.md` (hold this) and `by-person/<name>-full.md` (rehearse this). Start there. The per-section files below stay for anyone who prefers them split by topic.
+
 Two versions of every section:
 
 | Folder | Use it for |
